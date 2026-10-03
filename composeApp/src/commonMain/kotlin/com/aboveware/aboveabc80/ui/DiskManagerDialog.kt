@@ -44,7 +44,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.aboveware.aboveabc80.ArchiveFileDialog
-import com.aboveware.aboveabc80.Assembler
 import com.aboveware.aboveabc80.ArchivedFile
 import com.aboveware.aboveabc80.NativeLib
 import com.aboveware.aboveabc80.StorageFileDialog
@@ -559,28 +558,9 @@ fun NewDiskDialog(
                 @OptIn(ExperimentalResourceApi::class)
                 val data = Res.readBytes("files/$selectedTemplate")
 
-                // Create floppy from template and apply SYSGEN
+                // Preserve the prepared system tracks in the selected template.
                 val floppy = Floppy()
                 floppy.loadRawData(data)
-
-                // Prepare a full 52-sector system image
-                // Sector 1: Boot Loader (from Page Zero in memory)
-                val loader = Assembler.instance.memory.copyOfRange(0, 128)
-                // Sectors 2-52: CCP, BDOS, BIOS (from 0xE400)
-                val ccpBdosBios =
-                    Assembler.instance.memory.copyOfRange(0xE400, 0xE400 + 51 * 128)
-
-                val fullSysImage = ByteArray(52 * 128)
-                System.arraycopy(loader, 0, fullSysImage, 0, 128)
-                System.arraycopy(
-                    ccpBdosBios,
-                    0,
-                    fullSysImage,
-                    128,
-                    ccpBdosBios.size
-                )
-
-                floppy.applySysgen(fullSysImage)
 
                 if (saveLocalDisk(name, floppy.getRawData())) {
                     onCreated(name)

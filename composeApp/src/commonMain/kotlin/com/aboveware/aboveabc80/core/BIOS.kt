@@ -75,15 +75,36 @@ class BIOS {
     fun restart() {
         rebootCount++
         val lib = NativeLib.getObject()
-        // Thaw if frozen
-        lib.freeze(false)
-        // Reset memory to initial assembled state
+        lib.freeze(true)
         lib.copyToMemory(0, Assembler.instance.memory)
-        // Clear terminal
         TerminalManager.activeTerminal.reset()
         TerminalManager.activeTerminal.clearInputBuffer()
-        // Trigger the boot logic
-        performBoot(isWarm = false)
+        lib.setZ80Registers(
+            Z80Registers(
+                af = 0,
+                bc = 0,
+                de = 0,
+                hl = 0,
+                af2 = 0,
+                bc2 = 0,
+                de2 = 0,
+                hl2 = 0,
+                ix = 0,
+                iy = 0,
+                sp = 0xFFFF.toShort(),
+                pc = 0,
+                i = 0,
+                r = 0,
+                iff1 = 0,
+                iff2 = 0,
+                im = 0,
+                tStates = 0,
+                holdIntReqCycles = 0,
+                flags = 0,
+                memPtr = 0
+            )
+        )
+        lib.freeze(false)
     }
 
     private val biosFunctions = listOf(

@@ -225,8 +225,7 @@ fun CPMScreen(startWithStorageOpen: Boolean = false) {
         if (!speedDialOpen) speedDialTestOpen = false
     }
 
-    // Register for LOAD and SAVE events
-    assembler.AsmFileReader()
+    assembler.RomFileLoader()
 
     // Setup Tape Controller callbacks
     LaunchedEffect(Unit) {

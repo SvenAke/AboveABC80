@@ -950,25 +950,6 @@ fun NewDisketteDialog(
 
                 val floppy = Floppy.createFromData(data)
 
-                // Apply system if it's the CPM22 template
-                if (selectedTemplate == "CPM22.DSK") {
-                    val loader = Assembler.instance.memory.copyOfRange(0, 128)
-                    val ccpBdosBios = Assembler.instance.memory.copyOfRange(
-                        0xE400,
-                        0xE400 + 51 * 128
-                    )
-                    val fullSysImage = ByteArray(52 * 128)
-                    System.arraycopy(loader, 0, fullSysImage, 0, 128)
-                    System.arraycopy(
-                        ccpBdosBios,
-                        0,
-                        fullSysImage,
-                        128,
-                        ccpBdosBios.size
-                    )
-                    floppy.applySysgen(fullSysImage)
-                }
-
                 if (saveLocalDisk(name, floppy.getRawData())) {
                     onCreated(name)
                 }

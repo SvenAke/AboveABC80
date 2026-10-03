@@ -14,35 +14,27 @@ import java.util.TreeSet
 
 class Assembler {
     @OptIn(ExperimentalResourceApi::class)
-    suspend fun loadRomSymbols() = withContext(Dispatchers.Default) {
+    suspend fun loadRomFiles() = withContext(Dispatchers.Default) {
         try {
-            // Zero memory first
-            NativeLib.getObject().setRam(0, ByteArray(0x10000))
-
-            val asm48kBytes = Res.readBytes("files/cpm.z80")
-            val opcodesBytes = Res.readBytes("files/opcode.lst")
-
-            val asm48kReader = asm48kBytes.decodeToString().reader().buffered()
-            val opcodeReader = opcodesBytes.decodeToString().reader().buffered()
-
-            opcodeList = opcodesBytes.decodeToString().lines().toTypedArray()
-
-            assemble(opcodeReader, asm48kReader)
+            memory.fill(0)
+            loadRom("files/prom.rom", 0x0000)
+            loadRom("files/dos.rom", 0x6000)
+            loadRom("files/printer.rom", 0x7800)
+            loadLabels(Res.readBytes("files/cpm.txt").decodeToString())
+            opcodeList = Res.readBytes("files/opcode.lst").decodeToString().lines().toTypedArray()
             NativeLib.getObject().copyToMemory(0, memory)
-
         } catch (e: Exception) {
-            ZXLog.wtf("Kunde inte ladda ROM-symboler: ${e.message}")
+            ZXLog.wtf("Kunde inte ladda ROM-filer: ${e.message}")
             throw e
         }
     }
 
     @OptIn(ExperimentalResourceApi::class)
     @Composable
-    fun AsmFileReader() {
+    fun RomFileLoader() {
         LaunchedEffect(Unit) {
             try {
-                loadRomSymbols()
-                com.aboveware.aboveabc80.core.BIOS.instance.connect()
+                loadRomFiles()
                 NativeLib.getObject().enableLogging(true)
                 val cpuSpeedMHz = getPersistedString(
                     "cpu_speed_mhz",
@@ -54,6 +46,27 @@ class Assembler {
                 ZXLog.wtf("Kunde inte starta emulatorn: ${e.message}")
             }
         }
+    }
+
+    @OptIn(ExperimentalResourceApi::class)
+    private suspend fun loadRom(resourcePath: String, startAddress: Int) {
+        val bytes = Res.readBytes(resourcePath)
+        require(startAddress >= 0 && bytes.size <= memory.size - startAddress) {
+            "ROM $resourcePath (${bytes.size} bytes) does not fit at address 0x${startAddress.toString(16)}"
+        }
+        bytes.copyInto(memory, destinationOffset = startAddress)
+    }
+
+    private fun loadLabels(listing: String) {
+        val labelPattern = Regex("""([A-Za-z_][A-Za-z0-9_]*)\s*:\s*([0-9A-Fa-f]{4})""")
+        val loadedLabels = listing.lineSequence()
+            .filter { it.startsWith("[ASSEMBLE] LABELS ") }
+            .flatMap { line -> labelPattern.findAll(line).map { it.groupValues[1] to it.groupValues[2].toInt(16) } }
+            .toList()
+
+        require(loadedLabels.isNotEmpty()) { "No labels found in files/cpm.txt" }
+        labels.labels.clear()
+        loadedLabels.forEach { (label, address) -> labels.put(label, address) }
     }
 
     companion object {
