@@ -778,7 +778,7 @@ fun CPMScreen(startWithStorageOpen: Boolean = false) {
                                     exit = fadeOut() + shrinkVertically() + slideOutVertically { it / 2 }
                                 ) {
                                     Column(horizontalAlignment = Alignment.End) {
-                                        // Action: Test Printer
+                                        // Action: write characters 0-255 to the screen
                                         Row(
                                             verticalAlignment = Alignment.CenterVertically,
                                             modifier = Modifier.padding(bottom = 16.dp)
@@ -790,7 +790,7 @@ fun CPMScreen(startWithStorageOpen: Boolean = false) {
                                                 modifier = Modifier.padding(end = 12.dp)
                                             ) {
                                                 Text(
-                                                    "Test Printer",
+                                                    "Characters 0-255",
                                                     modifier = Modifier.padding(
                                                         horizontal = 8.dp,
                                                         vertical = 4.dp
@@ -801,187 +801,17 @@ fun CPMScreen(startWithStorageOpen: Boolean = false) {
                                             SmallFloatingActionButton(
                                                 onClick = {
                                                     speedDialOpen = false
-                                                    scope.launch {
-                                                        val command = "PIP LST:=BOOT.PRN\r\n"
-                                                        for (char in command) {
-                                                            Keyboard.instance.onKeyEvent(char)
-                                                            delay(10.milliseconds)
-                                                        }
-                                                    }
+                                                    writeAllCharactersToScreen(nativeLib)
                                                 },
                                                 containerColor = MaterialTheme.colorScheme.secondaryContainer,
                                                 contentColor = MaterialTheme.colorScheme.onSecondaryContainer
                                             ) {
                                                 Icon(
-                                                    Icons.Default.Print,
-                                                    contentDescription = "Test Printer"
+                                                    Icons.Default.Science,
+                                                    contentDescription = "Characters 0-255"
                                                 )
                                             }
                                         }
-
-                                        // Action: Test ESC/P
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            modifier = Modifier.padding(bottom = 16.dp)
-                                        ) {
-                                            Surface(
-                                                shape = MaterialTheme.shapes.small,
-                                                color = MaterialTheme.colorScheme.surface,
-                                                shadowElevation = 4.dp,
-                                                modifier = Modifier.padding(end = 12.dp)
-                                            ) {
-                                                Text(
-                                                    "Test ESC/P",
-                                                    modifier = Modifier.padding(
-                                                        horizontal = 8.dp,
-                                                        vertical = 4.dp
-                                                    ),
-                                                    style = MaterialTheme.typography.labelLarge
-                                                )
-                                            }
-                                            SmallFloatingActionButton(
-                                                onClick = {
-                                                    speedDialOpen = false
-                                                    scope.launch {
-                                                        val printer =
-                                                            VirtualPrinter.instance
-                                                        printer.activeTestData.forEach { line ->
-                                                            line.forEach { char ->
-                                                                printer.printChar(char)
-                                                                // Small delay to prevent blocking UI and allow audio to play
-                                                                if (char.code == 0x07) delay(200.milliseconds)
-                                                                else if (char.code == 0x0A || char.code == 0x0D) delay(
-                                                                    10.milliseconds
-                                                                )
-                                                            }
-                                                        }
-                                                    }
-                                                },
-                                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                                                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-                                            ) {
-                                                Icon(
-                                                    Icons.Default.Description,
-                                                    contentDescription = "Test ESC/P"
-                                                )
-                                            }
-                                        }
-
-                                        // Action: Test Paste to Terminal
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            modifier = Modifier.padding(bottom = 16.dp)
-                                        ) {
-                                            Surface(
-                                                shape = MaterialTheme.shapes.small,
-                                                color = MaterialTheme.colorScheme.surface,
-                                                shadowElevation = 4.dp,
-                                                modifier = Modifier.padding(end = 12.dp)
-                                            ) {
-                                                Text(
-                                                    "Test Paste",
-                                                    modifier = Modifier.padding(
-                                                        horizontal = 8.dp,
-                                                        vertical = 4.dp
-                                                    ),
-                                                    style = MaterialTheme.typography.labelLarge
-                                                )
-                                            }
-                                            SmallFloatingActionButton(
-                                                onClick = {
-                                                    speedDialOpen = false
-                                                    clipboardManager.getText()?.text?.let { text ->
-                                                        val activeTerminal = TerminalManager.activeTerminal
-                                                        val sanitized = text.replace("\r\n", "\r").replace("\n", "\r")
-                                                        scope.launch {
-                                                            for (char in sanitized) {
-                                                                activeTerminal.onKeyEvent(char)
-                                                                activeTerminal.triggerClick()
-                                                                delay(10.milliseconds)
-                                                            }
-                                                        }
-                                                    }
-                                                },
-                                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                                                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-                                            ) {
-                                                Icon(
-                                                    Icons.Default.ContentPaste,
-                                                    contentDescription = "Paste to Terminal"
-                                                )
-                                            }
-                                        }
-
-                                        // Action: Test Load Font
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            modifier = Modifier.padding(bottom = 16.dp)
-                                        ) {
-                                            Surface(
-                                                shape = MaterialTheme.shapes.small,
-                                                color = MaterialTheme.colorScheme.surface,
-                                                shadowElevation = 4.dp,
-                                                modifier = Modifier.padding(end = 12.dp)
-                                            ) {
-                                                Text(
-                                                    "Test Load Font",
-                                                    modifier = Modifier.padding(
-                                                        horizontal = 8.dp,
-                                                        vertical = 4.dp
-                                                    ),
-                                                    style = MaterialTheme.typography.labelLarge
-                                                )
-                                            }
-                                            SmallFloatingActionButton(
-                                                onClick = {
-                                                    speedDialOpen = false
-                                                    showFontDialog = true
-                                                },
-                                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                                                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-                                            ) {
-                                                Icon(
-                                                    Icons.Default.FontDownload,
-                                                    contentDescription = "Load Font"
-                                                )
-                                            }
-                                        }
-
-                                        // Reset Terminal (Startup Test)
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            modifier = Modifier.padding(bottom = 16.dp)
-                                        ) {
-                                            Surface(
-                                                shape = MaterialTheme.shapes.small,
-                                                color = MaterialTheme.colorScheme.surface,
-                                                shadowElevation = 4.dp,
-                                                modifier = Modifier.padding(end = 12.dp)
-                                            ) {
-                                                Text(
-                                                    "Reset Terminal",
-                                                    modifier = Modifier.padding(
-                                                        horizontal = 8.dp,
-                                                        vertical = 4.dp
-                                                    ),
-                                                    style = MaterialTheme.typography.labelLarge
-                                                )
-                                            }
-                                            SmallFloatingActionButton(
-                                                onClick = {
-                                                    speedDialOpen = false
-                                                    TerminalManager.activeTerminal.reset()
-                                                },
-                                                containerColor = Color.Red,
-                                                contentColor = Color.White
-                                            ) {
-                                                Icon(
-                                                    Icons.Default.Refresh,
-                                                    contentDescription = "Reset Terminal"
-                                                )
-                                            }
-                                        }
-
                                         // Debugger Toggle
                                         Row(
                                             verticalAlignment = Alignment.CenterVertically,
