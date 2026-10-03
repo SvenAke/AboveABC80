@@ -1,0 +1,13 @@
+ciflag: DO;
+
+$include(:f3:ciflag.ipx)
+
+ClrInfoFlag: PROCEDURE(flag) PUBLIC;
+	DECLARE flag BYTE;
+	call ClrFlag(.info.flag, flag);
+end;
+
+
+
+END;
+

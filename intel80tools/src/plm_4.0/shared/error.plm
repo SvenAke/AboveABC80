@@ -1,0 +1,8 @@
+Error: DO;
+$include(:f3:Error.ipx)
+
+Error: procedure (Error$num) public;
+    declare (Error$num) address;
+    call ISIS(IERROR, .Error$num);
+end Error;
+end;

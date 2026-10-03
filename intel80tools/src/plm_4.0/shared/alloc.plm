@@ -1,0 +1,12 @@
+Alloc: DO;
+$include(:f3:Alloc.ipx)
+
+Alloc: PROCEDURE(size1, size2) PUBLIC;
+	DECLARE (size1, size2) ADDRESS;
+
+	blk1Used = blk1Used + size1;
+	blk2Used = blk2Used + size2;
+	if blk1Used >= blksize1 or blk2Used >= blksize2 then
+		call FatalError(ERR83);
+end Alloc;
+end;

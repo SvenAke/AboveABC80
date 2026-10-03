@@ -1,0 +1,11 @@
+gieid: DO;
+$include(:f3:gieid.ipx)
+
+GetExternId: PROCEDURE BYTE PUBLIC;
+	return info.extId;	
+end;
+
+
+
+END;
+

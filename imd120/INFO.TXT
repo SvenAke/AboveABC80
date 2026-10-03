@@ -1,0 +1,26 @@
+IMageDisk Analyzer 1.20 / Jun 23 2024
+IMD 1.17:  9/ 3/2021 22:28:16
+Required cylinders: 40
+Required heads    : 1
+Data rate         : 250kbps
+Est. maximum track: 5630 bytes
+
+Possible drives/options to write INSTALL.IMD :
+
+ 5.25" DD 40-track
+   Double-step: OFF
+
+ 5.25" QD 80-track
+   Double-step: ON
+
+ 5.25" HD 80-track
+   Double-step: ON
+   250 kbps -> 300 kbps
+
+ 3.5" DD 80-track   NOTE: *1
+   Double-step: OFF
+
+ 3.5" HD 80-track   NOTE: *1
+   Double-step: OFF
+
+*1 40 track image will use only first 1/2 of 80-track drive.

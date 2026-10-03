@@ -1,0 +1,24 @@
+WrnstrLst: DO;
+
+$include(:f3:wrslst.ipx)
+
+WrnstrLst: procedure(str$p, cnt) public;
+	declare str$p address, cnt address;
+	declare ch based str$p byte;
+
+	do while cnt <> 0;
+		call wrcLst(ch);
+		str$p = str$p + 1;
+		cnt = cnt - 1;
+	end;
+end;
+end;
+
+
+
+
+
+
+
+
+

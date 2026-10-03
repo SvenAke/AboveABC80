@@ -1,0 +1,592 @@
+plm1c: DO;
+$include(:f2:plm1c.ipx)
+
+GetRestrictedExpr: PROCEDURE public;
+	declare rValue address,
+		use8bit byte;
+
+
+	SimpleUExpr: PROCEDURE;
+	    if MatchTx2Item(L$NUMBER) then
+		rValue = tx1Item.dataw(0);
+	    else
+	    do;
+		if MatchTx2Item(L$VARIABLE) then
+		    call Sub$45E0;
+		call WrTx2ExtError(151);	/* INVALID OPERAND IN RESTRICTED EXPRESSION */
+		rValue = 0;
+	    end;
+	    use8bit = use8bit and (high(rValue) = 0);
+	end;
+
+	SimpleNExpr: PROCEDURE;
+	    if MatchTx2Item(L$MINUSSIGN) then
+	    do;
+		call SimpleUExpr;
+		if use8bit then 
+		    rValue = - low(rValue);
+		else
+		    rValue = - rValue;
+	    end;
+	    else
+		call SimpleUExpr;
+	end;
+
+	EvalSimpleExpr: PROCEDURE;
+	    declare p address;
+	    call SimpleNExpr;
+	    p = rValue;
+	    do while 1;
+		if MatchTx2Item(L$PLUSSIGN) then
+		do;
+		    call SimpleNExpr;
+		    if use8bit then
+		    do;
+			p = (p := p + rValue) and 0ffh;
+			
+		    end;
+		    else 
+			p =  p + rValue;
+		end;
+		else if MatchTx2Item(L$MINUSSIGN) then
+		do;
+		    call SimpleNExpr;
+		    if use8bit then
+			p = (p := p - rValue) and 0ffh;
+		    else
+			p =  p - rValue;
+		end;
+		else
+		    goto done;
+	    end;
+	done:
+	    rValue = p;
+	end;
+
+
+	GetRestrictedArrayIndex: PROCEDURE;
+	    use8bit = TRUE;
+	    if not(TestInfoFlag(F$ARRAY)) then
+		call WrTx2ExtError(149);	/* INVALID SUBSCRIPTING IN RESTRICTED REFERENCE */
+	    call EvalSimpleExpr;
+	    call ExpectRparen(150);	/* MISSING ') ' AT END OF RESTRICTED SUBSCRIPT */
+	end;
+
+	GetRestrictedVar: PROCEDURE;
+	    if NotMatchTx2Item(L$VARIABLE) then
+	    do;
+		call WrTx2Error(147);	/* MISSING IDENTIFIER FOLLOWING DOT OPERATOR */
+		call Sub$4599;
+		return;
+	    end;
+	    call Sub$45E0;
+	    varInfoOffset = curInfo$p;
+	    if GetType = BUILTIN$T then
+	    do;
+		call WrTx2Error(123);	/* INVALID DOT OPERAND, BUILT-IN PROCEDURE ILLEGAL */
+		call Sub$4599;
+		return;
+	    end;
+	    if MatchTx2Item(L$LPAREN) then
+	    do;
+		call GetRestrictedArrayIndex;
+		varArrayIndex = rValue;
+	    end;
+	    if MatchTx2Item(L$PERIOD) then
+	    do;
+		curInfo$p = varInfoOffset;
+		if GetType <> STRUCT$T then
+		do;
+		    call WrTx2ExtError(148);	/* INVALID QUALIFICATION IN RESTRICTED REFERENCE */
+		    call Sub$4599;
+		    return;
+		end;
+		if NotMatchTx2Item(L$VARIABLE) then
+		do;
+		    call WrTx2Error(147);	/* MISSING IDENTIFIER FOLLOWING DOT OPERATOR */
+		    varInfoOffset = varInfoOffset - botInfo;
+		    return;
+		end;
+		call Sub$4631;
+		varInfoOffset = curInfo$p;
+		if MatchTx2Item(L$LPAREN) then
+		do;
+		    call GetRestrictedArrayIndex;
+		    varNestedArrayIndex = rValue;
+		end;
+	    end;
+	    varInfoOffset = varInfoOffset - botInfo;
+	end;
+
+    varInfoOffset, varArrayIndex, varNestedArrayIndex, varVal = 0;
+    if MatchTx2Item(L$PERIOD) then
+    do;
+	call GetRestrictedVar;
+	if MatchTx2Item(L$PLUSSIGN) then
+	    ;
+	else if MatchTx2Item(L$MINUSSIGN) then
+	    call SetRegetTx1Item;
+	else
+	    return;
+	use8bit = FALSE;
+	call EvalSimpleExpr;
+	varVal = rValue;
+    end;
+    else if MatchTx2Item(L$RPAREN) then
+	call SetRegetTx1Item;
+    else
+    do;
+	use8bit = TRUE;
+	call EvalSimpleExpr;
+	varVal = rValue;
+    end;
+end;
+
+ParseDataItems: PROCEDURE(arg1w) ADDRESS public;
+    declare arg1w address;
+    declare p address;
+
+    p = 0;
+    call WrAtFileByte(ATI$DHDR);
+    call WrAtFileWord(arg1w - botInfo);
+    call WrAtFileWord(curStmtNum);
+    do while 1;
+	if MatchTx2Item(L$STRING) then
+	do;
+	    call WrAtFileByte(ATI$STRING);
+	    call WrAtFileWord(tx1Item.dataw(0));
+	    call WrAtFile(.tx1Item.dataw(1), tx1Item.dataw(0));
+	    curInfo$p = arg1w;
+	    if GetType = ADDRESS$T then 
+		p = p + (tx1Item.dataw(0) + 1) / 2;
+	    else 
+		p = p + tx1Item.dataw(0);
+	end;
+	else
+	do;
+	    call GetRestrictedExpr;
+	    call WrAtFileByte(ATI$DATA);
+	    call WrAtFile(.varInfoOffset, 8);
+	    p = p + 1;
+	end;
+	if NotMatchTx2Item(L$COMMA) then
+	    goto done;
+	else if MatchTx2Item(L$RPAREN) then
+	do;
+	    call WrTx2Error(151);	/* INVALID OPERAND IN RESTRICTED EXPRESSION */
+	    call SetRegetTx1Item;
+	    goto done;
+	end;
+    end;
+done:
+    call WrAtFileByte(ATI$END);
+    call ExpectRparen(152);	/* MISSING ') ' AFTER CONSTANT LIST */
+    curInfo$p = arg1w;;
+    return p;
+end;
+
+ResetStacks: PROCEDURE public;
+    parseSP, exSP, operatorSP, stSP = 0;
+end;
+
+PushParseWord: PROCEDURE(arg1w) public;
+    declare arg1w address;
+    if parseSP = 63h then
+	call FatalError(119);	/* LIMIT EXCEEDED: PROGRAM TOO COMPLEX */
+    parseStack(parseSP := parseSP + 1) = arg1w;
+end;
+
+
+PopParseStack: PROCEDURE public;
+    if parseSP = 0 then
+	call FatalError(159);	/* COMPILER Error: PARSE STACK UNDERFLOW */
+    parseSP = parseSP - 1;
+end;
+
+
+PushParseByte: PROCEDURE(arg1b) public;
+    declare arg1b byte;
+    call PushParseWord(arg1b);
+end;
+
+ExprPush3: PROCEDURE(arg1b, arg2b, arg3w);
+    declare (arg1b, arg2b) byte, arg3w address;
+    if exSP = 63h then
+	call FatalError(121);	/* LIMIT EXCEEDED: EXPRESSION TOO COMPLEX */
+    ex1Stack(exSP := exSP + 1) = arg1b;
+    ex2Stack(exSP) = arg2b;
+    ex3Stack(exSP) = arg3w;
+end;
+
+ExprPop: PROCEDURE public;
+    if exSP = 0 then
+	call FatalError(160);	/* COMPILER Error: OPERAND STACK UNDERFLOW */
+    exSP = exSP - 1;
+end;
+
+
+SwapOperandStack: PROCEDURE;
+    declare i address, (op1, op2) byte, op3 address;
+
+    if exSP < 2 then
+	call FatalError(161);	/* COMPILER Error: ILLEGAL OPERAND STACK EXCHANGE */
+    i = exSP - 1;
+    op1 = ex1Stack(exSP);
+    op2 = ex2Stack(exSP);
+    op3 = ex3Stack(exSP);
+    ex1Stack(exSP) = ex1Stack(i);
+    ex2Stack(exSP) = ex2Stack(i);
+    ex3Stack(exSP) = ex3Stack(i);
+    ex1Stack(i) = op1;
+    ex2Stack(i) = op2;
+    ex3Stack(i) = op3;
+end;
+
+ExprPush2: PROCEDURE(arg1b, arg2w) public;
+    declare arg1b byte, arg2w address;
+    call ExprPush3(arg1b, 0, arg2w);
+end;
+
+StmtPush3: PROCEDURE(arg1b, arg2b, arg3w);
+    declare (arg1b, arg2b) byte, arg3w address;
+    if stSP = 299 then
+	call FatalError(122);	/* LIMIT EXCEEDED: PROGRAM TOO COMPLEX	 */
+    st1Stack(stSP := stSP + 1) = arg1b;
+    st2Stack(stSP) = arg2b;
+    st3Stack(stSP) = arg3w;
+end;
+
+MoveExpr2Stmt: PROCEDURE public;
+    call StmtPush3(ex1Stack(exSP), ex2Stack(exSP), ex3Stack(exSP));
+    call ExprPop;
+end;
+
+PushOperator: PROCEDURE(arg1b) public;
+    declare arg1b byte;
+    if operatorSP = 31h then
+	call FatalError(120);	/* LIMIT EXCEEDED: EXPRESSION TOO COMPLEX */
+    operatorStack(operatorSP := operatorSP + 1) = arg1b;
+end;
+
+
+PopOperatorStack: PROCEDURE public;
+    if operatorSP = 0 then
+	call FatalError(162);	/* COMPILER Error: OPERATOR STACK UNDERFLOW */
+    operatorSP = operatorSP - 1;
+end;
+
+
+ExprMakeNode: PROCEDURE(arg1b, arg2b) public;
+    declare (arg1b, arg2b) byte;
+    declare w address, (j, i) byte;
+
+    w = stSP + 1;
+
+    if exSP < arg2b then
+	call FatalError(163);	/* COMPILER Error: GENERATION FAILURE  */
+    j = exSP - arg2b + 1;
+    i = arg2b;
+    do while i <> 0;
+	call StmtPush3(ex1Stack(j), ex2Stack(j), ex3Stack(j));
+	i = i - 1;
+	j = j + 1;
+    end;
+
+    exSP = exSP - arg2b;
+    if arg2b = 0 then
+	w = 0;
+    call ExprPush3(arg1b, arg2b, w);
+end;
+
+AcceptOpAndArgs: PROCEDURE public;
+    declare i byte;
+
+    i = operatorStack(operatorSP);
+    if i = I$NOT or i = I$UNARYMINUS then
+	call ExprMakeNode(i, 1);
+    else
+	call ExprMakeNode(i, 2);
+    call PopOperatorStack;
+end;
+
+
+Sub$4CC2: PROCEDURE;
+    declare p address;
+    if TestInfoFlag(F$MEMBER) then
+    do;
+	p = curInfo$p;
+	curInfo$p = GetParentOffset;
+	call ExprPush2(I$VARIABLE, curInfo$p);
+	call ExprPush2(I$VARIABLE, p);
+	call ExprMakeNode(I$MEMBER, 2);
+    end;
+    else
+	call ExprPush2(I$VARIABLE, curInfo$p);
+end;
+
+Sub$4CFD: PROCEDURE(arg1w) public;
+    declare arg1w address;
+
+    curInfo$p = arg1w;
+    if TestInfoFlag(F$BASED) then
+    do;
+	curInfo$p = GetBaseOffset;
+	call Sub$4CC2;
+	curInfo$p = arg1w;
+	call SwapOperandStack;
+	call ExprMakeNode(I$BASED, 2);
+    end;
+end;
+
+Sub$4D2C: PROCEDURE public;
+    call Sub$4CC2;
+    call Sub$4CFD(curInfo$p);
+end;
+
+
+Sub$4D38: PROCEDURE public;
+    if GetDataType = 0 then
+	call WrTx2ExtError(131);	/* ILLEGAL REFERENCE TO UNTYPED PROCEDURE */
+end;
+
+
+GetCallArgCnt: PROCEDURE BYTE public;
+    declare (i, j, k) byte;
+    i = parseStack(parseSP);
+    j = operatorStack(operatorSP);
+    call PopParseStack;
+    call PopOperatorStack;
+    if i = j then
+	return i;
+    if i < j then
+    do;
+	call WrTx2ExtError(153);	/* INVALID NUMBER OF ARGUMENTS IN CALL, TOO MANY */
+	k = j - i;
+	do while k <> 0;
+	    call ExprPop;
+	    k = k - 1;
+	end;
+    end;
+    else
+    do;
+	call WrTx2ExtError(154);	/* INVALID NUMBER OF ARGUMENTS IN CALL, TOO FEW */
+	k = i - j;
+	do while k <> 0;
+	    call ExprPush2(I$NUMBER, 0);
+	    k = k - 1;
+	end;
+    end;
+    return i;
+end;
+
+Sub$4DCF: PROCEDURE(arg1b) public;
+    declare arg1b byte;
+
+    if NotMatchTx2Item(L$LPAREN) then
+    do;
+	call WrTx2ExtError(124);	/* MISSING ARGUMENTS FOR BUILT-IN PROCEDURE */
+	call ExprPush2(I$NUMBER, 0);
+    end;
+    else
+    do;	if NotMatchTx2Item(L$VARIABLE) then
+	do;
+	    call WrTx2Error(125);	/* ILLEGAL ARGUMENT FOR BUILT-IN PROCEDURE */
+	    call ExprPush2(I$NUMBER, 0);
+	end;
+	else
+	do;
+	    call Sub$45E0;
+	    if MatchTx2Item(L$LPAREN) then
+	    do;
+		if TestInfoFlag(F$ARRAY) then
+		do;
+			call ResyncRparen;
+			if MatchTx2Item(L$RPAREN) then
+			do;
+				if arg1b = I$LENGTH or arg1b = I$LAST then
+				do;
+					call WrTx2ExtError(125); /*  ILLEGAL ARGUMENT FOR BUILT-IN PROCEDURE */
+					call ExprPush2(I$NUMBER, 0);
+				end;
+				else 
+					call ExprPush2(arg1b, curInfo$p);
+				return;
+			end;
+		end;
+		else 
+			call WrTx2ExtError(127);	/* INVALID SUBSCRIPT ON NON-ARRAY */
+	    end; 
+	    if MatchTx2Item(L$PERIOD) then
+	    do;
+		if GetType <> STRUCT$T then
+			call WrTx2ExtError(110); /* INVALID LEFT OPERAND OF QUALIFICATION, NOT A STRUCTURE */
+		else if NotMatchTx2Item(L$VARIABLE) then
+			call WrTx2ExtError(111); /* INVALID RIGHT OPERAND OF QUALIFICATION, NOT IDENTIFIER */
+		else
+			call Sub$4631;
+	    end;
+	    if MatchTx2Item(L$LPAREN) then
+	    do;
+		if TestInfoFlag(F$ARRAY) then
+		do;
+			call ResyncRparen;
+			if arg1b = I$LENGTH or arg1b = I$LAST then
+			do;
+				call WrTx2ExtError(125);	/* ILLEGAL ARGUMENT FOR BUILT-IN PROCEDURE */
+				call ExprPush2(I$NUMBER, 0);
+			end;
+			else 
+				call ExprPush2(arg1b, curInfo$p);
+		end;
+		else
+		do;
+			call WrTx2ExtError(127);	/* INVALID SUBSCRIPT ON NON-ARRAY */
+			call ExprPush2(I$NUMBER, 0);
+		end;
+	    end;
+	    else if arg1b = I$LENGTH or arg1b = I$LAST then
+	    do;
+		if TestInfoFlag(F$ARRAY) then 
+			call ExprPush2(arg1b, curInfo$p);
+		else
+		do;
+			call WrTx2ExtError(157);
+				/* INVALID ARGUMENT, ARRAY REQUIRED FOR LENGTH OR LAST */
+			call ExprPush2(I$NUMBER, 0);
+		end;
+	    end;
+	    else
+	    do;
+		call ExprPush2(arg1b, curInfo$p);
+		call ExprPush2(I$LENGTH, curInfo$p);
+		call ExprMakeNode(I$STAR, 2);
+	    end;
+	end;
+	call ExpectRparen(126);	/* MISSING ') ' AFTER BUILT-IN PROCEDURE ARGUMENT LIST */
+    end;
+end;
+
+
+MkIndexNode: PROCEDURE public;
+    declare (p, q) address;
+    declare i byte, r address;
+
+    curInfo$p = ex3Stack(exSP-1);	/* get var */
+    if ex1Stack(exSP) = I$PLUSSIGN then
+    do;	/* see if index is of form expr + ?? */
+	p = ex3Stack(exSP) + 1;
+	if st1Stack(p) = I$NUMBER then
+	do;	/* expr + number */
+	    ex1Stack(exSP) = st1Stack(q := p - 1);	/* pull up expression */
+	    ex2Stack(exSP) = st2Stack(q);
+	    ex3Stack(exSP) = st3Stack(q);
+	    call ExprPush2(I$NUMBER, st3Stack(p));	/* and get the number as an offset */
+	end;
+	else 
+	    call ExprPush2(I$NUMBER, 0);		/* no simple 0 offset */
+    end;
+    else
+	call ExprPush2(I$NUMBER, 0);			/* 0 offset */
+
+    if GetType = ADDRESS$T then		/* simple word array */
+	i = I$WORDINDEX;
+    else
+    do;
+	i = I$BYTEINDEX;
+	if GetType = STRUCT$T then
+	do;	/* scale structure index */
+	    r = exSP - 1;					/* the index expr (ex offset) */
+	    call ExprPush3(ex1Stack(r), ex2Stack(r), ex3Stack(r));	/* calc dimension */
+	    call ExprPush2(I$SIZE, curInfo$p);
+	    call ExprMakeNode(I$STAR, 2);
+	    ex1Stack(r) = ex1Stack(exSP);	/* replace index expr */
+	    ex2Stack(r) = ex2Stack(exSP);
+	    ex3Stack(r) = ex3Stack(exSP);
+	    call ExprPop;						/* waste intermediate */
+	end;
+    end;
+    call ExprMakeNode(i, 3);
+end;
+
+
+ParsePortNum: PROCEDURE(arg1b) public;
+    declare arg1b byte;
+    declare p address;
+
+    p = 0;
+    if MatchTx2Item(L$LPAREN) then
+    do;
+	if MatchTx2Item(L$NUMBER) then
+	do;
+	    if tx1Item.dataw(0) <= 255 then
+		p = tx1Item.dataw(0);
+	    else
+		call WrTx2ExtError(106);	/* INVALID INPUT/OUTPUT PORT NUMBER */
+	end;
+	else
+	    call WrTx2ExtError(107);/* ILLEGAL INPUT/OUTPUT PORT NUMBER, NOT NUMERIC CONSTANT */
+	call ExpectRparen(108);	/* MISSING ') ' AFTER INPUT/OUTPUT PORT NUMBER */
+    end;
+    else
+	call WrTx2ExtError(109);	/* MISSING INPUT/OUTPUT PORT NUMBER */
+
+    call ExprPush2(arg1b, p);
+end;
+
+
+Sub$50D5: PROCEDURE public;
+    declare p address, i byte;
+
+    p = curInfo$p;
+    if (curInfo$p := curProcInfo$p) = 0 then
+	i = FALSE;
+    else
+	i = TestInfoFlag(F$REENTRANT);
+    curInfo$p = p;
+    if TestInfoFlag(F$REENTRANT) and i then
+	return;
+    if not TestInfoFlag(F$DECLARED) then 
+	call WrTx2ExtError(169);		/* ILLEGAL FORWARD CALL */
+    else if not TestInfoFlag(F$DEFINED) then
+	call WrTx2ExtError(170);		/* ILLEGAL RECURSIVE CALL */
+end;
+
+
+Sub$512E: PROCEDURE(arg1w) BYTE public;
+    declare arg1w address, c byte;
+    if (c := ex1Stack(arg1w)) = I$OUTPUT or c = I$STACKPTR or c = I$BASED then
+	return FALSE;
+    if c = I$VARIABLE then 
+	curInfo$p = ex3Stack(arg1w);
+    else if c = I$BYTEINDEX or c = I$WORDINDEX then
+	curInfo$p = st3Stack(ex3Stack(arg1w));
+    else if c = I$MEMBER then
+    do;
+	if st1Stack(ex3Stack(arg1w)) = I$VARIABLE then
+	    curInfo$p = st3Stack(ex3Stack(arg1w));
+	else
+	    curInfo$p = st3Stack(st3Stack(ex3Stack(arg1w)));
+    end;
+    else
+	return TRUE;
+    if TestInfoFlag(F$DATA) then
+	call WrTx2ExtError(173);
+    /*  INVALID LEFT SIDE OF ASSIGNMENT: VARIABLE DECLARED WITH DATA ATTRIBUTE */
+    return FALSE;
+end;
+
+Sub$521B: PROCEDURE public;
+    declare (q, p) address;
+
+    p = curSymbol$p;
+    curSymbol$p = 0;
+    call CreateInfo(256, BYTE$T);
+    call SetInfoFlag(F$DATA);
+    curSymbol$p = p;
+    call ExprPush2(I$VARIABLE, curInfo$p);
+    call SetInfoFlag(F$ARRAY);
+    call SetInfoFlag(F$STARDIM);
+    q = ParseDataItems(curInfo$p);
+    call SetDimension(q);
+end;
+end;

@@ -1,0 +1,270 @@
+plm0a:
+DO;
+$include(:f2:plm0a.ipx)
+
+DECLARE	cClass(*) BYTE PUBLIC DATA(
+	CC$NONPRINT, CC$NONPRINT, CC$NONPRINT, CC$NONPRINT,
+	CC$NONPRINT, CC$NONPRINT, CC$NONPRINT, CC$NONPRINT,
+	CC$NONPRINT, CC$WSPACE, CC$NEWLINE, CC$NONPRINT,
+	CC$NONPRINT, CC$WSPACE, CC$NONPRINT, CC$NONPRINT,
+	CC$NONPRINT, CC$NONPRINT, CC$NONPRINT, CC$NONPRINT,
+	CC$NONPRINT, CC$NONPRINT, CC$NONPRINT, CC$NONPRINT,
+	CC$NONPRINT, CC$NONPRINT, CC$NONPRINT, CC$NONPRINT,
+	CC$NONPRINT, CC$NONPRINT, CC$NONPRINT, CC$NONPRINT,
+	CC$WSPACE, CC$INVALID, CC$INVALID, CC$INVALID,
+	CC$DOLLAR, CC$INVALID, CC$INVALID, CC$QUOTE,
+	CC$LPAREN,  CC$RPAREN,  CC$STAR,  CC$PLUS,
+	CC$COMMA,  CC$MINUS, CC$PERIOD,  CC$SLASH,
+	CC$BINDIGIT, CC$BINDIGIT, CC$OCTDIGIT, CC$OCTDIGIT,
+	CC$OCTDIGIT, CC$OCTDIGIT, CC$OCTDIGIT, CC$OCTDIGIT,
+	CC$DECDIGIT, CC$DECDIGIT, CC$COLON, CC$SEMICOLON,
+	CC$LESS, CC$EQUALS, CC$GREATER, CC$INVALID,
+	CC$INVALID, CC$HEXCHAR, CC$HEXCHAR, CC$HEXCHAR,
+	CC$HEXCHAR, CC$HEXCHAR, CC$HEXCHAR, CC$ALPHA,
+	CC$ALPHA, CC$ALPHA, CC$ALPHA, CC$ALPHA,
+	CC$ALPHA, CC$ALPHA, CC$ALPHA, CC$ALPHA,
+	CC$ALPHA, CC$ALPHA, CC$ALPHA, CC$ALPHA,
+	CC$ALPHA, CC$ALPHA, CC$ALPHA, CC$ALPHA,
+	CC$ALPHA, CC$ALPHA, CC$ALPHA, CC$INVALID,
+	CC$INVALID, CC$INVALID, CC$INVALID, CC$INVALID,
+	CC$INVALID, CC$HEXCHAR, CC$HEXCHAR, CC$HEXCHAR,
+	CC$HEXCHAR, CC$HEXCHAR, CC$HEXCHAR, CC$ALPHA,
+	CC$ALPHA, CC$ALPHA, CC$ALPHA, CC$ALPHA,
+	CC$ALPHA, CC$ALPHA, CC$ALPHA, CC$ALPHA,
+	CC$ALPHA, CC$ALPHA, CC$ALPHA, CC$ALPHA,
+	CC$ALPHA, CC$ALPHA, CC$ALPHA, CC$ALPHA,
+	CC$ALPHA, CC$ALPHA, CC$ALPHA, CC$INVALID,
+	CC$INVALID, CC$INVALID, CC$INVALID, CC$NONPRINT
+	);
+
+DECLARE tok2oprMap(*) BYTE PUBLIC DATA(
+	L$VARIABLE, L$NUMBER, L$STRING, L$PLUSSIGN,
+	L$MINUSSIGN, L$STAR, L$SLASH, L$MOD,
+	L$PLUS, L$MINUS, L$AND, L$OR,
+	L$XOR, L$NOT, 0, L$LT,
+	L$LE, L$EQ, L$NE, L$GE,
+	L$GT, L$COLONEQUALS, L$INVALID, L$INVALID,
+	L$PERIOD, L$LPAREN, L$RPAREN, L$COMMA,
+	L$CALL, L$INVALID, L$DISABLE, L$INVALID,
+	L$ENABLE, L$END, L$GO, L$GOTO,
+	L$HALT, L$IF, L$PROCEDURE, L$RETURN,
+	L$INVALID, L$INVALID, L$INVALID, L$INVALID,
+	L$INVALID, L$INVALID, L$INVALID, L$INVALID,
+	L$INVALID, L$INVALID, L$INVALID, L$INVALID,
+	L$INVALID, L$BY, L$INVALID, L$INVALID,
+	L$INVALID, L$INVALID, L$TO, L$INVALID);
+
+
+/* public variables */
+DECLARE	macroPtrs(12) ADDRESS /* six inChr$p, info$p pairs */ PUBLIC,
+	macroDepth ADDRESS PUBLIC INITIAL(0),
+	tokenVal ADDRESS PUBLIC,
+	inChr$p ADDRESS PUBLIC,
+	stateStack(100) ADDRESS PUBLIC,
+	stateIdX ADDRESS PUBLIC,
+	stmtLabels(10) ADDRESS PUBLIC,
+	stmtLabelCnt ADDRESS PUBLIC,
+	curProcInfo$p ADDRESS PUBLIC,
+	pad8FA1 ADDRESS,
+	offCurCh ADDRESS PUBLIC INITIAL(0),
+	offLastCh ADDRESS PUBLIC INITIAL(0),
+	curStmtCnt ADDRESS PUBLIC INITIAL(0),
+	curBlkCnt ADDRESS PUBLIC INITIAL(0),
+	curMacroInfo$p ADDRESS PUBLIC INITIAL(0),
+	markedSymbol$p ADDRESS PUBLIC INITIAL(0),
+	lineBuf(128) BYTE PUBLIC,
+	inbuf(1280) BYTE PUBLIC,
+	tokenType BYTE PUBLIC,
+	tokenStr(256) BYTE PUBLIC INITIAL(0),
+	lastch BYTE PUBLIC,
+	stmtStartCode BYTE PUBLIC,
+	labelBrkToken BYTE PUBLIC,
+	lblBrkTxiCode BYTE PUBLIC,
+	doBlkCnt ADDRESS PUBLIC INITIAL(0),
+	tx1Buf(1280) BYTE PUBLIC,
+	labelBrkSymbol ADDRESS PUBLIC,
+	lineInfoToWrite BYTE PUBLIC INITIAL(FALSE),
+	isNonCtrlLine BYTE PUBLIC INITIAL(FALSE),
+	yyAgain BYTE PUBLIC INITIAL(FALSE),
+	linfo LINFO$ST PUBLIC INITIAL(0, 0),
+	(curDoBlkCnt, curProcId) BYTE PUBLIC INITIAL(0, 0),
+	curProcData ADDRESS PUBLIC,
+	state BYTE PUBLIC,
+	skippingCOND BYTE PUBLIC INITIAL(FALSE),
+	ifDepth ADDRESS PUBLIC INITIAL(0);
+	
+
+CreateTxi1File:	PROCEDURE PUBLIC;
+	DECLARE tmp ADDRESS;
+
+	tmp = tx1File.curoff;
+	call OpenF(.tx1File, 3);
+	call CreatF(.tx1File, .tx1Buf, 1280, 2);
+	tx1File.curoff = tmp;
+end CreateTxi1File;
+
+WriteTx1: PROCEDURE(buf, len) PUBLIC;
+	DECLARE (buf, len) ADDRESS;
+
+	if tx1File.aftn = 0 then
+		if tx1File.curoff > 1024 then
+			call CreateTxi1File;
+		else
+		do;
+			call movmem(len, buf, .tx1Buf(tx1File.curoff));
+			tx1File.curoff = tx1File.curoff + len;
+			return;
+		end;
+	call fwrite(.tx1File, buf, len);
+end WriteTx1;
+
+RewindTx1: PROCEDURE PUBLIC;
+	if tx1File.aftn = 0 then
+		call CreateTxi1File;
+	call Fflush(.tx1File);
+	call Rewind(.tx1File);
+end RewindTx1;
+
+
+WriteLineInfo: PROCEDURE PUBLIC;
+	if lineInfoToWrite then
+	do;
+		call WriteTx1(.linfo, 7);
+		lineInfoToWrite = FALSE;
+	end;
+end WriteLineInfo;
+
+
+WrBuf: PROCEDURE(buf, len) PUBLIC;
+	DECLARE (buf, len) ADDRESS;
+
+	call WriteLineInfo;
+	call WriteTx1(buf, len);
+end WrBuf;
+
+WrByte: PROCEDURE(v) PUBLIC;
+	DECLARE v BYTE;
+
+	call WrBuf(.v, 1);
+end WrByte;
+
+
+
+WrWord: PROCEDURE(v) PUBLIC;
+	DECLARE v ADDRESS;
+
+	call WrBuf(.v, 2);
+end WrWord;
+
+
+WrInfoOffset: PROCEDURE(addr) PUBLIC;
+	DECLARE addr ADDRESS;
+
+	call WrWord(addr - botInfo);
+end WrInfoOffset; 
+
+SyntaxError: PROCEDURE(err) PUBLIC;
+	DECLARE err BYTE;
+	hasErrors = TRUE;
+	call WrByte(L$SyntaxError);
+	call WrWord(err);
+end SyntaxError;
+
+
+TokenErrorAt: PROCEDURE(err) PUBLIC;
+	DECLARE err BYTE;
+
+	hasErrors = TRUE;
+	call WrByte(L$TokenError);
+	call WrWord(err);
+	call WrWord(markedSymbol$p);
+end TokenErrorAt;
+
+
+TokenError: PROCEDURE(err, sym$p) PUBLIC;
+	DECLARE err BYTE, sym$p ADDRESS;
+
+	hasErrors = TRUE;
+	call WrByte(L$TokenError);
+	call WrWord(err);
+	call WrWord(sym$p);
+end TokenError;
+
+
+FatalError: PROCEDURE(err) PUBLIC;
+	DECLARE err BYTE;
+
+	hasErrors = TRUE;
+	if state <> 20 then
+	do;
+		if err = ERR83 then	/* LIMIT EXCEEDED: DYNAMIC STORAGE */
+			call Fatal(.('DYNAMIC STORAGE OVERFLOW'), 24);
+		call Fatal(.('UNKNOWN FATAL ERROR'), 19);
+	end;
+	call TokenErrorAt(err);
+	fatalErrorCode = err;
+	goto resetPt;
+end FatalError;
+
+PushBlock: PROCEDURE(idAndLevel) PUBLIC;
+	DECLARE idAndLevel ADDRESS;
+
+	if blockDepth = 34 then
+		call FatalError(ERR84);	/* LIMIT EXCEEDED: BLOCK NESTING */
+	else
+	do;
+		procChains(blockDepth := blockDepth + 1) = idAndlevel;
+		curBlkCnt = curBlkCnt + 1;
+	end;
+end PushBlock;
+
+PopBlock:	PROCEDURE PUBLIC;
+	DECLARE procDW BASED curProcData ADDRESS;
+	if blockDepth = 0 then
+		call FatalError(ERR96);	/* COMPILER Error: SCOPE STACK UNDERFLOW */
+	else
+	do;
+		curBlkCnt = curBlkCnt - 1;
+		procDW = procChains(blockDepth := blockDepth - 1);
+	end;
+end PopBlock;
+
+
+
+WrOprAndValue:	PROCEDURE PUBLIC;
+	if tok2oprMap(tokenType) = L$INVALID then
+	do;
+		call TokenErrorAt(ERR171);	/* INVALID USE OF DELIMITER OR RESERVED WORD IN EXPRESSION */
+		return;
+	end;
+	call WrByte(tok2oprMap(tokenType));
+	if tokenType = T$VARIABLE then
+		call WrWord(curSymbol$p);
+	else if tokenType = T$NUMBER then
+		call WrWord(tokenVal);
+	else if tokenType = T$STRING then
+	do;
+		call WrWord(tokenstr(0));
+		call WrBuf(.tokenStr(1), tokenstr(0));
+	end;
+end WrOprAndValue;
+
+
+WrXrefUse: PROCEDURE PUBLIC;
+	if XREF then
+	do;
+		call WrByte(L$XREFINFO);
+		call WrInfoOffset(curInfo$p);
+	end;
+end;
+
+
+WrXrefDef: PROCEDURE PUBLIC;
+	if XREF or IXREF or SYMBOLS then
+	do;
+		call WrByte(L$XREF);
+		call WrInfoOffset(curInfo$p);
+	end;
+end;
+
+END;

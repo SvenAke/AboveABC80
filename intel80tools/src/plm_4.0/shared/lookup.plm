@@ -1,0 +1,59 @@
+Lookup: DO;
+$include(:f3:Lookup.ipx)
+
+Lookup: PROCEDURE(pstr) PUBLIC;
+	DECLARE pstr ADDRESS;
+	DECLARE (p, r, q, hval) ADDRESS;
+	DECLARE cmp BYTE;
+	DECLARE hashchains BASED hashChains$p(64) ADDRESS;
+	DECLARE len BASED pstr BYTE;
+
+	Hash:	PROCEDURE ADDRESS;
+		DECLARE p ADDRESS, len BYTE, Hash BYTE;
+		DECLARE cha BASED pstr(1) BYTE;
+		DECLARE ch BASED p BYTE;
+
+		p = pstr;
+		Hash = 0;
+		len = cha(0);
+		do while len <> 0;
+			Hash = ROL(Hash, 1) + ch;
+			p = p + 1;
+			len = len - 1;
+		end;
+		return Hash and 3FH;
+	end Hash;
+
+	hval = Hash;
+	curSymbol$p = hashChains(hval);
+	p = 0;
+	do while curSymbol$p <> 0;
+		if cursym.name(0) = len then
+		do;
+			cmp = Strncmp(.cursym.name(1), pstr + 1, len);
+			if cmp = 0 then
+			do;
+				if p <> 0 then
+				do;
+					q = cursym.link;
+					r = curSymbol$p;
+					curSymbol$p = p;
+					cursym.link = q;
+					curSymbol$p = r;
+					cursym.link = hashChains(hval);
+					hashChains(hval) = curSymbol$p;
+				end;
+				return;
+			end;
+		end;
+		p = curSymbol$p;
+		curSymbol$p = cursym.link;
+	end;
+	call Alloc(0, len + 1);
+	curSymbol$p = AllocSymbol(5 + len);
+	call movmem(len + 1, pstr, .cursym.name);
+	cursym.info$p = 0;
+	cursym.link = hashChains(hval);
+	hashChains(hval) = curSymbol$p;
+end Lookup;
+END;

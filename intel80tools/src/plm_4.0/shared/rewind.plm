@@ -1,0 +1,12 @@
+Rewind: DO;
+$include(:f3:Rewind.ipx)
+
+Rewind: PROCEDURE(file$p) public;
+	DECLARE file$p ADDRESS;
+	DECLARE file BASED file$p FILE$T;
+	DECLARE loc STRUCTURE(blk ADDRESS, byt ADDRESS);
+
+	loc.blk, loc.byt = 0;
+	call SeekF(file$p, .loc);
+end;
+end;

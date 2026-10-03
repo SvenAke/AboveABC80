@@ -1,0 +1,16 @@
+Fflush: DO;
+$include(:f3:Fflush.ipx)
+
+
+Fflush: PROCEDURE(fp) public;
+	DECLARE fp ADDRESS;
+	DECLARE file BASED fp FILE$T;
+
+	if file.curoff <> 0 then
+	do;
+		call WriteF(fp, file.buf$p, file.curoff);
+		file.curoff = 0;
+	end;
+end;
+
+END;

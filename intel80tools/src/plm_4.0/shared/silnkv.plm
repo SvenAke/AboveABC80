@@ -1,0 +1,11 @@
+silnkv: DO;
+$include(:f3:silnkv.ipx)
+
+SetLinkVal: PROCEDURE(val) PUBLIC;
+	declare val address;
+	info.ilink = val;
+end;
+
+
+END;
+

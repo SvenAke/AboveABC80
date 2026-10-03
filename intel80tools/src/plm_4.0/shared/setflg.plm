@@ -1,0 +1,14 @@
+SetFlag: DO;
+$include(:f3:setflg.ipx)
+
+SetFlag: PROCEDURE(base, flag) PUBLIC;
+	DECLARE base ADDRESS, flag BYTE;
+	DECLARE b BASED base(1) BYTE;
+	DECLARE off BYTE, bit BYTE;
+
+	off = tblOffsets(flag);
+	bit = tblBitFlags(flag);
+	b(off) = b(off) or bit;
+end;
+
+END;

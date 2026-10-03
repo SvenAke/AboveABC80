@@ -1,0 +1,20 @@
+package com.aboveware.abovecpm
+
+import android.util.Log
+
+actual fun platformLog(tag: String, message: String) {
+    try {
+        if (tag == "WTF") {
+            Log.e("ZXLog", "[$tag] $message")
+        } else {
+            Log.d("ZXLog", "[$tag] $message")
+        }
+    } catch (e: Exception) {
+        // Fallback for tests where android.util.Log is not mocked
+        if (tag == "WTF") {
+            System.err.println("[$tag] $message")
+        } else {
+            println("[$tag] $message")
+        }
+    }
+}

@@ -1,0 +1,254 @@
+plm2c: DO;
+$include(:f2:plm2c.ipx)
+
+
+Sub$6BD6: procedure public;
+	declare (bC259, bC25A) byte;
+
+
+
+	Sub$6C54: procedure(arg1b);
+	    declare arg1b byte;
+	    if arg1b <> 0 then
+		tx2Cnt(arg1b) = tx2Cnt(arg1b) + 1;  
+	end;
+
+
+
+	Sub$6C73: procedure(arg1b);
+	    declare arg1b byte;
+	    if OPTIMIZE  then
+		do while tx2qp - 1 > arg1b;
+		    arg1b = arg1b + 1;
+		    if tx2Type(arg1b) = curOp then
+		    do;
+			if tx2Left(arg1b) = tx2Left(tx2qp) then
+			do;
+			    if tx2Right(arg1b) = tx2Right(tx2qp) then
+			    do;
+				if tx2Aux1b(arg1b) = tx2Aux1b(tx2qp) then
+				do;
+				    if tx2op3(arg1b) <> 0ff00h then
+				    do;
+				    	tx2Type(tx2qp) = T2$OPTBACKREF;
+				    	tx2Left(tx2qp) = arg1b;
+				    	return;
+				    end;
+				end;
+			    end;
+			end;
+		    end;
+		end; 
+	    if (nodeControlFlags and 0c0h) = 0 then
+	    do;
+		call Sub$6C54(tx2Left(tx2qp));
+		call Sub$6C54(tx2Right(tx2qp));
+	    end;
+	    tx2op3(tx2qp) = tx2qp;
+	end;
+
+
+	Sub$6D52: procedure;
+	    declare boC25D byte;
+
+	 	Sub$6EAB: procedure(arg1w$p);
+		    declare arg1w$p address;
+		    declare arg1w based arg1w$p address;
+		    if arg1w <> 0 then
+		    do;
+			if tx2Type(arg1w) = T2$OPTBACKREF then 
+			    arg1w = tx2Left(arg1w);
+		    end;
+		end;
+
+	
+
+
+		Sub$6EE1: procedure(arg1b);
+		    declare arg1b byte;
+
+			Sub$6F20: procedure(arg1b);
+			    declare arg1b byte;
+			    declare i byte;
+			    if (i := tx2Type(arg1b)) = T2$BASED then
+				boC25D = 0ffh;
+			    else if i = T2$BYTEINDEX or i = T2$WORDINDEX then
+			    do;
+				if tx2Type(tx2Right(arg1b)) <> T2$NUMBER then
+				    boC25D = 0ffh;
+				else
+				do;
+				    curInfo$p = tx2Left(tx2Left(arg1b));
+				    if tx2Right(tx2Right(arg1b)) >= GetDimension or TestInfoFlag(F$AT) then
+					boC25D = 0ffh;
+				end;
+			    end;
+			    else if i = T2$VARIABLE then
+			    do;
+				curInfo$p = tx2Left(arg1b);
+				if TestInfoFlag(F$AT) then
+				    boC25D = 0ffh;
+			    end;
+			end Sub$6F20;
+
+	/* Sub$6EE1 */
+		    boC25D = 0;
+		    if tx2Type(arg1b) = T2$MEMBER then
+		    do;
+			call Sub$6F20(tx2Left(arg1b));
+			call Sub$6F20(tx2Right(arg1b));
+		    end;
+		    else
+			call Sub$6F20(arg1b);
+		end;
+
+
+
+
+
+		Sub$6FE2: procedure byte;
+		    declare bC263 byte;
+
+		    Sub$7018: procedure(arg1b);
+			declare arg1b byte;
+			if tx2Type(arg1b) <> T2$CALL then
+			    arg1b = tx2op3(arg1b);
+			if arg1b <> 0 then
+			    if arg1b > bC263 then
+				bC263 = arg1b;
+		    end;
+
+		    if boC25D then
+			bC263 = bC259;
+		    else
+			bC263 = bC25A;
+
+		    call Sub$7018(tx2Left(tx2qp));
+		    call Sub$7018(tx2Right(tx2qp));
+		    return bC263;
+		end;
+
+
+		Sub$7055: procedure;
+			Bsub$70BC: procedure(nodeLoc) byte;
+			    declare nodeLoc byte;
+			    call Sub$6EE1(tx2Left(nodeLoc));
+			    if boC25D then
+				return TRUE;
+                /* the code below appears to be wrong
+                   a more appropriate test would be
+
+                   tx2Type(tx2Left(nodeLoc)) == T2$VARIABLE
+
+                   as is the condition should be false except
+                   for complex statements with more than
+                   172 nodes at which point the behaviour
+                   is likely to be indeterminate and may
+                   access out of bound locations
+
+                   Note: The code only impacts re-entrant procs
+                   In the C-Port this is modified and in certain
+                   cases leads to better code, otherwise the code
+                   is the same
+                */
+
+			    if tx2Left(nodeLoc) = 0ach then
+			    do;
+				curInfo$p = tx2Left(tx2Left(nodeLoc));
+				if TestInfoFlag(F$AUTOMATIC) then
+				    return TRUE;
+			    end;
+			    return FALSE;
+			end;
+		/* Sub$7055 */
+		    if Bsub$70BC(tx2qp) then
+			bC25A = tx2qp;
+		    if tx2op3(tx2Left(bC259 := tx2qp)) <> 0ff00h then
+			tx2op3(tx2Left(tx2qp)) = tx2qp;
+		    call Sub$6C54(tx2Left(tx2qp));
+		    call Sub$6C54(tx2Right(tx2qp));
+		end;
+
+	    call Sub$6EAB(.tx2Left(tx2qp));
+	    call Sub$6EAB(.tx2Right(tx2qp));
+	    if curOp = T2$STORE then
+		call Sub$7055;
+	    else if procCallDepth > 0 then
+	    do;
+		call Sub$6C54(tx2Left(tx2qp));
+		call Sub$6C54(tx2Right(tx2qp));
+		if curOp = T2$CALL then
+		    procCallDepth = procCallDepth - 1;  
+		else if curOp = T2$MOVE or curOp = T2$CALLVAR then
+		do;
+		    procCallDepth = procCallDepth - 1;  
+		    call Sub$6EAB(.tx2op3(tx2qp));
+		    call Sub$6C54(tx2op3(tx2qp));
+		end;
+		else
+		    tx2op3(tx2qp) = 0ff00h;
+	    end;
+	    else if curOp = T2$OUTPUT or curOp = T2$TIME then
+	    do;
+		call Sub$6C54(tx2Left(tx2qp));
+		call Sub$6C54(tx2Right(tx2qp));
+	    end;
+	    else
+	    do;
+		tx2op3(tx2qp) = 0;
+		call Sub$6EE1(tx2qp);
+		call Sub$6C73(Sub$6FE2);
+		if curOp = T2$JMPFALSE then
+		do;
+		    if tx2Type(tx2qp - 1) = T2$NOT then
+		    do;
+			boC20F = TRUE;
+			tx2Right(tx2qp) = tx2Left(tx2qp - 1);
+			call Sub$56A0(tx2qp, tx2qp - 1);
+			tx2Type(tx2qp) = T2$SEMICOLON;
+		    end;
+		end;
+	    end;
+	end;
+
+
+
+
+
+
+	Sub$7111: procedure;
+	    if procCallDepth > 0 then
+		tx2op3(tx2qp) = 0ff00h;
+	    else
+	    do;
+		tx2op3(tx2qp) = 0;
+		if curOp = T2$VARIABLE then
+		do;
+		    curInfo$p = tx2Left(tx2qp);
+		    if TestInfoFlag(F$AT) then
+			call Sub$6C73(bC259);
+		    else
+			call Sub$6C73(bC25A);
+		end;
+		else
+		    call Sub$6C73(bC25A);
+	    end;
+	end;
+
+/* Sub$6BD6 */
+	bC259 = 4;
+	bC25A = 4;
+	do tx2qp = 4 to bC1BF - 1;
+		tx2Cnt(tx2qp) = 0;
+		curOp = tx2Type(tx2qp);
+		nodeControlFlags = nodeControlMap(curOp);
+		if (nodeControlFlags and 0c0h) = 0 then
+			call Sub$6D52;
+		else if (nodeControlFlags and 0c0h) = 40h then
+			call Sub$7111;
+		if curOp = T2$BEGCALL or curOp = T2$BEGMOVE then
+			procCallDepth = procCallDepth + 1;  
+
+	end;
+end;
+END;

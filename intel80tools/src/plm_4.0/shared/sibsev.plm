@@ -1,0 +1,10 @@
+sibsev: DO;
+$include(:f3:sibsev.ipx)
+
+SetBaseVal: procedure(val) public;
+	declare val address;
+	info.baseoff = val;
+end;
+
+
+END;

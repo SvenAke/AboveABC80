@@ -1,0 +1,10 @@
+giscope: DO;
+$include(:f3:giscop.ipx)
+
+GetScope: PROCEDURE address PUBLIC;
+	return info.scope;
+end;
+
+
+END;
+

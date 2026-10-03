@@ -1,0 +1,17 @@
+SeekF: DO;
+$include(:f3:SeekF.ipx)
+
+SeekF: PROCEDURE(file$p, loc$p) public;
+	DECLARE (file$p, loc$p) ADDRESS;
+	DECLARE file BASED file$p FILE$T;
+	DECLARE loc BASED loc$p STRUCTURE(blk ADDRESS, byt ADDRESS);
+	DECLARE status ADDRESS;
+
+	call Seek(file.aftn, 2, .loc.blk, .loc.byt, .status);
+	if status <> 0 then
+		call FatlIO(file$p, status);
+end;
+
+
+
+END;

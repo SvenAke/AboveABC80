@@ -1,0 +1,256 @@
+PLMA: DO;
+$include(:f2:plma.ipx)
+
+DECLARE
+	signonMsg(*) BYTE DATA(CR, LF, 'ISIS-II PL/M-80 COMPILER '),
+	noMemMsg(*) BYTE DATA('NOT ENOUGH MEMORY FOR A COMPILATION'),
+	a$ixi(*) BYTE DATA('.IXI'),
+	a$obj(*) BYTE DATA('.OBJ'),
+	a$lst(*) BYTE DATA('.LST'),
+	plmtx1(*) BYTE DATA(':F1:PLMTX1.TMP '),
+	plmtx2(*) BYTE DATA(':F1:PLMTX2.TMP '),
+	plmat(*) BYTE DATA(':F1:PLMAT.TMP '),
+	plmnms(*) BYTE DATA(':F1:PLMNMS.TMP '),
+	plmxrf(*) BYTE DATA(':F1:PLMXRF.TMP '),
+	aInvocationComm(*) BYTE DATA('INVOCATION COMMAND DOES NOT END WITH <CR><LF>'),
+	aIncorrectDevice(*) BYTE DATA('INCORRECT DEVICE SPEC'),
+	aSourceFileNotDisk(*) BYTE DATA('SOURCE FILE NOT A DISKETTE FILE'),
+	aSourceFileName(*) BYTE DATA('SOURCE FILE NAME INCORRECT'),
+	aSourceFileBadExt(*) BYTE DATA('SOURCE FILE EXTENSION INCORRECT'),
+	aIllegalCommand(*) BYTE DATA('ILLEGAL COMMAND TAIL SYNTAX');
+
+DECLARE
+	cmdText$p ADDRESS PUBLIC,
+	cmdch BASED cmdText$p BYTE;
+
+
+SignOnAndGetSourceName: PROCEDURE PUBLIC;
+
+	LocalRescan: procedure (conn, status$p);
+	    declare (conn, status$p) address;
+		call ISIS(IRESCAN, .conn);
+	end LocalRescan;
+
+
+	SkipSpace: PROCEDURE;
+		do while cmdch = ' ' or cmdch = '&';
+			if cmdch = ' ' then
+				cmdText$p = cmdText$p + 1;
+			else if 0 <> cmd.link then
+			do;
+				cmdLine$p = cmd.link;
+				cmdText$p = cmdLine$p + 3;
+			end;
+		end;
+	end SkipSpace;
+
+
+	TestToken: PROCEDURE(str, len) bool;
+		DECLARE str ADDRESS, len BYTE;
+		DECLARE p ADDRESS;
+		DECLARE strch BASED str BYTE;
+
+		p = cmdText$p;
+		do while len <> 0;
+			if (cmdch and 5FH) <> strch then
+			do;
+				cmdText$p = p;
+				return false;
+			end;
+			cmdText$p = cmdText$p + 1;
+			str = str + 1;
+			len = len - 1;
+		end;
+		return true;
+	end TestToken;
+
+
+	SkipAlphaNum: PROCEDURE;
+		
+		do while 'A' <= cmdch and cmdch <= 'Z' or 'a' <= cmdch and cmdch <= 'z'
+					or '0' <= cmdch and cmdch <= '9';
+			cmdText$p = cmdText$p + 1;
+		end;
+	end SkipAlphaNum;
+
+
+
+	GetCmdLine: PROCEDURE;
+		DECLARE (actual, status) ADDRESS;
+		DECLARE (i, inQuote) BYTE;
+
+		call LocalRescan(1, .status);
+		if status <> 0 then
+			call FatlIO(.conFile, status);
+		startCmdLine$p = 0;
+		cmdLine$p = topMem;
+
+		loop: do;
+			call Readf(.conFile, .ioBuffer, 128, .actual);
+			if ioBuffer(actual - 1) <> LF or ioBuffer(actual - 2) <> CR then
+				call Fatal(.aInvocationComm, length(aInvocationComm));
+			topMem = cmdLine$p - actual - 3;
+			if startCmdLine$p = 0 then
+				startCmdLine$p = topMem;
+			else
+				cmd.link = topMem;
+			cmdLine$p = topMem;
+			cmd.pstr(0) = actual;
+			call movmem(actual, .ioBuffer, .cmd.pstr(1));
+			inQuote = 0;
+			do i = 0 to actual - 1;
+				if ioBuffer(i) = QUOTE then
+					inQuote = not inQuote;
+				else if ioBuffer(i) = '&' then
+					if not inQuote then
+						goto extend;
+			end;
+			cmd.link = 0;
+			cmdLine$p = startCmdLine$p;
+			topMem = topMem - 1;
+			return;
+		extend:
+			call PrintStr(.('**'), 2);
+			goto loop;
+		end;
+	end GetCmdLine;
+
+	ParseInvokeName: PROCEDURE;
+		DECLARE (p, start$p, len) ADDRESS;
+		DECLARE ch BASED cmdText$p BYTE;
+
+		call SkipSpace;
+		if TestToken(.('DEBUG'), 5) then
+			debugFlag = 0FFH;
+		else
+			debugFlag = 0;
+		call SkipSpace;
+		start$p = cmdText$p;
+		if ch = ':' then
+			cmdText$p = cmdText$p + 4;
+		call SkipAlphaNum;
+		if (len := cmdText$p - start$p) > 10 then
+			len = 10;
+		do p = .overlay1 to .overlay5 by FILE$NAME$LEN;
+			call movmem(len, start$p, p);
+		end;
+		call movmem(len, start$p, .invokeName);
+		call movmem(len, start$p, .overlay6);
+		do p = .overlay1 to .overlay5 by FILE$NAME$LEN;
+			call movmem(5, p + 10, p + len);
+		end;
+		call movmem(5, .ov0, .invokeName(len));
+		call movmem(5, .ov6, .overlay6 + len);
+	end ParseInvokeName;
+
+
+	ParseSrcFileName: PROCEDURE;
+		DECLARE cmdText BASED cmdText$p(1) BYTE;
+		DECLARE fullName ADDRESS;
+		DECLARE fileName ADDRESS;
+		DECLARE nameLen ADDRESS;
+
+		do while  cmdch <> ' ' and cmdch <> CR and cmdch <> '&';
+			cmdText$p = cmdText$p + 1;
+		end;
+		call SkipSpace;
+		fullName = cmdText$p;
+		if cmdch = ':' then
+		do;
+			if cmdText(3) <> ':' then
+				call Fatal(.aIncorrectDevice, length(aIncorrectDevice));
+			if cmdText(1) >= 'a' then
+				cmdText(1) = cmdText(1) and 05FH;
+			if cmdText(1) <> 'F' then
+				call Fatal(.aSourceFileNotDisk, length(aSourceFileNotDisk));
+			cmdText$p = cmdText$p + 4;
+		end;
+		fileName = cmdText$p;
+		call SkipAlphaNum;
+		if (nameLen := cmdText$p - fileName) = 0 or nameLen > 6 then
+			call Fatal(.aSourceFileName, length(aSourceFileName));
+		srcStemLen = cmdText$p - fullname;
+		call FILLX(10, .srcStemName, double(' '));
+		call movmem(srcStemLen, fullname, .srcStemName);
+		if cmdch = '.' then
+		do;
+			filename = (cmdText$p := cmdText$p + 1);
+			call SkipAlphaNum;
+			if (namelen := cmdText$p - filename) = 0 or nameLen > 3 then
+				call Fatal(.aSourceFileBadExt, length(aSourceFileBadExt));
+		end;
+		namelen = cmdText$p - fullname;
+		srcFileIdx = 0;
+		call FILLX(16, .srcFileTable, double(' '));
+		call movmem(namelen, fullname, .srcFileTable);
+		call FILLX(4, .srcFileTable(8), double(0));
+		call SkipSpace;
+		if cmdch = '$' then
+			call Fatal(.aIllegalCommand, length(aIllegalCommand));
+		if cmdch = CR then
+			offNxtCmdChM1 = 0;
+		else
+			offNxtCmdChM1 = cmdText$p - cmdLine$p - 1;
+	end ParseSrcFileName;
+
+	InitFilesAndDefaults: PROCEDURE;
+		LEFTMARGIN = 1;
+		call FILLX(15, .ixiFileName, double(' '));
+		call movmem(srcStemLen, .srcStemName, .ixiFileName);
+		call movmem(4, .a$ixi, .ixiFileName(srcStemLen));
+		call InitF(.ixiFile, .('IXREF '), .ixiFileName);
+		objBlk, objByte = 0;
+		call FILLX(15, .objFileName, double(' '));	
+		call movmem(srcStemLen, .srcStemName, .objFileName);
+		call movmem(4, .a$obj, .objFileName(srcStemLen));
+		call InitF(.objFile, .('OBJECT'), .objFileName);
+		call FILLX(15, .lstFileName, double(' '));	
+		call movmem(srcStemLen, .srcStemName, .lstFileName);
+		call movmem(4, .a$lst, .lstFileName(srcStemLen));
+		call InitF(.lstFil, .('LIST '), .lstFileName);
+		call InitF(.tx1File, .('UT1 '), .plmtx1);
+		call InitF(.tx2File, .('UT2 '), .plmtx2);
+		call InitF(.atFile, .('AT  '), .plmat);
+		call InitF(.nmsFile, .('NAMES '), .plmnms);
+		call InitF(.xrfFile, .('XREF '), .plmxrf);
+		IXREF = false;
+		IXREFSET = false;
+		PRINT = true;
+		PRINTSet = true;
+		XREF = false;
+		SYMBOLS = false;
+		DEBUG = false;
+		PAGING = true;
+		OBJECT = true;
+		OBJECTSet = true;
+		OPTIMIZE = true;
+		call SetDate(.(' '), 1);
+		call SetPageLen(57);
+		call SetMarkerInfo(20, '-', 21);
+		call SetPageNo(0);
+		call SetMarginAndTabW(0FFH, 4);
+		call SetTitle(.(' '), 1);
+		call SetPageWidth(120);
+	end InitFilesAndDefaults;
+
+
+	call movmem(4, .verNo, .version);
+	call InitF(.conFile, .('CONSOL'), .(':CI: '));
+	call OpenF(.confile, 1);
+	topMem = MEMCHK - 12;
+	if topMem < 0C000H then
+		call Fatal(.noMemMsg, length(noMemMsg));
+	call GetCmdLine;
+	call PrintStr(.signonMsg, length(signonMsg));
+	call PrintStr(.version, 4);
+	call PrintStr(.(CR, LF), 2);
+	cmdText$p = cmdLine$p + 3;
+	blkSize1 = topMem - blkSize1 - 256;
+	blkSize2 = topMem - blkSize2 - 256;
+	call ParseInvokeName;
+	call ParseSrcFileName;
+	call InitFilesAndDefaults;
+end SignOnAndGetSourceName;
+
+END;
+

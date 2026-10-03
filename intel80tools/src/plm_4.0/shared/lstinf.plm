@@ -1,0 +1,89 @@
+lstInfo: DO;
+$include(:f3:lstinf.ipx)
+
+LstModuleInfo: procedure public;
+	declare (p, q, r) address;
+	p = 0;
+	do q = 1 to procCnt;
+		curInfo$p = botInfo + procInfo(q);
+		r = GetBaseVal;
+		if r > p then
+			p = r;
+	end;
+	call SetSkipLst(3);
+	call Xputstr2cLst(.('MODULE INFORMATION:', 0), 0);
+	call NewLineLst;
+	call SetSkipLst(1);
+	call TabLst(5);
+	call Xputstr2cLst(.('CODE AREA SIZE     = ', 0), 0);
+	call XnumLst(csegSize, 0FCh, 0F0h);
+	call TabLst(2);
+	call XnumLst(csegSize, 5, 0F6h);
+	call NewLineLst;
+	call TabLst(5);
+	call Xputstr2cLst(.('VARIABLE AREA SIZE = ', 0), 0);
+	call XnumLst(dsegSize, 0FCh, 0F0h);
+	call TabLst(2);
+	call XnumLst(dsegSize, 5, 0F6h);
+	call NewLineLst;
+	call TabLst(5);
+	call Xputstr2cLst(.('MAXIMUM STACK SIZE = ', 0), 0);
+	call XnumLst(p, 0FCh, 0F0h);
+	call TabLst(2);
+	call XnumLst(p, 5, 0F6h);
+	call NewLineLst;
+	call TabLst(5);
+	call XnumLst(linesRead, 0, 0Ah);
+	call Xputstr2cLst(.(' LINES READ', 0), 0);
+	call NewLineLst;
+	call TabLst(5);
+	call XnumLst(programErrCnt, 0, 0Ah);
+	call Xputstr2cLst(.(' PROGRAM ERROR', 0), 0);
+	if programErrCnt <> 1 then
+		call Xputstr2cLst(.('S', 0), 0);
+
+	if CODE then
+	do;
+		declare cursym based curSymbol$p SYM$ST;
+		declare (savedInfo, savedSym) address;
+
+		savedInfo = curInfo$p;
+		savedSym = curSymbol$p;
+
+		call NewLineLst;
+		call Xputstr2cLst(.('; SYMBOL TABLE', 0), 0);
+		call NewLineLst;
+
+		curInfo$p = botInfo + 2;
+		do while curInfo$p <> 0;
+			r = GetType;
+			if r >= LABEL$T and r <= PROC$T then
+			do;
+				curSymbol$p = GetSymbol;
+				if curSymbol$p <> 0 then
+				do;
+					call putLst('?');
+					call XwrnstrLst(.cursym.name(1), cursym.name(0));
+					call TabLst(-33);
+					call Xputstr2cLst(.('EQU     ', 0), 0);
+					call XnumLst(GetLinkVal, 0, 10h);
+					call putLst('H');
+					call NewLineLst;
+				end;
+			end;
+			call AdvNxtInfo;
+		end;
+
+		curInfo$p = savedInfo;
+		curSymbol$p = savedSym;
+	end;
+
+	call NewLineLst;
+	call SetSkipLst(1);
+	call Xputstr2cLst(.('END OF PL/M-80 COMPILATION', 0), 0);
+	call NewLineLst;
+	call FlushLstBuf;
+	call CloseF(.lstFil);
+	lfOpen = false;
+end;
+end;

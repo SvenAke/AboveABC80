@@ -1,0 +1,93 @@
+/* common source for lstsp[456].plm */
+
+FlushLstBuf: procedure public;
+	if lChCnt <> 0 then
+	do;
+		if not lfOpen then
+		do;
+			call OpenF(.lstFil, 2);
+			lfOpen = true;
+		end;
+		call WriteF(.lstFil, lbuf$p, lChCnt);
+		lChCnt = 0;
+	end;
+end;
+
+NewLineLst: procedure public;
+	if col = 0 then
+		if linlft = 0 then
+			call NewPgl;
+	call Wr2cLst(0d0ah);
+	linlft = linlft - 1;
+	col = 0;
+end;
+
+
+TabLst: procedure(arg1b) public;
+	declare arg1b byte;
+	if arg1b > 7fh then
+	do;
+		arg1b = -arg1b;
+		if col >= arg1b then
+			call NewLineLst;
+		arg1b = arg1b - col - 1;
+	end;
+	do while arg1b <> 0;
+		call putLst(' ');
+		arg1b = arg1b - 1;
+	end;
+end;
+
+
+NewPageNextChLst: procedure public;
+	linlft = 0;
+end;
+
+SetMarkerInfo: procedure(arg1b, arg2b, arg3b) public;
+	declare (arg1b, arg2b, arg3b) byte;
+	wrapMarkerCol = arg1b;
+	wrapMarker = arg2b;
+	wrapTextCol = arg3b;
+end;
+
+$if OVL<>5
+SetStartAndTabW: procedure(arg1b, arg2b) public;
+	declare (arg1b, arg2b) byte;
+	margin = arg1b - 1;
+	tWidth = arg2b;
+end;
+$endif
+
+SetSkipLst: procedure(arg1b) public;
+	declare arg1b byte;
+	skpCnt = arg1b;
+end;
+
+
+Xputstr2cLst: procedure(str, endch) public;
+	declare str address, endch byte,
+		ch based str byte;
+	do while ch <> endch;
+		call putLst(ch);
+		str = str + 1;
+	end;
+end;
+
+XwrnstrLst: procedure(str, cnt) public;
+	declare str address, cnt byte,
+		ch based str byte;
+	do while cnt <> 0;
+		call putLst(ch);
+		str=  str + 1;
+		cnt = cnt - 1;
+	end;
+end;
+
+
+XnumLst: procedure(num, width, radix) public;
+	declare num address, (width, radix) byte;
+	declare i byte, buf(7) byte;
+
+	i = Num2Asc(num, width, radix, .buf);
+	call XwrnstrLst(.buf, i);
+end;

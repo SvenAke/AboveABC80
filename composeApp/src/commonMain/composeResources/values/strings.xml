@@ -1,0 +1,8 @@
+<resources>
+    <string name="download">Download</string>
+    <string name="download_files">Download Files</string>
+    <string name="menu">Menu</string>
+    <string name="zx_spectrum_screen">CPM Screen</string>
+    <string name="cpu_label">CPU:</string>
+    <string name="fps_label">FPS:</string>
+</resources>

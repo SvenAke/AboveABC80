@@ -1,0 +1,33 @@
+page: DO;
+$include(:f2:page1.ipx)
+
+NewPgl: procedure public;
+	declare (i, j, k, m) byte,
+		pnum(3) byte;
+
+	if not PAGING then
+		return;
+	call wrcLst(0ch);
+	linlft = PAGELEN;
+	pageNo = pageNo + 1;
+	i = Num2Asc(pageNo, 3, 10, .pnum);
+	j = PWIDTH - 41;
+	if j < TITLELEN then
+		m = j;
+	else
+		m = TITLELEN;
+	call WrnstrLst(.Plm80Compiler, 20);
+	call WrnstrLst(.TITLE, m);
+	k = j - m + 2;
+	do while k <> 0;
+		call wrcLst(' ');
+		k = k - 1;
+	end;
+	call WrnstrLst(.DATE, 9);
+	call WrnstrLst(.('  PAGE '), 7);
+	call WrnstrLst(.pnum, 3);
+	call WrnstrLst(.(cr, lf, lf, lf), 4);
+	skpCnt = 0;
+end;
+
+end;

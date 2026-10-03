@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="vt320_one_half_key_width">3%p</dimen>
+    <dimen name="vt320_key_width">6%p</dimen>
+    <dimen name="vt320_one_and_a_half_key_width">9%p</dimen>
+    <dimen name="vt320_one_and_a_quarter_key_width">7%p</dimen>
+    <dimen name="vt320_double_key_width">12%p</dimen>
+    <dimen name="vt320_key_height">9%p</dimen>
+    <dimen name="vt320_half_key_height">4.5%p</dimen>
+    <dimen name="vt320_space_bar_size">54%p</dimen>
+    <dimen name="vt320_led_spacing">2.8%p</dimen>
+    <dimen name="vt320_led_width">3%p</dimen>
+</resources>

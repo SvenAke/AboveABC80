@@ -1,0 +1,20 @@
+siparo: DO;
+$include(:f3:siparo.ipx)
+
+SetParentOffset: procedure(parent) public;
+	declare parent address;
+	if info.type = STRUCT$T then
+	do;
+		info.parent = parent;
+		return;
+	end;
+	if parent = 0 then
+		info.parent = 0;
+	else
+		info.parent = parent - botInfo;
+end;
+
+
+
+END;
+

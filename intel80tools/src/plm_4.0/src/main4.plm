@@ -1,0 +1,168 @@
+main4: DO;
+$include(:f2:main4.ipx)
+
+declare copyright(*) byte data('(C) 1976, 1977, 1982 INTEL CORP'),
+	objEOF(*) byte data(0eh, 1, 0, 0f1h),
+	errCont label public;
+
+
+
+	Sub$3FC8: procedure;
+		declare cmd BASED cmdLine$p STRUCTURE(link ADDRESS, pstr(1) BYTE);
+		if PRINT then
+		do;
+			call NewPageNextChLst;
+			call Xputstr2cLst(.('ISIS-II PL/M-80 ',0), 0);
+			call XwrnstrLst(.version, 4);
+			call Xputstr2cLst(.(' COMPILATION OF MODULE ',0), 0);
+			curInfo$p = botInfo + procInfo(1);
+			curSymbol$p = GetSymbol;
+			if curSymbol$p <> 0 then
+				call XwrnstrLst(.cursym.name(1), cursym.name(0));
+			call NewLineLst;
+			if OBJECT then
+			do; 
+				call Xputstr2cLst(.('OBJECT MODULE PLACED IN ',0), 0);
+				call Xputstr2cLst(.objFile.fNam, ' ');
+			end;
+			else
+				call Xputstr2cLst(.('NO OBJECT MODULE REQUESTED',0), 0);
+
+			call NewLineLst;
+			if w382A = 1 then
+			do;
+				call Xputstr2cLst(.('COMPILER INVOKED BY:  ',0), 0);
+				cmdLine$p = startCmdLine$p;
+				do while cmdLine$p <> 0;
+					call TabLst(-23);
+					call Xputstr2cLst(.cmd.pstr(1), cr);
+					cmdLine$p = cmd.link;
+				end;
+				call NewLineLst;
+			end;
+		end;
+	end;
+
+	Sub$408B: procedure;
+		if PRINT then
+		do; 
+			lBuf$p = .lstbuf;
+			lBufSz = 639;
+		end;
+
+		call Sub$3FC8;
+		if .MEMORY + 256 > botMem then
+			call Fatal(.('COMPILER ERROR: INSUFFICIENT MEMORY FOR FINAL ASSEMBLY'), 54);
+		stmtNo = 0;
+		if PRINT then
+		do;
+			srcFileIdx = 0;
+			call InitF(.srcFil, .('SOURCE'), .srcFileTable(srcFileIdx));
+			call OpenF(.srcFil, 1);
+		end;
+
+		call CreatF(.tx1File, .tx1buf, 640, 1);
+		call CreatF(.objFile, .objbuf, 640, 2);
+		curInfo$p = procInfo(1) + botInfo;
+		baseAddr, rec6$4.addr = GetLinkVal;
+		call SetSkipLst(3);
+		call SetMarkerInfo(11, '-', 15);
+		if fatalErrorCode > 0 then
+		do;
+            errData.stmt, errData.info = 0;
+			errData.num = fatalErrorCode;
+			call EmitError;
+			call SetSkipLst(2);
+		end;
+		listing = PRINT;
+		listOff = false;
+		codeOn = false;
+		programErrCnt, linesRead = 0;
+	end;
+
+
+
+	Sub$4162: procedure;
+		declare helperAddr based helperAddr$p(1) address;
+
+		if not standAlone then
+			return;
+		do helperModId = 0 to 45;
+			helperId = b42D6(helperModId);
+			endHelperId = helperId + b42A8(helperModId);
+			do while helperId < endHelperId;
+				if helperAddr(helperId) <> 0 then
+				do;
+					baseAddr = helperAddr(helperId);
+					b969C = b4304(helperModId);
+					b969D = nodeTypeToHelperGroup(b969C);
+					call Sub$5FE7(w4919(helperId), b4A03(helperId));
+					goto break;
+				end;
+				helperId = helperId + 1;
+			end;
+		break:
+		end;
+	end Sub$4162;
+
+	Sub$4208: procedure;
+		if haveModule then
+		do; 
+			rec4.subtype = 1;
+			curInfo$p = procInfo(1) + botInfo;
+			rec4.addr = GetLinkVal;
+		end;
+		else
+		do;
+			rec4.subtype = 0;
+			rec4.addr = 0;
+		end;
+		call WriteRec(.rec4.type, 0);
+	end;
+
+
+	Sub$423C: procedure;
+		linesRead = w812F;
+		call Sub$4208;
+		call CloseF(.tx1File);
+		if OBJECT then
+		do;
+			call fwrite(.objFile, .objEOF, 4);
+			call Fflush(.objFile);
+			call CloseF(.objFile);
+		end;
+
+		if PRINT then
+		do;
+			call TellF(.srcFil, .srcFileTable(srcFileIdx + 8));
+			call Backup(.srcFileTable(srcFileIdx + 8), offLastCh - offCurCh);
+			call CloseF(.srcFil);
+			call FlushLstBuf;
+		end;
+
+		call DeletF(.tx1File);
+	end Sub$423C;
+
+
+	call Sub$408B;
+
+	do while bo812B;
+		call Sub$54BA;
+	end;
+	call Sub$4162;
+	call FlushRecs;
+	call LinePrefix;
+errCont:
+	call Sub$423C;
+	if IXREF then
+		call Chain(.overlay5);
+	if PRINT then
+	do;
+		if XREF or SYMBOLS then
+			call Chain(.overlay5);
+		else
+			call LstModuleInfo;
+	end;
+	call EndCompile;
+	call Exit;
+end;

@@ -1,0 +1,13 @@
+allocs: DO;
+$include(:f3:allocs.ipx)
+
+AllocSymbol: PROCEDURE(spc) ADDRESS PUBLIC;
+	DECLARE spc ADDRESS;
+	DECLARE tmp ADDRESS;
+
+	if (tmp := botSymbol - spc) < topInfo then
+		call FatalError(ERR83);
+	return (botSymbol := tmp);
+end AllocSymbol;
+
+end;

@@ -1,0 +1,12 @@
+sieid: DO;
+$include(:f3:sieid.ipx)
+
+SetExternId: PROCEDURE(id) PUBLIC;
+	declare id byte;
+	info.extId = id;;	
+end;
+
+
+
+END;
+

@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <attr name="keyCustomBitmap" format="reference" />
+    <attr name="keyBackground" format="reference" />
+    <attr name="keyLabelUnderline" format="boolean" />
+    <attr name="secondKeyLabelUnderline" format="boolean" />
+    <attr name="thirdKeyLabelUnderline" format="boolean" />
+    <attr name="forthKeyLabelUnderline" format="boolean" />
+    <attr name="fifthKeyLabelUnderline" format="boolean" />
+    <attr name="sixthKeyLabelUnderline" format="boolean" />
+
+    <declare-styleable name="KeyboardView">
+        <attr name="keyboardViewString" format="string" />
+        <attr name="keyboardViewDimension" format="dimension" />
+        <attr name="keyboardViewColor" format="color" />
+        <attr name="keyboardViewDrawable" format="color|reference" />
+        <attr name="backgroundDimAmount" format="integer" />
+        <!-- Default KeyboardView style.-->
+        <attr name="keyboardViewStyle" format="reference" />
+        <!-- Image for the key. This image needs to be a StateListDrawable, with the following
+             possible states: normal, pressed, checkable, checkable+pressed, checkable+checked,
+             checkable+checked+pressed. -->
+        <attr name="defaultKeyBackground" format="reference" />
+        <!-- Size of the text for character keys.-->
+        <attr name="keyTextSize" format="dimension" />
+        <!-- Size of the text for custom keys with some text and no icon. -->
+        <attr name="labelTextSize" format="dimension" />
+        <!-- Color to use for the label in a key. -->
+        <attr name="keyTextColor" format="color" />
+        <!-- Layout resource for key press feedback. -->
+        <attr name="keyPreviewLayout" format="reference" />
+        <!-- Vertical offset of the key press feedback from the key. -->
+        <attr name="keyPreviewOffset" format="dimension" />
+        <!-- Height of the key press feedback popup. -->
+        <attr name="keyPreviewHeight" format="dimension" />
+        <!-- Amount to offset the touch Y coordinate by, for bias correction. -->
+        <attr name="verticalCorrection" format="dimension" />
+        <!-- Layout resource for popup keyboards. -->
+        <attr name="popupLayout" format="reference" />
+        <!--<attr name="shadowColor" />-->
+        <!--<attr name="shadowRadius" />-->
+    </declare-styleable>
+
+    <declare-styleable name="KeyboardViewPreviewState">
+        <!-- State for {@link android.inputmethodservice.KeyboardView}
+                key preview background. -->
+        <attr name="state_long_pressable" format="boolean" />
+    </declare-styleable>
+
+    <declare-styleable name="Keyboard">
+        <!-- Default background for all keys. -->
+        <attr name="keyBackground" />
+        <attr name="keyLabelColor" />
+        <attr name="secondKeyLabelColor" />
+        <attr name="thirdKeyLabelColor" />
+        <attr name="forthKeyLabelColor" />
+        <attr name="fifthKeyLabelColor" />
+        <attr name="sixthKeyLabelColor" />
+        <attr name="keyLabelUnderline" />
+        <attr name="secondKeyLabelUnderline" />
+        <attr name="thirdKeyLabelUnderline" />
+        <attr name="forthKeyLabelUnderline" />
+        <attr name="fifthKeyLabelUnderline" />
+        <attr name="sixthKeyLabelUnderline" />
+        <!-- Default width of a key, in pixels or percentage of display width. -->
+        <attr name="keyWidth" format="dimension|fraction" />
+        <!-- Default height of a key, in pixels or percentage of display width. -->
+        <attr name="keyHeight" format="dimension|fraction" />
+        <!-- Default horizontal gap between keys. -->
+        <attr name="horizontalGap" format="dimension|fraction" />
+        <!-- Default vertical gap between rows of keys. -->
+        <attr name="verticalGap" format="dimension|fraction" />
+    </declare-styleable>
+
+    <declare-styleable name="Keyboard_Row">
+        <!-- Row edge flags. -->
+        <attr name="rowEdgeFlags">
+            <!-- Row is anchored to the top of the keyboard. -->
+            <flag name="top" value="4" />
+            <!-- Row is anchored to the bottom of the keyboard. -->
+            <flag name="bottom" value="8" />
+        </attr>
+        <!-- Mode of the keyboard. If the mode doesn't match the
+             requested keyboard mode, the row will be skipped. -->
+        <attr name="keyboardMode" format="reference" />
+        <!-- Initial indent of the row as a fraction of the key width or dimension. -->
+        <attr name="initialIndent" format="dimension|fraction" />
+        <attr name="verticalRowGap" format="dimension|fraction" />
+
+    </declare-styleable>
+
+    <declare-styleable name="Keyboard_Key">
+        <!-- Image for the key. This image needs to be a StateListDrawable, with the following
+             possible states: normal, pressed, checkable, checkable+pressed, checkable+checked,
+             checkable+checked+pressed. -->
+        <attr name="keyBackground" />
+        <!-- Custom bitmap for the key with 25/50/25 stretch logic. -->
+        <attr name="keyCustomBitmap" />
+        <!-- The Unicode value or comma-separated values that this key outputs. -->
+        <attr name="codes" format="string" />
+        <!-- The XML keyboard layout of any popup keyboard. -->
+        <attr name="keyEdgeFlags">
+            <!-- Key is anchored to the left of the keyboard. -->
+            <flag name="left" value="1" />
+            <!-- Key is anchored to the right of the keyboard. -->
+            <flag name="right" value="2" />
+        </attr>
+        <!-- Whether this is a modifier key such as Alt or Shift. -->
+        <attr name="isModifier" format="boolean" />
+        <!-- Whether this is a toggle key that is automatically released when any key is pressed. -->
+        <attr name="isSticky" format="boolean" />
+        <!-- Whether this is a toggle key. -->
+        <attr name="isVerySticky" format="boolean" />
+        <!-- Whether long-pressing on this key will make it repeat. -->
+        <attr name="isRepeatable" format="boolean" />
+        <!-- The icon to show in the popup preview. -->
+        <attr name="iconPreview" format="reference" />
+        <!-- The label to display on the key. -->
+        <attr name="keyLabel" format="string" />
+        <attr name="keyLabelColor" format="color" />
+        <!-- The second label to display on the key. -->
+        <attr name="secondKeyLabel" format="string" />
+        <attr name="secondKeyLabelColor" format="color" />
+        <attr name="secondKeyIcon" format="reference" />
+        <!-- The third label to display on the key. -->
+        <attr name="thirdKeyLabel" format="string" />
+        <attr name="thirdKeyLabelColor" format="color" />
+        <!-- The forth label to display on the key. -->
+        <attr name="forthKeyLabel" format="string" />
+        <attr name="forthKeyLabelColor" format="color" />
+        <attr name="forthKeyIcon" format="reference" />
+        <!-- The fifth label to display on the key. -->
+        <attr name="fifthKeyLabel" format="string" />
+        <attr name="fifthKeyLabelColor" format="color" />
+        <!-- The sixth label to display on the key. -->
+        <attr name="sixthKeyLabel" format="string" />
+        <attr name="sixthKeyLabelColor" format="color" />
+        <attr name="keyLabelUnderline" />
+        <attr name="secondKeyLabelUnderline" />
+        <attr name="thirdKeyLabelUnderline" />
+        <attr name="forthKeyLabelUnderline" />
+        <attr name="fifthKeyLabelUnderline" />
+        <attr name="sixthKeyLabelUnderline" />
+        <!-- The icon to display on the key instead of the label. -->
+        <attr name="keyIcon" format="reference" />
+        <!-- Mode of the keyboard. If the mode doesn't match the
+             requested keyboard mode, the key will be skipped. -->
+        <attr name="keyboardMode" />
+        <attr name="keyLabelHorizontalAlignment">
+            <!-- Key label is anchored to the left of the keyboard. -->
+            <flag name="left" value="0" />
+            <!-- Key label is anchored to the center of the keyboard. -->
+            <flag name="center" value="1" />
+            <!-- Key label is anchored to the right of the keyboard. -->
+            <flag name="right" value="2" />
+        </attr>
+        <attr name="keyLabelVerticalAlignment">
+            <!-- Key label is anchored to the left of the keyboard. -->
+            <flag name="top" value="0" />
+            <!-- Key label is anchored to the center of the keyboard. -->
+            <flag name="center" value="1" />
+            <!-- Key label is anchored to the right of the keyboard. -->
+            <flag name="bottom" value="2" />
+        </attr>
+        <!-- The string of code of the key that this key shall left align to. -->
+        <attr name="keyAttachTo" format="string" />
+        <!-- Horizontal margin after this keys. -->
+        <attr name="horizontalMargin" format="dimension|fraction" />
+        <!-- Whether this key is actually an LED indicator. -->
+        <attr name="isLed" format="boolean" />
+        <!-- The color of the LED when it is active. -->
+        <attr name="ledColor" format="color" />
+        <!-- Fixed ID for LED state lookup, independent of localized label. -->
+        <attr name="keyLedId" format="string" />
+    </declare-styleable>
+</resources>

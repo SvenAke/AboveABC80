@@ -1,0 +1,9 @@
+silen: do;
+$include(:f3:silen.ipx)
+
+SetLen: procedure(len) public;
+	declare len byte;
+	info.len = len;
+end;
+
+end;

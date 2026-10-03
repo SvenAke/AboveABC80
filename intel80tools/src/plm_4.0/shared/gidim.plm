@@ -1,0 +1,12 @@
+gidim: DO;
+$include(:f3:gidim.ipx)
+
+
+GetDimension: procedure address public;
+	return info.dim;
+end;
+
+
+
+END;
+

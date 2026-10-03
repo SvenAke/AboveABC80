@@ -1,0 +1,8 @@
+gilen: do;
+$include(:f3:gilen.ipx)
+
+GetLen: procedure byte public;
+	return info.len;
+end;
+
+end;

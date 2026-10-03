@@ -1,0 +1,10 @@
+gitype: DO;
+$include(:f3:gitype.ipx)
+
+GetType: PROCEDURE BYTE PUBLIC;
+	return info.type;
+end;
+
+
+END;
+

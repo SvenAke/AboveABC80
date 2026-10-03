@@ -1,0 +1,10 @@
+gilnkv: DO;
+$include(:f3:gilnkv.ipx)
+
+GetLinkVal: PROCEDURE ADDRESS PUBLIC;
+	return info.ilink;
+end;
+
+
+END;
+

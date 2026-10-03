@@ -1,0 +1,81 @@
+main1: DO;
+$include(:f2:main1.ipx)
+
+DECLARE copyright(*) BYTE DATA('(C) 1976, 1977, 1982 INTEL CORP');
+DECLARE cleanup LABEL public;
+
+declare markedStSP address public,
+	T2CntForStmt address public,
+	curProcInfo$p address public initial(0),
+	curStmtNum address public,
+	(varInfoOffset, varArrayIndex, varNestedArrayIndex, varVal) address public,
+	regetTx1Item byte public initial(FALSE),
+	b88B3 byte public initial(FALSE),
+	linfo$ LINFO$ST public,
+	tx1Item TX1ITEM$ST public,
+	tx1Aux2 byte public,
+	tx1Aux1 byte public,
+	tx1RdBuf(512) byte public,
+	tx2Buf(512) byte public,
+	xrfBuf(512) byte public,
+	atBuf(512) byte public,
+	b91C0 byte public;
+
+
+	Sub$3F19: PROCEDURE;
+		call CreatF(.tx1File, .tx1RdBuf, 512, 1);
+		call OpenF(.tx2File, 3);
+		call CreatF(.tx2File, .tx2Buf, 512, 2);
+		if XREF or IXREF or SYMBOLS then
+		do;
+			call OpenF(.xrfFile, 2);
+			call CreatF(.xrfFile, .xrfBuf, 512, 2);
+		end;
+		call OpenF(.atFile, 3);
+		call CreatF(.atFile, .atBuf, 16, 2);
+		blockDepth = 1;
+		procChains(1) = 0;
+	end;
+
+	Sub$3F8B: PROCEDURE;
+		if b88B3 then 
+			call WrTx2File(.linfo, 7);
+		call CloseF(.tx1File);
+		call DeletF(.tx1File);
+		call OpenF(.tx1File, 3);
+		if XREF or IXREF or SYMBOLS then
+		do;
+			call fwrite(.xrfFile, .(0), 1);
+			call Fflush(.xrfFile);
+			call CloseF(.xrfFile);
+		end;
+		call WrAtFileByte(ATI$END);
+		call WrAtFileByte(ATI$EOF);
+		call Fflush(.atFile);
+		call Rewind(.atFile);
+	end;
+
+
+	call Sub$3F19;	/* create files and preload tx1 */
+	call Sub$6523;
+loop:	
+	call Sub$3F8B;
+	call Sub$6EE0;
+	if hasErrors then 
+		call Chain(.overlay6);
+	else
+		call Chain(.overlay2);
+
+cleanup:
+	call WrTx2ExtError(b91C0);
+	do while tx1Item.type <> L$EOF;
+		if tx1Item.type = L$STMTCNT then
+		do;
+			T2CntForStmt = 0;
+			call MapLToT2;
+			curStmtNum = tx1Item.dataw(0);
+		end;
+		call GetTx1Item;
+	end;
+	goto loop;
+END;

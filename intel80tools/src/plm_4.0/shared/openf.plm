@@ -1,0 +1,15 @@
+OpenF: DO;
+$include(:f3:OpenF.ipx)
+
+OpenF: PROCEDURE(file$p, access) PUBLIC;
+	DECLARE file$p ADDRESS, access BYTE;
+	DECLARE file BASED file$p FILE$T;
+	DECLARE status ADDRESS;
+
+	call Open(.file.aftn, .file.fNam, access, 0, .status);
+	if status <> 0 then
+		call FatlIO(file$p, status);
+end OpenF;
+
+
+END;

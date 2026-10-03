@@ -1,0 +1,10 @@
+gicond: do;
+$include(:f3:gicond.ipx)
+
+GetCondFlag: PROCEDURE BYTE PUBLIC;
+	return info.flag(0);
+end;
+
+
+
+end;

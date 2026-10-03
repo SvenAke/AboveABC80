@@ -1,0 +1,24 @@
+page: DO;
+$include(:f2:page2.ipx)
+
+NlLead: procedure public;
+	call Wr2cLst(0d0ah);
+	col = 0;
+	linlft = linlft - 1;
+	if linlft = 0 then
+		call NewPgl;
+	do while col < wrapMarkerCol;
+		call wrcLst(' ');
+		col = col + 1;
+	end;
+	if wrapMarker <> 0 then
+	do;
+		call wrcLst(wrapMarker);
+		col = col + 1;
+	end;
+	do while col < wrapTextCol;
+		call wrcLst(' ');
+		col = col + 1;
+	end;
+end;
+end;

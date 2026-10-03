@@ -1,0 +1,20 @@
+CreatF: DO;
+$include(:f3:CreatF.ipx)
+
+/* CreatF(file$p, buf$p, size$w, mode$b)
+   set files buffer and buffer size
+   Read into buffer if mode$b =    1
+*/
+
+CreatF: PROCEDURE(fp, buf, bsize, mode) public;
+	DECLARE (fp, buf, bsize) ADDRESS, mode BYTE;
+	DECLARE file BASED fp FILE$T;
+
+	file.buf$p = buf;
+	file.bsize = bsize;
+	if mode = 1 then
+		call Readf(fp, buf, bsize, .file.actual);
+	file.curoff = 0;
+end;
+
+END;

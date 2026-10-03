@@ -1,0 +1,11 @@
+giparv: DO;
+$include(:f3:giparv.ipx)
+
+GetParentVal: procedure address public;
+	return info.parent;
+end;
+
+
+
+END;
+

@@ -1,0 +1,12 @@
+siflag: DO;
+$include(:f3:siflag.ipx)
+
+SetInfoFlag: PROCEDURE(flag) PUBLIC;
+	DECLARE flag BYTE;
+	call SetFlag(.info.flag, flag);
+end;
+
+
+
+END;
+

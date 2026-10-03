@@ -1,0 +1,10 @@
+sicond: do;
+$include(:f3:sicond.ipx)
+
+SetCondFlag: PROCEDURE(flag) PUBLIC;
+	DECLARE flag BYTE;
+
+	info.flag(0) = flag;
+end;
+
+end;

@@ -1,0 +1,13 @@
+sipcnt: DO;
+$include(:f3:sipcnt.ipx)
+
+SetParamCnt: PROCEDURE(cnt) PUBLIC;
+	declare cnt byte;
+
+	if info.type = PROC$T then
+		info.pcnt = cnt;
+	else
+		info.flag(1) = cnt;
+end;
+
+END;

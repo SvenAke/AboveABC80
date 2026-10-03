@@ -1,0 +1,10 @@
+sibin: do;
+$include(:f3:sibin.ipx)
+
+SetBuiltinId: PROCEDURE(id) PUBLIC;
+	DECLARE id BYTE;
+
+	info.flag(0) = id;
+end;
+
+end;

@@ -1,0 +1,9 @@
+gibsev: DO;
+$include(:f3:gibsev.ipx)
+
+GetBaseVal: procedure address public;
+	return info.baseoff;
+end;
+
+
+END;

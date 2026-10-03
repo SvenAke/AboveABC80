@@ -1,0 +1,18 @@
+cpyflg: do;
+
+$include(:f3:cpyflg.ipx)
+
+CpyFlags: PROCEDURE(base) PUBLIC;
+	DECLARE base ADDRESS;
+	DECLARE b BASED base(3) BYTE;
+	DECLARE i BYTE;
+
+	do i = 0 to 2;
+		info.flag(i) = b(i);
+	end;
+end;
+
+
+
+end;
+

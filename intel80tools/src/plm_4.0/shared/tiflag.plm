@@ -1,0 +1,13 @@
+tiflag: DO;
+
+$include(:f3:tiflag.ipx)
+
+TestInfoFlag: PROCEDURE(flag) BYTE PUBLIC;
+	DECLARE flag BYTE;
+	return TestFlag(.info.flag, flag);
+end;
+
+
+
+END;
+

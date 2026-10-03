@@ -1,0 +1,9 @@
+Rename: DO;
+$include(:f3:Rename.ipx)
+
+Rename: procedure (old$p, new$p, status$p) public;
+    declare (old$p, new$p, status$p) address;
+    CALL ISIS(IRENAME, .old$p);
+end Rename;
+
+end;

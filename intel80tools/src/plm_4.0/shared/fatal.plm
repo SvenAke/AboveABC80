@@ -1,0 +1,15 @@
+Fatal: DO;
+$include(:f3:Fatal.ipx)
+
+Fatal: PROCEDURE(str, len) PUBLIC;
+	DECLARE str ADDRESS, len BYTE;
+	call PrintStr(.(CR, LF, LF,'PL/M-80 FATAL ERROR --', CR, LF, LF), 28);
+	call PrintStr(str, len);
+	call PrintStr(.(CR, LF, LF,'COMPILATION TERMINATED', CR, LF, LF), 28);
+	if debugFlag then
+		call REBOOTVECTOR;
+	else
+		call Exit;
+end Fatal;
+
+end;

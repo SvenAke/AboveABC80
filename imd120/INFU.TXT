@@ -1,0 +1,4 @@
+IMageDisk Utility 1.20 / Jun 23 2024
+IMD 1.17:  9/ 3/2021 22:28:16
+ 0/0 250 kbps DD  5x1024
+40 tracks(40/0), 200 sectors (89 Compressed)

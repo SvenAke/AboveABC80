@@ -1,0 +1,9 @@
+IMageDisk Utility 1.20 / Jun 23 2024
+IMD 1.16: 14/04/2007 13:24:48
+SuperCalc   This disk is serialized and may be used only by
+            the registered user.     (C) 1981 Sorcim
+
+Fmt: 3740      Serial #  100-4343        Vers: 1.06
+Assuming 1:1 for Binary output
+ 0/0 500 kbps SD  26x128
+77 tracks(77/0), 2002 sectors (862 Compressed)

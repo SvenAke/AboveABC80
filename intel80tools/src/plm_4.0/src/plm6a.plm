@@ -1,0 +1,114 @@
+plm6a: DO;
+$include(:f2:plm6a.ipx)
+
+declare nodeControlMap(*) byte data(
+	2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0Eh, 1, 1, 1, 1,
+	1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 2, 1, 1, 1,
+	1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 6, 1, 0, 0, 0,
+	0, 3, 0, 9, 9, 8, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 2, 9, 0Bh, 0Bh, 81h,
+	99h, 91h, 91h, 91h, 81h, 89h, 89h, 89h, 8Ah, 80h, 80h,
+	80h, 80h, 80h, 80h, 90h, 0A1h, 0A3h, 0A0h, 0A1h, 0A2h,
+	0B0h, 0A0h, 0A0h, 0A0h, 0A0h, 0A0h, 0A3h, 0A3h, 0,
+	0, 0, 0, 0, 0, 0, 0, 41h, 41h, 41h, 40h, 0, 0, 0, 0,
+	0, 0C0h, 0C0h, 0C0h, 0C0h, 0C0h, 0D8h, 41h, 41h, 41h,
+	0C0h);
+
+
+Sub$42E7: procedure public;
+	declare cfCode byte, itemArgs(4) address;
+
+	Sub$4396: procedure;
+		declare i address;
+		if itemArgs(1) > 0 or itemArgs(2) = 0 then
+			itemArgs(3) = itemArgs(0);
+		else
+		do;
+			itemArgs(3) = itemArgs(2);
+			itemArgs(2) = 0;
+		end;
+		do i = itemArgs(0) to itemArgs(3);
+			call LinePrefix;
+			w7AE5 = i;
+			lineNo = itemArgs(1);
+			depth = itemArgs(2);
+			call GetSourceLine;
+		end;
+	end;
+
+	Sub$4400: procedure;
+		errData.num = itemArgs(0);
+		errData.info = 0;
+		errData.stmt = stmtNo;
+		call EmitError;
+	end;
+
+
+	Sub$4416: procedure;
+		errData.num = itemArgs(0);
+		errData.info = itemArgs(1);
+		errData.stmt = stmtNo;
+		call EmitError;
+	end;
+
+
+	Sub$442C: procedure;
+		errData.num = itemArgs(0);
+		errData.info = itemArgs(1);
+		errData.stmt = itemArgs(2);
+		call EmitError;
+	end;
+
+
+	Sub$4442: procedure;
+		declare name(19) byte;
+
+		do case cfCode - 9dh;
+			listOff = false;
+			listOff = true;
+			codeOn = PRINT;
+			codeOn = false;
+			if listing then
+				call NewPageNextChLst;
+			do;
+				call LinePrefix;
+				call TellF(.srcFil, .srcFileTable(srcFileIdx + 8));
+				call Backup(.srcFileTable(srcFileIdx + 8), offLastCh - offCurCh);
+				srcFileIdx = srcFileIdx + 10;
+				call fread(.tx2File, .name(13), 6);	/* Read in name of include file */
+				call fread(.tx2File, .name(6), 7);
+				call fread(.tx2File, .name(0), 7);	/* overwrites the type byte */
+				call movmem(16, .name(1), .srcFileTable(srcFileIdx));
+				call CloseF(.srcFil);
+				call InitF(.srcFil, .('SOURCE'), .name(1));
+				call OpenF(.srcFil, 1);
+				offCurCh = offLastCh;	/* force Read next time	*/
+			end;
+		end;
+	end;
+
+
+/* Sub$42E7 */
+	itemArgs(0), itemArgs(1), itemArgs(2) = 0;
+	call fread(.tx2File, .cfCode, 1);
+	if cfCode <> 0a2h then
+		call fread(.tx2File, .itemArgs, shl(nodeControlMap(cfCode) and 3,1));
+	if cfCode = 98h then
+		call Sub$4396;
+	else if cfCode = 97h then
+		stmtNo = itemArgs(0);
+	else if cfCode = 9Ah then
+		call Sub$4400;
+	else if cfCode = 9Bh then
+		call Sub$4416;
+	else if cfCode = 0A3h then
+		call Sub$442C;
+	else if 9Dh <= cfCode and cfCode <= 0A2h then
+		call Sub$4442;
+	else if cfCode = 9Ch then
+		b7AE4 = 0;
+end;
+end;

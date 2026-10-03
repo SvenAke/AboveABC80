@@ -1,0 +1,14 @@
+InitF: DO;
+$include(:f3:InitF.ipx)
+
+InitF: PROCEDURE(file$p, sNam, fNam) PUBLIC;
+	DECLARE (file$p, sNam, fNam) ADDRESS;
+	DECLARE file BASED file$p FILE$T;
+	file.aftn = 0;
+	call fill(22, .file.sNam, ' ');
+	call CpyTill(sNam, .file.sNam, 6, ' ');
+	call CpyTill(fNam, .file.fNam, 15, ' ');
+end InitF;
+
+
+END;
