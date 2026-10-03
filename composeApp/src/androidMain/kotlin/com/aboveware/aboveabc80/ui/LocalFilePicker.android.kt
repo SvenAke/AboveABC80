@@ -8,7 +8,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.LocalContext
-import com.aboveware.aboveabc80.ZXLog
+import com.aboveware.aboveabc80.Abc80Log
 
 @Composable
 actual fun LocalFilePicker(
@@ -30,7 +30,7 @@ actual fun LocalFilePicker(
                     onFileSelected(fileName, bytes)
                 }
             } catch (e: Exception) {
-                ZXLog.wtf("Upload failed: ${e.message}")
+                Abc80Log.wtf("Upload failed: ${e.message}")
             }
         }
         onDismiss()

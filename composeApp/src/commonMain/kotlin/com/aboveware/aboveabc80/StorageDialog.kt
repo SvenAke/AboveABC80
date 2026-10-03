@@ -133,9 +133,9 @@ fun StorageFileDialog(
                     controller.loadFromLocal(index, finalDiskName)
                 }
             }
-            ZXLog.terminal("Successfully injected $fileName into $finalDiskName")
+            Abc80Log.terminal("Successfully injected $fileName into $finalDiskName")
         } else {
-            ZXLog.wtf("Failed to inject $fileName into $diskName (disk full?)")
+            Abc80Log.wtf("Failed to inject $fileName into $diskName (disk full?)")
         }
     }
 
@@ -954,7 +954,7 @@ fun NewDisketteDialog(
                     onCreated(name)
                 }
             } catch (e: Exception) {
-                ZXLog.wtf("Creation failed: ${e.message}")
+                Abc80Log.wtf("Creation failed: ${e.message}")
             }
         }
     }

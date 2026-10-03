@@ -1,7 +1,7 @@
 package com.aboveware.aboveabc80.terminal
 
 import aboveabc80.composeapp.generated.resources.Res
-import com.aboveware.aboveabc80.ZXLog
+import com.aboveware.aboveabc80.Abc80Log
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 
 /**
@@ -22,9 +22,9 @@ object ROMStringsLoader {
     suspend fun load() {
         try {
             romData = Res.readBytes("files/23-054E7.bin")
-            ZXLog.terminal("ROM strings loaded (size=${romData?.size}).")
+            Abc80Log.terminal("ROM strings loaded (size=${romData?.size}).")
         } catch (e: Exception) {
-            ZXLog.wtf("Failed to load ROM strings: ${e.message}")
+            Abc80Log.wtf("Failed to load ROM strings: ${e.message}")
         }
     }
 

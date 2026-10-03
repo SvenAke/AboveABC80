@@ -1,6 +1,6 @@
 package com.aboveware.aboveabc80.terminal
 
-import com.aboveware.aboveabc80.ZXLog
+import com.aboveware.aboveabc80.Abc80Log
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.time.Duration.Companion.milliseconds
@@ -47,7 +47,7 @@ internal fun VT320.handleKeyEvent(char: Char) {
 
         // 1. Check for Setup key sequence (\u001B[28~) or fallback Ctrl-B (ascii 2)
         if (inputSeq == VTSetup.SETUP_KEY || (inputSeq.length == 1 && inputSeq[0].code == 2)) {
-            ZXLog.terminal("VT320: Setup trigger detected via inputSeq")
+            Abc80Log.terminal("VT320: Setup trigger detected via inputSeq")
             toggleSetup()
             inputSeq = ""
             return
@@ -124,7 +124,7 @@ internal fun VT320.flush() {
 
 internal fun VT320.triggerAnswerback() {
     val msg = VT320Settings.answerBack
-    ZXLog.terminal("VT320: Triggering answerback: $msg")
+    Abc80Log.terminal("VT320: Triggering answerback: $msg")
     msg.forEach { handleKeyEvent(it) }
 }
 

@@ -1,7 +1,7 @@
 package com.aboveware.aboveabc80.terminal
 
 import androidx.compose.ui.input.key.Key
-import com.aboveware.aboveabc80.ZXLog
+import com.aboveware.aboveabc80.Abc80Log
 import com.aboveware.aboveabc80.keyboard.Keyboard
 import com.aboveware.aboveabc80.keyboard.KeyboardLed
 import kotlinx.coroutines.CoroutineScope
@@ -90,7 +90,7 @@ class VT320Keyboard(private val terminal: Terminal) : TerminalKeyboard {
         fifthLabel: String?,
         sixthLabel: String?
     ) {
-        ZXLog.keyboard("VT320Keyboard: handleKeyEvent codes='$codes' label='$label'")
+        Abc80Log.keyboard("VT320Keyboard: handleKeyEvent codes='$codes' label='$label'")
         if (codes.isEmpty()) return
 
         // 1. Special state keys (Shift, Ctrl, Lock)
@@ -217,9 +217,9 @@ class VT320Keyboard(private val terminal: Terminal) : TerminalKeyboard {
                     if (terminal is VT320) terminal.triggerAnswerback()
                 } else if (isShiftActive) {
                     // Shift-Break: Modem disconnect (not fully implemented, but let's signal it)
-                    ZXLog.terminal("VT320: Shift-Break (Modem Disconnect) triggered")
+                    Abc80Log.terminal("VT320: Shift-Break (Modem Disconnect) triggered")
                 } else if (VT320Settings.breakKey == 1) {
-                    ZXLog.terminal("VT320: Break triggered")
+                    Abc80Log.terminal("VT320: Break triggered")
                     Keyboard.instance.pressBreak()
                 }
                 triggerClick()
@@ -536,7 +536,7 @@ class VT320Keyboard(private val terminal: Terminal) : TerminalKeyboard {
 
         if (type != androidx.compose.ui.input.key.KeyEventType.KeyDown) return false
 
-        ZXLog.keyboard("VT320Keyboard: KeyDown: $key (code=${key.keyCode}) repeat=$isRepeat")
+        Abc80Log.keyboard("VT320Keyboard: KeyDown: $key (code=${key.keyCode}) repeat=$isRepeat")
 
         // Handle Hold Screen (F1) and Setup (F3) keys immediately
         if (key == Key.F1 || key == Key.F3 || key == Key(0xF0)) {
@@ -545,10 +545,10 @@ class VT320Keyboard(private val terminal: Terminal) : TerminalKeyboard {
                 if (compose.isActive) abortCompose()
 
                 if (key == Key.F1) {
-                    ZXLog.terminal("VT320Keyboard: Hold Screen key recognized: $key")
+                    Abc80Log.terminal("VT320Keyboard: Hold Screen key recognized: $key")
                     toggleHoldScreen()
                 } else {
-                    ZXLog.terminal("VT320Keyboard: Setup key recognized: $key")
+                    Abc80Log.terminal("VT320Keyboard: Setup key recognized: $key")
                     terminal.toggleSetup()
                 }
                 terminal.triggerClick()
@@ -704,7 +704,7 @@ class VT320Keyboard(private val terminal: Terminal) : TerminalKeyboard {
                         terminal.triggerAnswerback(); terminal.triggerClick(); return true
                     }
                 } else if (isShift) {
-                    ZXLog.terminal("VT320: Shift-Break (Modem Disconnect) triggered")
+                    Abc80Log.terminal("VT320: Shift-Break (Modem Disconnect) triggered")
                     terminal.triggerClick(); return true
                 } else if (VT320Settings.breakKey == 1) {
                     Keyboard.instance.pressBreak(); terminal.triggerClick(); return true
@@ -805,7 +805,7 @@ class VT320Keyboard(private val terminal: Terminal) : TerminalKeyboard {
 
     private fun abortCompose() {
         if (compose.isActive) {
-            ZXLog.keyboard("VT320Keyboard: Aborting Compose sequence")
+            Abc80Log.keyboard("VT320Keyboard: Aborting Compose sequence")
             compose.cancel()
             setLed(3, false)
             terminal.onBell?.invoke()

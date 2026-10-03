@@ -6,7 +6,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.aboveware.aboveabc80.NativeLib
-import com.aboveware.aboveabc80.ZXLog
+import com.aboveware.aboveabc80.Abc80Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -46,9 +46,9 @@ class CpmDebugger {
                 val bytes = Res.readBytes("files/cpm.txt")
                 val text = bytes.decodeToString()
                 parseListing(text)
-                ZXLog.terminal("CpmDebugger: Loaded ${sourceMap.size} source lines")
+                Abc80Log.terminal("CpmDebugger: Loaded ${sourceMap.size} source lines")
             } catch (e: Exception) {
-                ZXLog.wtf("CpmDebugger: Failed to load cpm.txt: ${e.message}")
+                Abc80Log.wtf("CpmDebugger: Failed to load cpm.txt: ${e.message}")
             }
         }
     }

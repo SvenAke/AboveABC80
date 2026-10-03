@@ -228,7 +228,7 @@ private val clickClip: Clip? by lazy {
 }
 
 actual fun playBell() {
-    ZXLog.terminal("playBell")
+    Abc80Log.terminal("playBell")
     val now = System.currentTimeMillis()
     if (now - lastBellTime < 200) return // Cooldown 200ms
     lastBellTime = now
@@ -241,7 +241,7 @@ actual fun playBell() {
 }
 
 actual fun playKeyClick() {
-    ZXLog.terminal("playKeyClick")
+    Abc80Log.terminal("playKeyClick")
     try {
         clickClip?.let {
             it.stop()

@@ -8,7 +8,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import com.aboveware.aboveabc80.ZXLog
+import com.aboveware.aboveabc80.Abc80Log
 
 class VirtualPrinter {
     companion object {
@@ -185,7 +185,7 @@ class VirtualPrinter {
 
     fun printChar(c: Char) {
         if (!isVisible) {
-            ZXLog.terminal("VirtualPrinter: Becoming visible due to printChar('${if (c.code >= 32) c else '.'}')")
+            Abc80Log.terminal("VirtualPrinter: Becoming visible due to printChar('${if (c.code >= 32) c else '.'}')")
             isVisible = true
         }
         getDriver().printChar(c)

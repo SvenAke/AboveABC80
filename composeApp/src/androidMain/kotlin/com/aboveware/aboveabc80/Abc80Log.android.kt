@@ -5,9 +5,9 @@ import android.util.Log
 actual fun platformLog(tag: String, message: String) {
     try {
         if (tag == "WTF") {
-            Log.e("ZXLog", "[$tag] $message")
+            Log.e("Abc80Log", "[$tag] $message")
         } else {
-            Log.d("ZXLog", "[$tag] $message")
+            Log.d("Abc80Log", "[$tag] $message")
         }
     } catch (e: Exception) {
         // Fallback for tests where android.util.Log is not mocked

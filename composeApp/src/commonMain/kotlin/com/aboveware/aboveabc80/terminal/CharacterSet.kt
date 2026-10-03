@@ -1,7 +1,7 @@
 package com.aboveware.aboveabc80.terminal
 
 import aboveabc80.composeapp.generated.resources.Res
-import com.aboveware.aboveabc80.ZXLog
+import com.aboveware.aboveabc80.Abc80Log
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 
 /**
@@ -61,9 +61,9 @@ object CharacterSet {
             e = Glyph('E', GLYPH_0X045, rawData!!)
             error = GlyphGraphics('⸮', GLYPH_0X126, rawData!!)
 
-            ZXLog.terminal("CharacterSet: load() COMPLETED SUCCESSFULLY. _characterSets is not null.")
+            Abc80Log.terminal("CharacterSet: load() COMPLETED SUCCESSFULLY. _characterSets is not null.")
         } catch (e: Exception) {
-            ZXLog.wtf("CharacterSet: load() FAILED: ${e.message}")
+            Abc80Log.wtf("CharacterSet: load() FAILED: ${e.message}")
             e.printStackTrace()
         }
     }
@@ -321,7 +321,7 @@ object CharacterSet {
         fun getCode(char: Char): Int {
             val result = chars.entries.find { it.value.char == char }?.key ?: char.code
             if (char == '~' || char == '`') {
-                ZXLog.keyboard("CharacterSet: getCode for '$char' returned $result")
+                Abc80Log.keyboard("CharacterSet: getCode for '$char' returned $result")
             }
             return result
         }

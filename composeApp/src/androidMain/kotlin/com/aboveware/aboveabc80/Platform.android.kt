@@ -169,7 +169,7 @@ private val toneGenerator by lazy {
 private var lastBellTime = 0L
 
 actual fun playBell() {
-    ZXLog.terminal("playBell")
+    Abc80Log.terminal("playBell")
     val now = System.currentTimeMillis()
     if (now - lastBellTime < 200) return // Cooldown 200ms to prevent spam
     lastBellTime = now
@@ -182,7 +182,7 @@ actual fun playBell() {
 }
 
 actual fun playKeyClick() {
-    ZXLog.terminal("playKeyClick")
+    Abc80Log.terminal("playKeyClick")
     val audioManager =
         androidContext?.getSystemService(Context.AUDIO_SERVICE) as? android.media.AudioManager
     audioManager?.playSoundEffect(android.media.AudioManager.FX_KEYPRESS_STANDARD)

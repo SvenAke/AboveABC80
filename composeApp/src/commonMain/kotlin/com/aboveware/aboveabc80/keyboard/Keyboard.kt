@@ -5,7 +5,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.aboveware.aboveabc80.Assembler
 import com.aboveware.aboveabc80.NativeLib
-import com.aboveware.aboveabc80.ZXLog
+import com.aboveware.aboveabc80.Abc80Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
@@ -138,7 +138,7 @@ class Keyboard {
 
     private fun dumpKey(event: String, vararg components: String?) {
         val keyStr = components.filter { !it.isNullOrEmpty() }.joinToString(",")
-        ZXLog.keyboard("$event: $keyStr, shifted? ${isCapsShiftPressed()} symbolShifted? ${isSymbolShiftPressed()}")
+        Abc80Log.keyboard("$event: $keyStr, shifted? ${isCapsShiftPressed()} symbolShifted? ${isSymbolShiftPressed()}")
     }
 
     fun onKeyUp(key: Keys) {
@@ -212,7 +212,7 @@ class Keyboard {
                 )
 
                 codes.toIntOrNull()?.let { ascii ->
-                    ZXLog.keyboard("Keyboard: codes ascii $ascii")
+                    Abc80Log.keyboard("Keyboard: codes ascii $ascii")
                     onCharacter?.invoke(ascii.toChar())
                     dumpKey("onKeyDown Character", codes)
                 }

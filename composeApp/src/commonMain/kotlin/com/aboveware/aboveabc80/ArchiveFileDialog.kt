@@ -436,7 +436,7 @@ fun ArchiveFileDialog(
                     val previewBytes = if (isZzz) {
                         val nativeLib = NativeLib.getObject()
                         nativeLib.decompressSqueezed(file.content) ?: run {
-                            ZXLog.wtf("Could not decompress ${file.name}.")
+                            Abc80Log.wtf("Could not decompress ${file.name}.")
                             file.content
                         }
                     } else {

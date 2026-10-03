@@ -24,7 +24,7 @@ class Assembler {
             opcodeList = Res.readBytes("files/opcode.lst").decodeToString().lines().toTypedArray()
             NativeLib.getObject().copyToMemory(0, memory)
         } catch (e: Exception) {
-            ZXLog.wtf("Kunde inte ladda ROM-filer: ${e.message}")
+            Abc80Log.wtf("Kunde inte ladda ROM-filer: ${e.message}")
             throw e
         }
     }
@@ -43,7 +43,7 @@ class Assembler {
                 NativeLib.getObject().setFastSpeed(cpuSpeedMHz == 9)
                 NativeLib.getObject().startEmulator(cpuSpeedMHz.coerceAtMost(8) * 1_000_000)
             } catch (e: Exception) {
-                ZXLog.wtf("Kunde inte starta emulatorn: ${e.message}")
+                Abc80Log.wtf("Kunde inte starta emulatorn: ${e.message}")
             }
         }
     }
@@ -193,13 +193,13 @@ class Assembler {
             if (unresolved.isNotEmpty()) unresolvedList.add(unresolved.toString())
             if (doubleDefined.isNotEmpty()) doubleDefinedList.add(doubleDefined.toString())
             resolvedList.forEach {
-                ZXLog.assemble("LABELS $it")
+                Abc80Log.assemble("LABELS $it")
             }
             unresolvedList.forEach {
-                ZXLog.assemble("ULABELS $it")
+                Abc80Log.assemble("ULABELS $it")
             }
             doubleDefinedList.forEach {
-                ZXLog.assemble("DLABELS $it")
+                Abc80Log.assemble("DLABELS $it")
             }
         }
 
@@ -211,7 +211,7 @@ class Assembler {
             val labelKey = key.remove(HIGH).remove(LOW)
             val value = labels[labelKey] ?: run {
                 if (secondPass) {
-                    ZXLog.wtf("Label $labelKey not found!")
+                    Abc80Log.wtf("Label $labelKey not found!")
                 }
                 return 0
             }
@@ -396,7 +396,7 @@ class Assembler {
 
                 hex.contains("XX") -> when {
                     evaluator.result.length < 2 -> {
-                        ZXLog.assemble("'$first' '$second' $line")
+                        Abc80Log.assemble("'$first' '$second' $line")
                         ""
                     }
 
@@ -780,7 +780,7 @@ class Assembler {
                     isRet(tokens, key)
                 }
             } catch (e: Exception) {
-                ZXLog.assemble("OPCODE ${e.message}")
+                Abc80Log.assemble("OPCODE ${e.message}")
             }
         }
 
@@ -895,12 +895,12 @@ class Assembler {
                 assemble(asm48k)
             } catch (_: Exception) {
             }
-            if (ZXLogTag.ASSEMBLE.enabled) {
+            if (Abc80LogTag.ASSEMBLE.enabled) {
                 labels.dump()
                 dumpIntelHex()
             }
         } catch (e: IOException) {
-            ZXLog.wtf("${e.message}")
+            Abc80Log.wtf("${e.message}")
         }
     }
 
@@ -929,7 +929,7 @@ class Assembler {
         while (lineReader.ready()) {
             val line = Line(lineReader.readLine(), ++lineNo, labels, pc)
             if (line.isEmpty) {
-                if (secondPass && ZXLogTag.ASSEMBLE.enabled) ZXLog.assemble(
+                if (secondPass && Abc80LogTag.ASSEMBLE.enabled) Abc80Log.assemble(
                     String.format(
                         "%20.20s %s",
                         " ",
@@ -990,14 +990,14 @@ class Assembler {
                                 memoryPc = add2memory(pc, args)
                                 // val len = if (line.first.length > 15) line.first.length else 15
                                 val format = "%s %-15.15s %s"
-                                if (ZXLogTag.ASSEMBLE.enabled) ZXLog.assemble(
+                                if (Abc80LogTag.ASSEMBLE.enabled) Abc80Log.assemble(
                                     String.format(format, pc.toHex(), args, line)
                                 )
                                 addSourceCode(pc, args, line.toString())
                                 first = false
                             } else {
                                 memoryPc = add2memory(memoryPc, hex)
-                                if (ZXLogTag.ASSEMBLE.enabled) ZXLog.assemble(
+                                if (Abc80LogTag.ASSEMBLE.enabled) Abc80Log.assemble(
                                     String.format(
                                         "     %-15.15s",
                                         hex
@@ -1006,7 +1006,7 @@ class Assembler {
                                 addSourceCode(pc, hex)
                             }
                         }
-                        if (first && ZXLogTag.ASSEMBLE.enabled) ZXLog.assemble(
+                        if (first && Abc80LogTag.ASSEMBLE.enabled) Abc80Log.assemble(
                             String.format(
                                 "%20.20s %s",
                                 " ",
@@ -1018,11 +1018,11 @@ class Assembler {
                 }
             }
             if (secondPass) {
-                ZXLog.assemble("NO_MATCH $line")
+                Abc80Log.assemble("NO_MATCH $line")
             }
         } else {
             if (secondPass) {
-                ZXLog.assemble("UNKNOWN $line")
+                Abc80Log.assemble("UNKNOWN $line")
             }
         }
         return pc
@@ -1057,9 +1057,9 @@ class Assembler {
         }
         records.add(":00000001FF") // End of File record
 
-        ZXLog.terminal("--- INTEL HEX DUMP START ---")
-        records.forEach { ZXLog.terminal(it) }
-        ZXLog.terminal("--- INTEL HEX DUMP END ---")
+        Abc80Log.terminal("--- INTEL HEX DUMP START ---")
+        records.forEach { Abc80Log.terminal(it) }
+        Abc80Log.terminal("--- INTEL HEX DUMP END ---")
     }
 
     private fun toIntelHexRecord(address: Int, data: ByteArray): String {

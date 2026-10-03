@@ -40,7 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.aboveware.aboveabc80.ZXLog
+import com.aboveware.aboveabc80.Abc80Log
 import com.aboveware.aboveabc80.getCurrentTimestamp
 import com.aboveware.aboveabc80.saveLocalFile
 
@@ -170,10 +170,10 @@ fun TapeView(modifier: Modifier = Modifier) {
                     val prefix = saveFilename.trim().ifEmpty { "PUNCH" }
                     val finalName = "${prefix}_$timestamp.TAP"
                     if (saveLocalFile("puncher", finalName, data)) {
-                        ZXLog.terminal("Paper Tape Punch: Saved $finalName in 'puncher' folder")
+                        Abc80Log.terminal("Paper Tape Punch: Saved $finalName in 'puncher' folder")
                         tape.clear() // Remove animation and clear buffer after successful save
                     } else {
-                        ZXLog.wtf("Paper Tape Punch: Failed to save $finalName")
+                        Abc80Log.wtf("Paper Tape Punch: Failed to save $finalName")
                     }
                     showSaveDialog = false
                 }) {

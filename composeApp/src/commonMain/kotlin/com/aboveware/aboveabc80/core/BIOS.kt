@@ -3,7 +3,7 @@ package com.aboveware.aboveabc80.core
 import com.aboveware.aboveabc80.Assembler
 import com.aboveware.aboveabc80.NativeLib
 import com.aboveware.aboveabc80.Z80Registers
-import com.aboveware.aboveabc80.ZXLog
+import com.aboveware.aboveabc80.Abc80Log
 import com.aboveware.aboveabc80.printer.VirtualPrinter
 import com.aboveware.aboveabc80.tape.TapeController
 import com.aboveware.aboveabc80.terminal.TerminalManager
@@ -45,7 +45,7 @@ class BIOS {
         watchTransientProgramStart()
 
         isConnected = true
-        ZXLog.terminal("CP/M BIOS connected and high-level interception enabled.")
+        Abc80Log.terminal("CP/M BIOS connected and high-level interception enabled.")
     }
 
     /**
@@ -66,7 +66,7 @@ class BIOS {
         isTransientProgramRunning = false
 
         isConnected = false
-        ZXLog.terminal("CP/M BIOS disconnected.")
+        Abc80Log.terminal("CP/M BIOS disconnected.")
     }
 
     /**
@@ -130,7 +130,7 @@ class BIOS {
     private fun setupWatchers() {
         val biosAddr = Assembler.instance.labels["BIOS"]
         if (biosAddr == 0) {
-            ZXLog.wtf("BIOS label not found!")
+            Abc80Log.wtf("BIOS label not found!")
             return
         }
 
@@ -142,7 +142,7 @@ class BIOS {
 
             val jumpTableAddr = biosAddr + index * 3
             val implementationAddr = Assembler.instance.labels[internalName]
-            ZXLog.terminal(
+            Abc80Log.terminal(
                 "BIOS mapping: $name table=${jumpTableAddr.toHex(4)} " +
                     "implementation=${implementationAddr.toHex(4)}"
             )
@@ -154,7 +154,7 @@ class BIOS {
                     val caller = lib.peekw(cpu.sp)
 
                     if (name == "BOOT" || name == "WBOOT") {
-                        ZXLog.terminal(
+                        Abc80Log.terminal(
                             "BIOS $name invoked at ${address.toHex(4)}, " +
                                 "caller=${caller.toHex(4)}, PC=${cpu.pc.toHex(4)}, " +
                                 "SP=${cpu.sp.toHex(4)}"
@@ -165,7 +165,7 @@ class BIOS {
                         "BOOT" -> {
                             val applicationBoot = caller in 0x0100 until 0xE400
                             if (applicationBoot) {
-                                ZXLog.terminal("Ignoring application BOOT request from ${caller.toHex(4)}")
+                                Abc80Log.terminal("Ignoring application BOOT request from ${caller.toHex(4)}")
                             } else {
                                 performBoot(isWarm = false)
                             }
@@ -190,7 +190,7 @@ class BIOS {
 
                             val char = TerminalManager.activeTerminal.getChar()
                             val caller = lib.peekw(cpu.sp)
-                            ZXLog.terminal(
+                            Abc80Log.terminal(
                                 "BIOS CONIN: Returned 0x${
                                     char.toString(16).uppercase()
                                 } ('${char.toChar()}') to PC=${caller.toHex(4)}"
@@ -203,7 +203,7 @@ class BIOS {
                             val char = cpu.bc and 0xFF
                             if (char != 0) {
                                 // Standard CP/M prompt detection
-                                ZXLog.terminal(
+                                Abc80Log.terminal(
                                     "BIOS CONOUT: 0x${
                                         char.toString(16).uppercase()
                                     } ('${if (char >= 32) char.toChar() else '.'}')"
@@ -215,7 +215,7 @@ class BIOS {
                         "LIST" -> {
                             val char = cpu.bc and 0xFF
                             val caller = lib.peekw(cpu.sp)
-                            ZXLog.terminal(
+                            Abc80Log.terminal(
                                 "BIOS LIST: 0x${
                                     char.toString(16).uppercase()
                                 } ('${if (char >= 32) char.toChar() else '.'}') from PC=${
@@ -247,7 +247,7 @@ class BIOS {
 
                             val dpbaseRaw = Assembler.instance.labels["dpbase"]
                             val dpbase = if (dpbaseRaw == 0) 0 else dpbaseRaw
-                            ZXLog.terminal(
+                            Abc80Log.terminal(
                                 "BIOS SELDSK: Drive $drive from PC=${caller.toHex(4)}, dpbase=0x${
                                     dpbase.toHex(
                                         4
@@ -303,7 +303,7 @@ class BIOS {
 
                                 val savedDpbPtr = lib.peekw(dphAddr + 10)
                                 val savedOff = lib.peekw(savedDpbPtr + 13)
-                                ZXLog.diskett("BIOS SELDSK: Drive $drive DPH at 0x${dphAddr.toHex(4)} points to DPB at 0x${savedDpbPtr.toHex(4)} (OFF=$savedOff, SPT=${lib.peekw(savedDpbPtr)})")
+                                Abc80Log.diskett("BIOS SELDSK: Drive $drive DPH at 0x${dphAddr.toHex(4)} points to DPB at 0x${savedDpbPtr.toHex(4)} (OFF=$savedOff, SPT=${lib.peekw(savedDpbPtr)})")
 
                                 // HLE bypasses CP/M's normal DPH copy, so keep its
                                 // cached disk parameters synchronized explicitly.
@@ -342,7 +342,7 @@ class BIOS {
                             )
                             val maxTrack = floppy?.tracks ?: 0
                             if (floppy != null && requestedTrack >= maxTrack) {
-                                ZXLog.wtf(
+                                Abc80Log.wtf(
                                     "Ignoring invalid SETTRK: requested=$requestedTrack, " +
                                         "maxTrack=$maxTrack, watcher=${address.toHex(4)}, " +
                                         "caller=${lib.peekw(cpu.sp).toHex(4)}"
@@ -355,7 +355,7 @@ class BIOS {
                                 requestedTrack
                             }
                             val caller = lib.peekw(cpu.sp)
-                            ZXLog.terminal(
+                            Abc80Log.terminal(
                                 "BIOS SETTRK: requested=$requestedTrack physical=$track " +
                                     "watcher=${address.toHex(4)} caller=${caller.toHex(4)}"
                             )
@@ -365,7 +365,7 @@ class BIOS {
                         "SETSEC" -> {
                             val sector = cpu.bc and 0xFF
                             val caller = lib.peekw(cpu.sp)
-                            ZXLog.terminal(
+                            Abc80Log.terminal(
                                 "BIOS SETSEC: $sector watcher=${address.toHex(4)} " +
                                     "caller=${caller.toHex(4)}"
                             )
@@ -375,7 +375,7 @@ class BIOS {
                         "SETDMA" -> {
                             val dma = cpu.bc and 0xFFFF
                             val caller = lib.peekw(cpu.sp)
-                            ZXLog.terminal("BIOS SETDMA: 0x${dma.toHex(4)} from PC=${caller.toHex(4)}")
+                            Abc80Log.terminal("BIOS SETDMA: 0x${dma.toHex(4)} from PC=${caller.toHex(4)}")
                             DiskController.instance.dmaAddress = dma
                         }
 
@@ -587,7 +587,7 @@ class BIOS {
                         }
                     }
                     if(funcCode != 6)
-                        ZXLog.terminal(logMsg)
+                        Abc80Log.terminal(logMsg)
                 }
                 return false
             }
@@ -611,13 +611,13 @@ class BIOS {
 
         val currentDrive = DiskController.instance.currentDriveIndex
 
-        ZXLog.terminal(
+        Abc80Log.terminal(
             "BIOS performBoot(isWarm=$isWarm), PC=${cpu.pc.toHex(4)}, " +
                 "Drive=$currentDrive"
         )
 
         if (isWarm) {
-            ZXLog.terminal("Warm Boot (WBOOT) initiated...")
+            Abc80Log.terminal("Warm Boot (WBOOT) initiated...")
             // Reload only the system part (CCP/BDOS/BIOS) to preserve TPA
             val systemMemory = Assembler.instance.memory.copyOfRange(ccpAddress, 0x10000)
             lib.copyToMemory(ccpAddress, systemMemory)
@@ -669,7 +669,7 @@ class BIOS {
             .takeIf { it != 0 }
             ?: Assembler.instance.labels["wboot"]
         val wbootAddr = wbootLabel.takeIf { it != 0 } ?: (biosAddr + 3)
-        ZXLog.terminal("Page zero WBOOT target=${wbootAddr.toHex(4)}")
+        Abc80Log.terminal("Page zero WBOOT target=${wbootAddr.toHex(4)}")
         lib.patchMemory(1, wbootAddr and 0xFF)
         lib.patchMemory(2, (wbootAddr shr 8) and 0xFF)
 
@@ -677,7 +677,7 @@ class BIOS {
         val bdosAddr = Assembler.instance.labels["BDOS"]
         lib.patchMemory(6, bdosAddr and 0xFF)
         lib.patchMemory(7, (bdosAddr shr 8) and 0xFF)
-        ZXLog.terminal("Page zero WBOOT target=${wbootAddr.toHex(4)}")
+        Abc80Log.terminal("Page zero WBOOT target=${wbootAddr.toHex(4)}")
     }
 
     private fun getStringFromMemory(address: Int): String {

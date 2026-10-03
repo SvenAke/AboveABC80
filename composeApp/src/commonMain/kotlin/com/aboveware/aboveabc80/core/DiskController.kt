@@ -8,7 +8,7 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.setValue
 import com.aboveware.aboveabc80.Assembler
 import com.aboveware.aboveabc80.NativeLib
-import com.aboveware.aboveabc80.ZXLog
+import com.aboveware.aboveabc80.Abc80Log
 import com.aboveware.aboveabc80.currentTimeMillis
 import com.aboveware.aboveabc80.loadLocalDisk
 import com.aboveware.aboveabc80.saveLocalDisk
@@ -52,7 +52,7 @@ class DiskController {
             drives[index] = floppy
             mountedDisks[index] = mountedDisk
             val firstEntry = floppy.listFiles().firstOrNull { it.isActive() }
-            ZXLog.diskett(
+            Abc80Log.diskett(
                 "Disk drive ${'A' + index}: mounted ${mountedDisk.name} (${mountedDisk.source}), " +
                     "SPT=${floppy.dpb.spt}, OFF=${floppy.dpb.off}, " +
                     "firstFile=${firstEntry?.filename}.${firstEntry?.extension}"
@@ -70,7 +70,7 @@ class DiskController {
             val name = resourcePath.substringAfterLast("/")
             loadDrive(index, floppy, MountedDisk(name, Source.RESOURCE))
         } catch (e: Exception) {
-            ZXLog.wtf("Failed to load disk resource $resourcePath: ${e.message}")
+            Abc80Log.wtf("Failed to load disk resource $resourcePath: ${e.message}")
         }
     }
 
@@ -86,14 +86,14 @@ class DiskController {
                 val dskName = name.substringBeforeLast(".") + ".DSK"
                 if (saveLocalDisk(dskName, floppy.getRawData())) {
                     actualName = dskName
-                    ZXLog.diskett("Converted $name to $dskName")
+                    Abc80Log.diskett("Converted $name to $dskName")
                 }
             }
 
             loadDrive(index, floppy, MountedDisk(actualName, Source.LOCAL))
             return actualName
         } else {
-            ZXLog.wtf("Failed to load local disk $name")
+            Abc80Log.wtf("Failed to load local disk $name")
             return null
         }
     }
@@ -102,7 +102,7 @@ class DiskController {
         if (index in 0 until MAX_DRIVES) {
             drives[index] = null
             mountedDisks.remove(index)
-            ZXLog.diskett("Disk drive ${'A' + index}: cleared")
+            Abc80Log.diskett("Disk drive ${'A' + index}: cleared")
         }
     }
 
@@ -113,7 +113,7 @@ class DiskController {
             try {
                 // DMA boundary check
                 if (dmaAddress > 0xFF80) {
-                    ZXLog.wtf("Disk READ: DMA address 0x${dmaAddress.toHex(4)} too high!")
+                    Abc80Log.wtf("Disk READ: DMA address 0x${dmaAddress.toHex(4)} too high!")
                     return 1
                 }
 
@@ -125,7 +125,7 @@ class DiskController {
                     currentSector
                 }.coerceIn(0, floppy.dpb.spt - 1)
 
-                ZXLog.diskett(
+                Abc80Log.diskett(
                     "Disk READ: Drive ${'A' + currentDriveIndex}, Track $currentTrack, Sector $currentSector, DMA=0x${
                         dmaAddress.toHex(
                             4
@@ -140,7 +140,7 @@ class DiskController {
                 NativeLib.getObject().copyToMemory(dmaAddress, data)
                 return 0
             } catch (e: Exception) {
-                ZXLog.wtf("Disk READ ERROR: ${e.message}")
+                Abc80Log.wtf("Disk READ ERROR: ${e.message}")
                 return 1
             }
         }
@@ -154,7 +154,7 @@ class DiskController {
             try {
                 // DMA boundary check
                 if (dmaAddress > 0xFF80) {
-                    ZXLog.wtf("Disk WRITE: DMA address 0x${dmaAddress.toHex(4)} too high!")
+                    Abc80Log.wtf("Disk WRITE: DMA address 0x${dmaAddress.toHex(4)} too high!")
                     return 1
                 }
 
@@ -164,7 +164,7 @@ class DiskController {
                     currentSector
                 }.coerceIn(0, floppy.dpb.spt - 1)
 
-                ZXLog.diskett(
+                Abc80Log.diskett(
                     "Disk WRITE: Drive ${'A' + currentDriveIndex}, Track $currentTrack, Sector $currentSector, DMA=0x${
                         dmaAddress.toHex(
                             4
@@ -186,7 +186,7 @@ class DiskController {
 
                 return 0
             } catch (e: Exception) {
-                ZXLog.wtf("Disk WRITE ERROR: ${e.message}")
+                Abc80Log.wtf("Disk WRITE ERROR: ${e.message}")
                 return 1
             }
         }

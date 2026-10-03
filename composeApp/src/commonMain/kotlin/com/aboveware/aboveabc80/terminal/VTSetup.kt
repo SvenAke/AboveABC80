@@ -3,7 +3,7 @@ package com.aboveware.aboveabc80.terminal
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import com.aboveware.aboveabc80.ZXLog
+import com.aboveware.aboveabc80.Abc80Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -731,7 +731,7 @@ class VTSetup(private val vt: VT320) {
         }
 
         open fun draw() {
-            ZXLog.terminal("VTSetup: draw() called")
+            Abc80Log.terminal("VTSetup: draw() called")
             vt.activeStatusLine = false // Ensure drawing commands target the main screen area
             heading()
             bottom()
@@ -873,7 +873,7 @@ class VTSetup(private val vt: VT320) {
                         }
 
                         if (level == 52) {
-                            ZXLog.terminal("VT320: Switching to VT52 mode")
+                            Abc80Log.terminal("VT320: Switching to VT52 mode")
                         } else {
                             val seq = "\u001B[${level};${controls}\"p"
                             seq.forEach { vt.putChar(it) }
@@ -1413,12 +1413,12 @@ class VTSetup(private val vt: VT320) {
     private var savedConformanceLevel = 63
 
     fun toggle() {
-        ZXLog.terminal("VTSetup: toggle() called, current isVisible=$isVisible")
+        Abc80Log.terminal("VTSetup: toggle() called, current isVisible=$isVisible")
         if (isVisible) exit() else enter()
     }
 
     private fun enter() {
-        ZXLog.terminal("VTSetup: enter() - saving screen and starting draw")
+        Abc80Log.terminal("VTSetup: enter() - saving screen and starting draw")
         isVisible = true
 
         // Save current terminal state
@@ -1444,11 +1444,11 @@ class VTSetup(private val vt: VT320) {
 
         currentScreen = setUpDirectoryScreen
         currentScreen?.draw()
-        ZXLog.terminal("VTSetup: enter() - draw complete")
+        Abc80Log.terminal("VTSetup: enter() - draw complete")
     }
 
     private fun exit() {
-        ZXLog.terminal("VTSetup: exit() - restoring screen. savedScreen present: ${savedScreen != null}")
+        Abc80Log.terminal("VTSetup: exit() - restoring screen. savedScreen present: ${savedScreen != null}")
         isVisible = false
 
         // Restore terminal state
@@ -1484,7 +1484,7 @@ class VTSetup(private val vt: VT320) {
 
     fun handleInput(code: String): Boolean {
         if (!isVisible) return false
-        ZXLog.terminal("VTSetup: handleInput code='${code.replace("\u001B", "ESC")}'")
+        Abc80Log.terminal("VTSetup: handleInput code='${code.replace("\u001B", "ESC")}'")
         if (isPartialSequence(code)) return false
 
         val handled = when (code) {

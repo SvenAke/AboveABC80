@@ -1,7 +1,7 @@
 package com.aboveware.aboveabc80.keyboard
 
 import com.aboveware.aboveabc80.NativeLib
-import com.aboveware.aboveabc80.ZXLog
+import com.aboveware.aboveabc80.Abc80Log
 import com.aboveware.aboveabc80.core.CutNPaste
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -288,7 +288,7 @@ class CommandLine {
             "K_CUR",
             object : NativeLib.MemoryWriteWatcher {
                 override fun onWrite(address: Int, data: Short, before: Short, changed: Boolean) {
-                    // ZXLog.wtf("${this@CommandLine}")
+                    // Abc80Log.wtf("${this@CommandLine}")
                 }
             })
     }
@@ -312,7 +312,7 @@ class CommandLine {
     operator fun plusAssign(increment: List<String>) {
         CoroutineScope(Dispatchers.Default).launch {
             CutNPaste.instance.paste(increment) { _, _, _ ->
-                //ZXLog.commandLine("$progress ${ZXSpectrum.commandLine}")
+                //Abc80Log.commandLine("$progress ${ZXSpectrum.commandLine}")
             }
         }
     }
@@ -320,7 +320,7 @@ class CommandLine {
     operator fun plusAssign(increment: String) {
         CoroutineScope(Dispatchers.Default).launch {
             CutNPaste.instance.paste(increment) {
-                ZXLog.commandLine("$instance")
+                Abc80Log.commandLine("$instance")
             }
         }
     }

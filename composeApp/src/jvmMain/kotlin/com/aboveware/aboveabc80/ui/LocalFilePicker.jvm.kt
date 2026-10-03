@@ -2,7 +2,7 @@ package com.aboveware.aboveabc80.ui
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import com.aboveware.aboveabc80.ZXLog
+import com.aboveware.aboveabc80.Abc80Log
 import java.awt.FileDialog
 import java.awt.Frame
 import java.io.File
@@ -27,7 +27,7 @@ actual fun LocalFilePicker(
                     val bytes = file.readBytes()
                     onFileSelected(fileName, bytes)
                 } catch (e: Exception) {
-                    ZXLog.wtf("Upload failed: ${e.message}")
+                    Abc80Log.wtf("Upload failed: ${e.message}")
                 }
             }
             onDismiss()

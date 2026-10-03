@@ -37,7 +37,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.aboveware.aboveabc80.ZXLog
+import com.aboveware.aboveabc80.Abc80Log
 
 @Composable
 fun VirtualPrinterView(modifier: Modifier = Modifier) {
@@ -45,7 +45,7 @@ fun VirtualPrinterView(modifier: Modifier = Modifier) {
     // Removing the internal isVisible check as it's now handled by the caller (CPMScreen)
     // and adding a log to confirm composition.
     SideEffect {
-        ZXLog.terminal("VirtualPrinterView: Composed")
+        Abc80Log.terminal("VirtualPrinterView: Composed")
     }
 
     val listState = rememberLazyListState()

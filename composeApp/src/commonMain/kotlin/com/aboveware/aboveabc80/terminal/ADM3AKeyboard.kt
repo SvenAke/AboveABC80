@@ -1,7 +1,7 @@
 package com.aboveware.aboveabc80.terminal
 
 import androidx.compose.ui.input.key.Key
-import com.aboveware.aboveabc80.ZXLog
+import com.aboveware.aboveabc80.Abc80Log
 import com.aboveware.aboveabc80.keyboard.KeyboardLed
 
 class ADM3AKeyboard(private val terminal: Terminal) : TerminalKeyboard {
@@ -24,7 +24,7 @@ class ADM3AKeyboard(private val terminal: Terminal) : TerminalKeyboard {
         fifthLabel: String?,
         sixthLabel: String?
     ) {
-        ZXLog.keyboard("ADM3AKeyboard: handleKeyEvent codes='$codes' label='$label'")
+        Abc80Log.keyboard("ADM3AKeyboard: handleKeyEvent codes='$codes' label='$label'")
         if (codes.isNotEmpty() && !codes.contains(",")) {
             codes.toIntOrNull()?.let { ascii ->
                 // HERE IS key (Answer Back) is traditionally CTRL-E (0x05)

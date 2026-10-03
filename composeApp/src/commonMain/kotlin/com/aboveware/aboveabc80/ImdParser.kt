@@ -149,7 +149,7 @@ class ImdParser(val data: ByteArray) {
         val raw = ByteArray(totalSize)
         raw.fill(0xE5.toByte()) // Default CP/M empty value
 
-        ZXLog.diskett(
+        Abc80Log.diskett(
             "Converting IMD to raw DSK: Cyls=${maxCyl + 1}, Heads=$headsCount, " +
                 "physicalSPT=$maxPhysicalSectors, logicalSPT=$logicalSectorsPerTrack, Size=$totalSize"
         )

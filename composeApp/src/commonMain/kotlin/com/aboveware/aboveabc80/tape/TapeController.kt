@@ -5,7 +5,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import com.aboveware.aboveabc80.ZXLog
+import com.aboveware.aboveabc80.Abc80Log
 
 class TapeController {
     companion object {
@@ -44,7 +44,7 @@ class TapeController {
         punchedTape.add(c.code.toByte())
         // Keep only last N chars for animation if it gets too long? 
         // Or just let it grow like the printer.
-        ZXLog.terminal(
+        Abc80Log.terminal(
             "Paper Tape Punch: 0x${
                 c.code.toString(16).uppercase()
             } ('${if (c.code >= 32) c else '.'}')"

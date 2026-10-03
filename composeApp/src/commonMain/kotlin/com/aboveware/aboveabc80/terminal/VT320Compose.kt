@@ -1,6 +1,6 @@
 package com.aboveware.aboveabc80.terminal
 
-import com.aboveware.aboveabc80.ZXLog
+import com.aboveware.aboveabc80.Abc80Log
 
 /**
  * Implements the VT320 Compose key logic.
@@ -19,13 +19,13 @@ class VT320Compose {
     )
 
     fun start(mark: Char? = null) {
-        ZXLog.keyboard("VT320Compose: Start${if (mark != null) " with mark '$mark'" else ""}")
+        Abc80Log.keyboard("VT320Compose: Start${if (mark != null) " with mark '$mark'" else ""}")
         isActive = true
         firstChar = mark
     }
 
     fun cancel() {
-        ZXLog.keyboard("VT320Compose: Cancel")
+        Abc80Log.keyboard("VT320Compose: Cancel")
         isActive = false
         firstChar = null
     }
@@ -44,18 +44,18 @@ class VT320Compose {
         }
 
         if (firstChar == null) {
-            ZXLog.keyboard("VT320Compose: First char = '$c' (${c.code})")
+            Abc80Log.keyboard("VT320Compose: First char = '$c' (${c.code})")
             firstChar = c
             return null
         }
 
-        ZXLog.keyboard("VT320Compose: Second char = '$c' (${c.code})")
+        Abc80Log.keyboard("VT320Compose: Second char = '$c' (${c.code})")
         val result = compose(firstChar!!, c, context)
 
         if (result != null) {
-            ZXLog.keyboard("VT320Compose: Result = '$result' (${result.code})")
+            Abc80Log.keyboard("VT320Compose: Result = '$result' (${result.code})")
         } else {
-            ZXLog.keyboard("VT320Compose: No match for '$firstChar' + '$c'")
+            Abc80Log.keyboard("VT320Compose: No match for '$firstChar' + '$c'")
         }
 
         isActive = false

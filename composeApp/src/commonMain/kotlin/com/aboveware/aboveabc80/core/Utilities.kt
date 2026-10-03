@@ -20,7 +20,7 @@ class Utilities {
      */
     fun waitForLabel(label: String) {
         if (!Assembler.instance.labels.isDefined(label)) {
-            // ZXLog.wtf("waitForLabel: Label $label not found, skipping wait.")
+            // Abc80Log.wtf("waitForLabel: Label $label not found, skipping wait.")
             return
         }
 

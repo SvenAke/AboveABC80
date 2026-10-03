@@ -2,7 +2,7 @@ package com.aboveware.aboveabc80.core
 
 import com.aboveware.aboveabc80.ImdParser
 import com.aboveware.aboveabc80.NativeLib
-import com.aboveware.aboveabc80.ZXLog
+import com.aboveware.aboveabc80.Abc80Log
 import com.aboveware.aboveabc80.splitFilename
 import kotlin.math.min
 
@@ -89,7 +89,7 @@ class Floppy(
                     }
                     if (hasFiles) {
                         guessedOff = tracks[i].cylinder
-                        ZXLog.diskett("Detected CP/M directory at Cylinder $guessedOff")
+                        Abc80Log.diskett("Detected CP/M directory at Cylinder $guessedOff")
                         break
                     }
                 }
@@ -97,7 +97,7 @@ class Floppy(
                 if (tracks.isNotEmpty()) {
                     // Convert physical sectors to 128-byte logical sectors
                     sectorsPerTrack = (tracks[0].sectorCount * tracks[0].sectorSize) / 128
-                    ZXLog.diskett("IMD: Physical SPT=${tracks[0].sectorCount}, Size=${tracks[0].sectorSize} -> logical SPT=$sectorsPerTrack")
+                    Abc80Log.diskett("IMD: Physical SPT=${tracks[0].sectorCount}, Size=${tracks[0].sectorSize} -> logical SPT=$sectorsPerTrack")
                 }
 
                 workingData = parser.toRawDsk()
@@ -124,17 +124,17 @@ class Floppy(
             }
 
             if (guessedOff != null) {
-                ZXLog.diskett("Setting reserved tracks (OFF) to $guessedOff")
+                Abc80Log.diskett("Setting reserved tracks (OFF) to $guessedOff")
                 format = format.copy(off = guessedOff)
             }
 
             if (sectorsPerTrack != null && sectorsPerTrack != format.spt) {
-                ZXLog.diskett("Updating SPT to $sectorsPerTrack")
+                Abc80Log.diskett("Updating SPT to $sectorsPerTrack")
                 format = format.copy(spt = sectorsPerTrack)
             }
 
             val tracksCount = workingData.size / (format.spt * 128)
-            ZXLog.diskett("Floppy created: SPT=${format.spt}, OFF=${format.off}, Tracks=$tracksCount, Size=${workingData.size}")
+            Abc80Log.diskett("Floppy created: SPT=${format.spt}, OFF=${format.off}, Tracks=$tracksCount, Size=${workingData.size}")
 
             val floppy = Floppy(format, tracks = tracksCount)
             floppy.loadRawData(workingData)
@@ -527,7 +527,7 @@ class Floppy(
         // Find N contiguous directory entries if possible for sequential order
         val entryIndices = findContiguousFreeDirectoryEntries(entriesNeeded)
         if (entryIndices == null) {
-            ZXLog.wtf(
+            Abc80Log.wtf(
                 "Inject $name.$extension failed: directory entries needed=$entriesNeeded " +
                         "free=${countFreeDirectoryEntries()}"
             )
@@ -557,7 +557,7 @@ class Floppy(
         }
 
         if (freeBlocks.size < blocksNeeded) {
-            ZXLog.wtf(
+            Abc80Log.wtf(
                 "Inject $name.$extension failed: blocks needed=$blocksNeeded " +
                         "free=${freeBlocks.size}, fileBytes=${fileData.size}"
             )
@@ -629,13 +629,13 @@ class Floppy(
 
         val storedData = readFile(name, extension)
         if (storedData == null) {
-            ZXLog.wtf("Inject $name.$extension failed: verification read returned null")
+            Abc80Log.wtf("Inject $name.$extension failed: verification read returned null")
             return fail()
         }
         if (storedData.size < fileData.size ||
             !storedData.copyOf(fileData.size).contentEquals(fileData)
         ) {
-            ZXLog.wtf(
+            Abc80Log.wtf(
                 "Inject $name.$extension failed: verification mismatch " +
                         "storedBytes=${storedData.size}, fileBytes=${fileData.size}"
             )

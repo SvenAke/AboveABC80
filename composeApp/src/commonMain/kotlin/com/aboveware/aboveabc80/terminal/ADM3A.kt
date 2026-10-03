@@ -5,7 +5,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
-import com.aboveware.aboveabc80.ZXLog
+import com.aboveware.aboveabc80.Abc80Log
 import com.aboveware.aboveabc80.core.BIOS
 
 private const val adm3aAnswerBack = "aboveCMP\r"
@@ -78,7 +78,7 @@ class ADM3A : Terminal {
     }
 
     override fun toggleSetup() {
-        ZXLog.terminal("ADM3A: toggleSetup called (not implemented for ADM3A)")
+        Abc80Log.terminal("ADM3A: toggleSetup called (not implemented for ADM3A)")
     }
 
     override fun getGlyph(c: Char): CharacterSet.Glyph? = if (CharacterSet.isLoaded()) {
@@ -155,7 +155,7 @@ class ADM3A : Terminal {
     override fun getChar(): Int = synchronized(lock) {
         if (inputBuffer.isNotEmpty()) {
             val char = inputBuffer.removeAt(0)
-            ZXLog.keyboard("ADM3A read: ${char.toChar()} (${char.toString(16)})")
+            Abc80Log.keyboard("ADM3A read: ${char.toChar()} (${char.toString(16)})")
             char
         } else {
             0x00
@@ -168,10 +168,10 @@ class ADM3A : Terminal {
         }
         synchronized(lock) {
             if (char.code == 0x05) { // ENQ - Answer Back
-                ZXLog.keyboard("ADM3A: Answer Back triggered")
+                Abc80Log.keyboard("ADM3A: Answer Back triggered")
                 adm3aAnswerBack.forEach { inputBuffer.add(it.code) }
             } else {
-                ZXLog.keyboard("ADM3A: onKeyEvent $char")
+                Abc80Log.keyboard("ADM3A: onKeyEvent $char")
                 inputBuffer.add(char.code)
             }
         }

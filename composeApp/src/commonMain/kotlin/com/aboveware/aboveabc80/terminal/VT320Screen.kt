@@ -1,6 +1,6 @@
 package com.aboveware.aboveabc80.terminal
 
-import com.aboveware.aboveabc80.ZXLog
+import com.aboveware.aboveabc80.Abc80Log
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.time.Duration.Companion.milliseconds
@@ -39,7 +39,7 @@ internal fun VT320.drawChar(c: Char) {
 
     // Trace character drawing if it's the prompt
     if (finalChar == '*') {
-        ZXLog.terminal("VT320: DRAWING '*' at ($cursorX, $cursorY) with attr=$currentAttr")
+        Abc80Log.terminal("VT320: DRAWING '*' at ($cursorX, $cursorY) with attr=$currentAttr")
     }
 
     if (autoWrap || cursorX < columns - 1) {

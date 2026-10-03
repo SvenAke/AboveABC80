@@ -57,7 +57,7 @@ class NativeLib {
             if (lastLabel == label) {
                 ++labelCount
             } else {
-                if (labelCount != 0) ZXLog.trace("... $lastLabel($labelCount)")
+                if (labelCount != 0) Abc80Log.trace("... $lastLabel($labelCount)")
                 lastLabel = label
                 labelCount = 0
                 val cpu = cpu()
@@ -65,7 +65,7 @@ class NativeLib {
                 val retAddr = (peek(cpu.sp + 1) shl 8) or peek(cpu.sp)
                 val retAddr2 = (peek(cpu.sp + 3) shl 8) or peek(cpu.sp + 2)
                 message += " RET -> ${retAddr.toHex()}, ${retAddr2.toHex()}"
-                ZXLog.trace(message)
+                Abc80Log.trace(message)
             }
             return false
         }
@@ -286,7 +286,7 @@ class NativeLib {
                 files.add(ArchivedFile("$name.$ext", finalContent))
             }
         }
-        ZXLog.terminal("Extracted ${files.size} files from LBR archive")
+        Abc80Log.terminal("Extracted ${files.size} files from LBR archive")
         return files
     }
 

@@ -193,10 +193,10 @@ fun CPMScreen(startWithStorageOpen: Boolean = false) {
 
     LaunchedEffect(TerminalManager.activeTerminal, TerminalManager.autoUppercase) {
         val activeTerminal = TerminalManager.activeTerminal
-        ZXLog.keyboard("CPMScreen: Attaching keyboard listeners to ${activeTerminal::class.simpleName}")
+        Abc80Log.keyboard("CPMScreen: Attaching keyboard listeners to ${activeTerminal::class.simpleName}")
         activeTerminal.connect()
         keyboard.onKeyCodes = { codes, l1, l2, l3, l4, l5, l6 ->
-            ZXLog.keyboard("CPMScreen: onKeyCodes received codes='$codes' label='$l1'")
+            Abc80Log.keyboard("CPMScreen: onKeyCodes received codes='$codes' label='$l1'")
             activeTerminal.keyboard.handleKeyEvent(codes, l1, l2, l3, l4, l5, l6)
         }
         keyboard.onKeyUpCodes = { codes ->
@@ -344,7 +344,7 @@ fun CPMScreen(startWithStorageOpen: Boolean = false) {
                     val data = Res.readBytes("files/CMP22.DSK")
                     saveLocalDisk("SYSTEM.DSK", data)
                 } catch (e: Exception) {
-                    ZXLog.wtf("Failed to create SYSTEM.DSK: ${e.message}")
+                    Abc80Log.wtf("Failed to create SYSTEM.DSK: ${e.message}")
                 }
             }
             DiskController.instance.loadFromLocal(0, "SYSTEM.DSK")
@@ -356,7 +356,7 @@ fun CPMScreen(startWithStorageOpen: Boolean = false) {
             delay(500.milliseconds)
             try {
                 focusRequester.requestFocus()
-                ZXLog.keyboard("CPMScreen: Focus requested successfully")
+                Abc80Log.keyboard("CPMScreen: Focus requested successfully")
             } catch (e: Exception) {
                 // Ignore, will retry
             }
@@ -369,7 +369,7 @@ fun CPMScreen(startWithStorageOpen: Boolean = false) {
     LaunchedEffect(printer.isVisible) {
         if (!printer.isVisible && !isFirstPrinterCheck) {
             focusRequester.requestFocus()
-            ZXLog.keyboard("CPMScreen: Printer hidden, requesting focus back to terminal")
+            Abc80Log.keyboard("CPMScreen: Printer hidden, requesting focus back to terminal")
         }
         isFirstPrinterCheck = false
     }
@@ -415,12 +415,12 @@ fun CPMScreen(startWithStorageOpen: Boolean = false) {
                 .imePadding()
                 .focusRequester(focusRequester)
                 .onFocusChanged { state ->
-                    ZXLog.keyboard("CPMScreen: Column focus changed: ${state.isFocused}")
+                    Abc80Log.keyboard("CPMScreen: Column focus changed: ${state.isFocused}")
                 }
                 .focusable()
                 .pointerInput(Unit) {
                     detectTapGestures {
-                        ZXLog.keyboard("CPMScreen: Screen tapped, requesting focus")
+                        Abc80Log.keyboard("CPMScreen: Screen tapped, requesting focus")
                         focusRequester.requestFocus()
                     }
                 }
@@ -592,7 +592,7 @@ fun CPMScreen(startWithStorageOpen: Boolean = false) {
                 }
 
                 if (!TerminalManager.activeTerminal.isSetupVisible && printer.isVisible) {
-                    ZXLog.terminal("CPMScreen: Showing VirtualPrinterView (isVisible=${printer.isVisible})")
+                    Abc80Log.terminal("CPMScreen: Showing VirtualPrinterView (isVisible=${printer.isVisible})")
                     VirtualPrinterView(modifier = Modifier.align(Alignment.CenterStart).zIndex(1f))
                 }
 
@@ -1201,7 +1201,7 @@ private suspend fun loadFont(fontFile: String) {
     if (fontFile == "DEFAULT") {
         "\u001B(B".forEach { terminal.putChar(it) }
         terminal.putChar('\u000F') // SI (G0 -> GL)
-        ZXLog.terminal("CPMScreen: Reset to standard font")
+        Abc80Log.terminal("CPMScreen: Reset to standard font")
         return
     }
 
@@ -1254,7 +1254,7 @@ private suspend fun loadFont(fontFile: String) {
         // Designate DRCS as G0 and invoke GL
         if (terminal is com.aboveware.aboveabc80.terminal.VT320) {
             val designator = terminal.graphics.characterSets.drcsFontBuffer.designator()
-            ZXLog.terminal("CPMScreen: DRCS Designator detected as '$designator'")
+            Abc80Log.terminal("CPMScreen: DRCS Designator detected as '$designator'")
             if (designator.isNotEmpty()) {
                 "\u001B($designator".forEach { terminal.putChar(it) }
             } else {
@@ -1265,9 +1265,9 @@ private suspend fun loadFont(fontFile: String) {
         }
         terminal.putChar('\u000F') // SI (G0 into GL)
 
-        ZXLog.terminal("CPMScreen: Font $fontFile loaded and designated to G0")
+        Abc80Log.terminal("CPMScreen: Font $fontFile loaded and designated to G0")
     } catch (e: Exception) {
-        ZXLog.wtf("CPMScreen: Failed to load font $fontFile: ${e.message}")
+        Abc80Log.wtf("CPMScreen: Failed to load font $fontFile: ${e.message}")
     }
 }
 
@@ -1331,7 +1331,7 @@ private fun handleTerminalKeyEvent(
         return true // Skip redundant LF
     }
 
-    ZXLog.keyboard("CPMScreen: handleTerminalKeyEvent activeTerminal=${activeTerminal::class.simpleName} type=$type, key=$key, char='$charValue', ctrl=$isCtrl, shift=$isShift")
+    Abc80Log.keyboard("CPMScreen: handleTerminalKeyEvent activeTerminal=${activeTerminal::class.simpleName} type=$type, key=$key, char='$charValue', ctrl=$isCtrl, shift=$isShift")
 
     val isRepeat = getRepeatCount(event) > 0
     val timeMillis = getEventTime(event)
@@ -1345,7 +1345,7 @@ private fun handleTerminalKeyEvent(
             timeMillis
         )
     ) {
-        ZXLog.keyboard("CPMScreen: Physical key handled by terminal keyboard")
+        Abc80Log.keyboard("CPMScreen: Physical key handled by terminal keyboard")
         return true
     }
 
@@ -1380,7 +1380,7 @@ private fun handleTerminalKeyEvent(
     if (char != null && char.code != 0) {
         // Only handle KeyDown for character input to avoid double letters on Desktop
         if (type == KeyEventType.KeyDown) {
-            ZXLog.keyboard("CPMScreen: sending char to terminal: char=${char.code} ('$char')")
+            Abc80Log.keyboard("CPMScreen: sending char to terminal: char=${char.code} ('$char')")
             activeTerminal.onKeyEvent(char)
             activeTerminal.triggerClick()
         }

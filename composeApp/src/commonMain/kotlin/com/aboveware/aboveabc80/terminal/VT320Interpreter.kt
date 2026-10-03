@@ -1,6 +1,6 @@
 package com.aboveware.aboveabc80.terminal
 
-import com.aboveware.aboveabc80.ZXLog
+import com.aboveware.aboveabc80.Abc80Log
 
 /**
  * VT320 Escape Sequence Interpreter
@@ -317,7 +317,7 @@ internal fun VT320.handleEsc(c: Char) {
         }
 
         'c' -> { // RIS - Reset to Initial State
-            ZXLog.terminal("VT320: Full Reset (RIS) received")
+            Abc80Log.terminal("VT320: Full Reset (RIS) received")
             ris()
         }
 
@@ -556,30 +556,30 @@ internal fun VT320.handleSpace(c: Char) {
 
         'F' -> { // S7C1T - Select 7-bit C1 controls
             eightBitControls = false
-            ZXLog.terminal("VT320: 7-bit C1 controls selected")
+            Abc80Log.terminal("VT320: 7-bit C1 controls selected")
         }
 
         'G' -> { // S8C1T - Select 8-bit C1 controls
             eightBitControls = true
-            ZXLog.terminal("VT320: 8-bit C1 controls selected")
+            Abc80Log.terminal("VT320: 8-bit C1 controls selected")
         }
 
         'L' -> { // Conformance Level 1 (VT100)
             conformanceLevel = 61
             eightBitControls = false
-            ZXLog.terminal("VT320: Conformance Level 1 (VT100) selected")
+            Abc80Log.terminal("VT320: Conformance Level 1 (VT100) selected")
         }
 
         'M' -> { // Conformance Level 2 (VT200)
             conformanceLevel = 62
             eightBitControls = true
-            ZXLog.terminal("VT320: Conformance Level 2 (VT200) selected")
+            Abc80Log.terminal("VT320: Conformance Level 2 (VT200) selected")
         }
 
         'N' -> { // Conformance Level 3 (VT300)
             conformanceLevel = 63
             eightBitControls = true
-            ZXLog.terminal("VT320: Conformance Level 3 (VT300) selected")
+            Abc80Log.terminal("VT320: Conformance Level 3 (VT300) selected")
         }
     }
 }
@@ -655,7 +655,7 @@ internal fun VT320.handleQuote(c: Char) {
                 if (controls == 1 || level == 61) "7-bit controls" else "8-bit controls"
             eightBitControls = if (level == 61) false else (controls == 0 || controls == 2)
 
-            ZXLog.terminal("VT320: Conformance Level set to $levelStr ($controlStr)")
+            Abc80Log.terminal("VT320: Conformance Level set to $levelStr ($controlStr)")
         }
 
         'q' -> { // DECSCA - Select Character Protection Attribute
@@ -726,7 +726,7 @@ internal fun VT320.handleDcsData(c: Char) {
         } else {
             val added = it.add(c)
             if (!added) {
-                // ZXLog.terminal("VT320: SoftCharacterSet rejected byte 0x${code.toString(16).uppercase()}")
+                // Abc80Log.terminal("VT320: SoftCharacterSet rejected byte 0x${code.toString(16).uppercase()}")
             }
         }
     }
@@ -749,7 +749,7 @@ internal fun VT320.startDecdld() {
         if (characterMatrixHeight == 0) characterMatrixHeight = 12 // Default
         characterSetSize = getParam(7, 0)
     }
-    ZXLog.terminal("VT320: Started DECDLD with params $params")
+    Abc80Log.terminal("VT320: Started DECDLD with params $params")
 }
 
 /**
@@ -759,7 +759,7 @@ internal fun VT320.finishDecdld() {
     softCharacterSet?.let {
         it.finish()
         graphics.characterSets.drcsFontBuffer.load(it)
-        ZXLog.terminal("VT320: Finished DECDLD. Designator: '${it.designator()}'")
+        Abc80Log.terminal("VT320: Finished DECDLD. Designator: '${it.designator()}'")
     }
     softCharacterSet = null
 }
@@ -808,7 +808,7 @@ internal fun VT320.startUdk() {
 
     udkBuffer = ""
     udkKeyNum = -1
-    ZXLog.terminal("VT320: Started UDK definition with params $params")
+    Abc80Log.terminal("VT320: Started UDK definition with params $params")
 }
 
 /**
@@ -818,7 +818,7 @@ internal fun VT320.finishUdkEntry() {
     if (udkKeyNum != -1 && udkBuffer.isNotEmpty()) {
         val definition = hexToString(udkBuffer)
         (keyboard as? VT320Keyboard)?.defineUdk(udkKeyNum, definition)
-        ZXLog.terminal("VT320: Defined UDK $udkKeyNum = '$definition'")
+        Abc80Log.terminal("VT320: Defined UDK $udkKeyNum = '$definition'")
     }
     udkKeyNum = -1
     udkBuffer = ""
@@ -1237,7 +1237,7 @@ internal fun VT320.executeCsi(c: Char) {
         }
 
         'h' -> { // SM - Set Mode / DECSET - DEC Private Mode Set
-            ZXLog.terminal("VT320: SM/DECSET params=$params isPrivate=$isPrivateMode")
+            Abc80Log.terminal("VT320: SM/DECSET params=$params isPrivate=$isPrivateMode")
             params.forEach { p ->
                 if (isPrivateMode) {
                     when (p) {
@@ -1311,7 +1311,7 @@ internal fun VT320.executeCsi(c: Char) {
         }
 
         'l' -> { // RM - Reset Mode / DECRST - DEC Private Mode Reset
-            ZXLog.terminal("VT320: RM/DECRST params=$params isPrivate=$isPrivateMode")
+            Abc80Log.terminal("VT320: RM/DECRST params=$params isPrivate=$isPrivateMode")
             params.forEach { p ->
                 if (isPrivateMode) {
                     when (p) {

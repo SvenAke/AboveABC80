@@ -24,7 +24,7 @@ import androidx.core.graphics.createBitmap
 import androidx.core.graphics.withSave
 import androidx.core.graphics.withTranslation
 import com.aboveware.aboveabc80.R
-import com.aboveware.aboveabc80.ZXLog
+import com.aboveware.aboveabc80.Abc80Log
 import com.aboveware.aboveabc80.keyboard.KeyboardView.Companion.LONG_PRESS_TIMEOUT
 import java.util.Arrays
 import kotlin.math.max
@@ -160,7 +160,7 @@ class KeyboardView(
                     if (msg.what == MSG_LONG_PRESS) {
                         val key = msg.obj as KeyboardViewController.Key
                         key.on = true
-                        ZXLog.keyboard("MSG_LONG_PRESS $key")
+                        Abc80Log.keyboard("MSG_LONG_PRESS $key")
                         removeLongPress(key)
                     }
                 }

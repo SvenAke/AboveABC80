@@ -47,7 +47,7 @@ import com.aboveware.aboveabc80.ArchiveFileDialog
 import com.aboveware.aboveabc80.ArchivedFile
 import com.aboveware.aboveabc80.NativeLib
 import com.aboveware.aboveabc80.StorageFileDialog
-import com.aboveware.aboveabc80.ZXLog
+import com.aboveware.aboveabc80.Abc80Log
 import com.aboveware.aboveabc80.core.DiskController
 import com.aboveware.aboveabc80.core.Floppy
 import com.aboveware.aboveabc80.core.unzipFile
@@ -113,7 +113,7 @@ fun DiskManagerDialog(
                     }
                 }
             }
-            ZXLog.terminal("Exported ${uniqueFiles.size} files to $fullPath")
+            Abc80Log.terminal("Exported ${uniqueFiles.size} files to $fullPath")
         }
     }
 
@@ -361,7 +361,7 @@ fun DiskManagerDialog(
                     saveLocalDisk(mounted.name, floppy.getRawData())
                 }
             }
-            ZXLog.terminal("Successfully injected $fullName into drive ${'A' + driveIndex}")
+            Abc80Log.terminal("Successfully injected $fullName into drive ${'A' + driveIndex}")
         } else {
             errorMessage = "Failed to copy $fullName. The disk may be full."
         }
@@ -566,7 +566,7 @@ fun NewDiskDialog(
                     onCreated(name)
                 }
             } catch (e: Exception) {
-                ZXLog.wtf("Creation failed: ${e.message}")
+                Abc80Log.wtf("Creation failed: ${e.message}")
             }
         }
     }

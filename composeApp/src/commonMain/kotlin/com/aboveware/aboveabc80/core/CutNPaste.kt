@@ -4,7 +4,7 @@ package com.aboveware.aboveabc80.core
 
 import com.aboveware.aboveabc80.Assembler
 import com.aboveware.aboveabc80.NativeLib
-import com.aboveware.aboveabc80.ZXLog
+import com.aboveware.aboveabc80.Abc80Log
 import com.aboveware.aboveabc80.keyboard.CommandLine
 import com.aboveware.aboveabc80.keyboard.Keyboard
 import com.aboveware.aboveabc80.keyboard.Keys
@@ -226,7 +226,7 @@ class CutNPaste {
 
     @OptIn(ExperimentalUnsignedTypes::class)
     fun paste(inputLine: String, progress: (String) -> Unit): String {
-        ZXLog.commandLine(inputLine)
+        Abc80Log.commandLine(inputLine)
         val progressSoFar = StringBuilder()
         var doingRem = false
 
@@ -238,19 +238,19 @@ class CutNPaste {
                         if (cpu().a == '?'.code) parseError =
                             true
                         if (parseError) {
-                            ZXLog.wtf("Parse Error ${CommandLine.instance}")
+                            Abc80Log.wtf("Parse Error ${CommandLine.instance}")
                         }
                         return parseError
                     }
                 })
         }
 
-        ZXLog.commandLine(Tokenizer().tokenize(inputLine).toString())
+        Abc80Log.commandLine(Tokenizer().tokenize(inputLine).toString())
         Tokenizer().tokenize(inputLine).forEach { token ->
             if (doingRem) {
                 token.forEach { char ->
                     reservedWords["$char"]?.let { pair ->
-                        ZXLog.commandLine("1: $pair $char")
+                        Abc80Log.commandLine("1: $pair $char")
                         progressSoFar.append(char)
                         progress(progressSoFar.toString())
                         send(pair)
@@ -262,7 +262,7 @@ class CutNPaste {
                 progress(progressSoFar.toString())
                 send(space!!)
             } else reservedWords[token]?.let { pair ->
-                ZXLog.commandLine("2: $pair $token")
+                Abc80Log.commandLine("2: $pair $token")
                 doingRem = pair == rem
                 progressSoFar.append(token).append(" ")
                 progress(progressSoFar.toString())
@@ -270,7 +270,7 @@ class CutNPaste {
             } ?: run {
                 token.forEach { char ->
                     reservedWords["$char"]?.let { pair ->
-                        ZXLog.commandLine("3: $pair $char")
+                        Abc80Log.commandLine("3: $pair $char")
                         progressSoFar.append(char)
                         progress(progressSoFar.toString())
                         send(pair)

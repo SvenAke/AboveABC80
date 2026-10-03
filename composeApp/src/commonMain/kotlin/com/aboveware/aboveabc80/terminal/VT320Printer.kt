@@ -1,6 +1,6 @@
 package com.aboveware.aboveabc80.terminal
 
-import com.aboveware.aboveabc80.ZXLog
+import com.aboveware.aboveabc80.Abc80Log
 import com.aboveware.aboveabc80.printer.VirtualPrinter
 
 internal fun VT320.handleControllerMode(c: Char) {
@@ -13,7 +13,7 @@ internal fun VT320.handleControllerMode(c: Char) {
     if (controllerModeSeq.endsWith("\u001B[4i") || controllerModeSeq.endsWith("\u009B4i")) {
         printerStatus = PrinterStatus.READY
         controllerModeSeq = ""
-        ZXLog.terminal("VT320: Exited Printer Controller Mode")
+        Abc80Log.terminal("VT320: Exited Printer Controller Mode")
         sendPrinterTerminator()
     } else if (controllerModeSeq.length > 10) {
         controllerModeSeq = controllerModeSeq.takeLast(5)

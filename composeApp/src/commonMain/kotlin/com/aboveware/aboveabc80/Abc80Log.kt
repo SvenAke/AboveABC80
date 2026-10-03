@@ -6,7 +6,7 @@ package com.aboveware.aboveabc80
  *
  * @property enabled Whether logging for this specific tag is currently active.
  */
-enum class ZXLogTag(val enabled: Boolean) {
+enum class Abc80LogTag(val enabled: Boolean) {
     ASSEMBLE(false),
     COMMAND_LINE(false),
     DEBUG(false),
@@ -15,7 +15,9 @@ enum class ZXLogTag(val enabled: Boolean) {
     KEYBOARD(true),
     MONITOR(false),
     PORT(false),
+    BUS(false),
     DISKETT(true),
+    FLOPPY(false),
     PRINTER(false),
     SOUND(false),
     STORAGE(false),
@@ -30,14 +32,14 @@ enum class ZXLogTag(val enabled: Boolean) {
  * This object provides a unified interface for logging across common code,
  * delegating the actual output to platform-specific implementations.
  */
-object ZXLog {
+object Abc80Log {
     /**
      * Logs a "What a Terrible Failure" message. Used for conditions that should never happen.
      *
      * @param message The message to log.
      */
     fun wtf(message: String) {
-        log(ZXLogTag.WTF, message)
+        log(Abc80LogTag.WTF, message)
     }
 
     /**
@@ -46,32 +48,38 @@ object ZXLog {
      * @param tag The category of the log.
      * @param message The message to log.
      */
-    fun log(tag: ZXLogTag, message: String) {
+    fun log(tag: Abc80LogTag, message: String) {
         if (tag.enabled) {
             platformLog(tag.name, message)
         }
     }
 
     /** Logs messages related to the assembler or disassembler. */
-    fun assemble(message: String) = log(ZXLogTag.ASSEMBLE, message)
+    fun assemble(message: String) = log(Abc80LogTag.ASSEMBLE, message)
 
     /** Logs keyboard-related events and input processing. */
-    fun keyboard(message: String) = log(ZXLogTag.KEYBOARD, message)
+    fun keyboard(message: String) = log(Abc80LogTag.KEYBOARD, message)
+
+    /** Logs ABC bus traffic. */
+    fun bus(message: String) = log(Abc80LogTag.BUS, message)
+
+    /** Logs floppy controller activity. */
+    fun floppy(message: String) = log(Abc80LogTag.FLOPPY, message)
 
     /** Logs I/O port read and write operations. */
-    fun port(message: String) = log(ZXLogTag.PORT, message)
+    fun port(message: String) = log(Abc80LogTag.PORT, message)
 
     /** Logs terminal output and control sequences. */
-    fun terminal(message: String) = log(ZXLogTag.TERMINAL, message)
+    fun terminal(message: String) = log(Abc80LogTag.TERMINAL, message)
 
     /** Logs input received from the command line interface. */
-    fun commandLine(inputLine: String) = log(ZXLogTag.COMMAND_LINE, inputLine)
+    fun commandLine(inputLine: String) = log(Abc80LogTag.COMMAND_LINE, inputLine)
 
     /** Logs sound generation and audio processing events. */
-    fun sound(inputLine: String) = log(ZXLogTag.SOUND, inputLine)
+    fun sound(inputLine: String) = log(Abc80LogTag.SOUND, inputLine)
 
     /** Logs detailed execution trace information. */
-    fun trace(string: String) = log(ZXLogTag.TRACE, string)
+    fun trace(string: String) = log(Abc80LogTag.TRACE, string)
 
     /**
      * Logs a trace message and explicitly enables logging in the native library.
@@ -80,11 +88,11 @@ object ZXLog {
      * @param string The message to log.
      */
     fun debug(string: String) {
-        log(ZXLogTag.TRACE, string)
+        log(Abc80LogTag.TRACE, string)
         NativeLib.getObject().enableLogging(true)
     }
 
-    fun diskett(string: String) = log(ZXLogTag.DISKETT, string)
+    fun diskett(string: String) = log(Abc80LogTag.DISKETT, string)
 }
 
 /**

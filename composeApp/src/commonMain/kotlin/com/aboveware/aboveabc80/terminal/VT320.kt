@@ -6,7 +6,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
-import com.aboveware.aboveabc80.ZXLog
+import com.aboveware.aboveabc80.Abc80Log
 import com.aboveware.aboveabc80.playBell
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -241,7 +241,7 @@ class VT320 : Terminal {
         topMargin = 0
         bottomMargin = rows - 1
         lineAttributes = Array(rows) { LineAttribute.NORMAL }
-        ZXLog.terminal("VT320: Column mode changed to $cols and screen cleared")
+        Abc80Log.terminal("VT320: Column mode changed to $cols and screen cleared")
     }
 
     fun applyKeyboardLanguage(index: Int = VT320Settings.keyboardLanguage) {
@@ -694,7 +694,7 @@ class VT320 : Terminal {
         localEcho = VT320Settings.localEcho
         clearInputBuffer()
         applyKeyboardLanguage()
-        ZXLog.terminal("VT320: RIS performed.")
+        Abc80Log.terminal("VT320: RIS performed.")
         updateStatusLine()
 
         // Replay buffered characters
@@ -727,7 +727,7 @@ class VT320 : Terminal {
         characterSetMode8Bit = true
         graphics.softReset()
         applyKeyboardLanguage()
-        ZXLog.terminal("VT320: Soft Reset performed.")
+        Abc80Log.terminal("VT320: Soft Reset performed.")
         updateStatusLine()
     }
 
@@ -744,7 +744,7 @@ class VT320 : Terminal {
         onKeyEvent(0x11.toChar())
         isXoffReceivedFromHost = false
         isXoffReceivedFromPrinter = false
-        ZXLog.terminal("VT320: Clear Comm performed.")
+        Abc80Log.terminal("VT320: Clear Comm performed.")
         updateStatusLine()
     }
 
