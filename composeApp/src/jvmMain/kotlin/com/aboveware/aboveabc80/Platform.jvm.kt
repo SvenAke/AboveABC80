@@ -18,7 +18,7 @@ import kotlin.math.sin
 class JVMPlatform : Platform {
     override val name: String = "Java ${System.getProperty("java.version")}"
     val disksDir =
-        File(System.getProperty("user.home"), ".abovecpm/disks").apply { if (!exists()) mkdirs() }
+        File(System.getProperty("user.home"), ".aboveabc80/disks").apply { if (!exists()) mkdirs() }
 }
 
 actual fun getPlatform(): Platform = JVMPlatform()
@@ -134,7 +134,7 @@ actual fun openPdfPreview(name: String, data: ByteArray): Boolean {
         val desktop = Desktop.getDesktop()
         if (!desktop.isSupported(Desktop.Action.OPEN)) return false
 
-        val previewFile = File.createTempFile("abovecpm-preview-", ".pdf")
+        val previewFile = File.createTempFile("aboveabc80-preview-", ".pdf")
         previewFile.writeBytes(data)
         previewFile.deleteOnExit()
         desktop.open(previewFile)

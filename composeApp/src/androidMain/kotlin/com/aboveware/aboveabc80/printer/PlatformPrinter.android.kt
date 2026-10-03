@@ -23,7 +23,7 @@ actual fun printPrinterBuffer(lines: List<IntArray>) {
 
     val printManager = context.getSystemService(Context.PRINT_SERVICE) as? PrintManager
     printManager?.let {
-        val jobName = "AboveCPM Printer Output"
+        val jobName = "AboveABC80 Printer Output"
         it.print(jobName, ZXPrintAdapter(lines), PrintAttributes.Builder().build())
     }
 }

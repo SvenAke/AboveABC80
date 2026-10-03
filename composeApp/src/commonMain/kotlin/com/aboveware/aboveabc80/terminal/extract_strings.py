@@ -23,7 +23,7 @@ def extract(path, start, end):
         strings.append("".join(current))
     return strings
 
-path = 'C:/Users/svena/AndroidStudioProjects/aboveCPM/composeApp/src/commonMain/composeResources/files/23-054E7.bin'
+path = 'C:/Users/svena/AndroidStudioProjects/aboveABC80/composeApp/src/commonMain/composeResources/files/23-054E7.bin'
 en = extract(path, 566, 2600)
 fr = extract(path, 2602, 4830)
 de = extract(path, 4833, 7000)

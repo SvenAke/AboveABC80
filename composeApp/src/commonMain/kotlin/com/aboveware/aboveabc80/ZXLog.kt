@@ -26,7 +26,7 @@ enum class ZXLogTag(val enabled: Boolean) {
 }
 
 /**
- * Centralized logging utility for the abovecpm application.
+ * Centralized logging utility for the aboveabc80 application.
  * This object provides a unified interface for logging across common code,
  * delegating the actual output to platform-specific implementations.
  */

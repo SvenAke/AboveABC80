@@ -27,13 +27,13 @@ fun setAndroidContext(context: Context) {
 actual fun getPlatform(): Platform = AndroidPlatform(_androidContext!!)
 
 actual fun setPersistedString(key: String, value: String) {
-    val prefs = androidContext?.getSharedPreferences("abovecpm_prefs", Context.MODE_PRIVATE)
+    val prefs = androidContext?.getSharedPreferences("aboveabc80_prefs", Context.MODE_PRIVATE)
     prefs?.edit()?.putString(key, value)?.apply()
 }
 
 actual fun setPersistedMap(values: Map<String, String>) {
     val prefs =
-        androidContext?.getSharedPreferences("abovecpm_prefs", Context.MODE_PRIVATE) ?: return
+        androidContext?.getSharedPreferences("aboveabc80_prefs", Context.MODE_PRIVATE) ?: return
     prefs.edit {
         values.forEach { (key, value) ->
             putString(key, value)
@@ -42,12 +42,12 @@ actual fun setPersistedMap(values: Map<String, String>) {
 }
 
 actual fun getPersistedString(key: String, defaultValue: String): String {
-    val prefs = androidContext?.getSharedPreferences("abovecpm_prefs", Context.MODE_PRIVATE)
+    val prefs = androidContext?.getSharedPreferences("aboveabc80_prefs", Context.MODE_PRIVATE)
     return prefs?.getString(key, defaultValue) ?: defaultValue
 }
 
 actual fun clearPersistedSettings() {
-    androidContext?.getSharedPreferences("abovecpm_prefs", Context.MODE_PRIVATE)
+    androidContext?.getSharedPreferences("aboveabc80_prefs", Context.MODE_PRIVATE)
         ?.edit()
         ?.clear()
         ?.apply()
@@ -125,7 +125,7 @@ actual fun openPdfPreview(name: String, data: ByteArray): Boolean {
     return try {
         val context = androidContext ?: return false
         val previewDir = File(context.cacheDir, "pdf-previews").apply { mkdirs() }
-        val previewFile = File.createTempFile("abovecpm-preview-", ".pdf", previewDir)
+        val previewFile = File.createTempFile("aboveabc80-preview-", ".pdf", previewDir)
         previewFile.writeBytes(data)
         val uri = FileProvider.getUriForFile(
             context,

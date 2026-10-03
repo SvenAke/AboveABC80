@@ -1,6 +1,6 @@
 import os
 
-path = r'C:\Users\svena\AndroidStudioProjects\aboveCPM\composeApp\src\python\tzxtools\tzxtools\KnightLLore.tzx'
+path = r'C:\Users\svena\AndroidStudioProjects\aboveABC80\composeApp\src\python\tzxtools\tzxtools\KnightLLore.tzx'
 with open(path, 'rb') as f:
     data = f.read()
 

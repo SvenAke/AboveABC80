@@ -1,6 +1,6 @@
 package com.aboveware.aboveabc80
 
-import abovecpm.composeapp.generated.resources.Res
+import aboveabc80.composeapp.generated.resources.Res
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import com.aboveware.aboveabc80.Assembler.Companion.opcodeList

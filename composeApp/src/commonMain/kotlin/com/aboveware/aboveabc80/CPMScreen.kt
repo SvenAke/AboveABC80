@@ -1,5 +1,5 @@
 /**
- * CPMScreen: Main screen for the AboveCPM emulator and terminal interface.
+ * CPMScreen: Main screen for the AboveABC80 emulator and terminal interface.
  *
  * Recent fixes:
  * - Optimized state using mutableIntStateOf for FPS tracking.
@@ -10,10 +10,10 @@
  */
 package com.aboveware.aboveabc80
 
-import abovecpm.composeapp.generated.resources.Res
-import abovecpm.composeapp.generated.resources.cpu_label
-import abovecpm.composeapp.generated.resources.fps_label
-import abovecpm.composeapp.generated.resources.menu
+import aboveabc80.composeapp.generated.resources.Res
+import aboveabc80.composeapp.generated.resources.cpu_label
+import aboveabc80.composeapp.generated.resources.fps_label
+import aboveabc80.composeapp.generated.resources.menu
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn

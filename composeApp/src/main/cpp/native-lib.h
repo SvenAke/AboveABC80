@@ -13,7 +13,7 @@
 
 #endif
 
-#define LOG_TAG "NativeAboveCPM"
+#define LOG_TAG "NativeAboveABC80"
 
 #ifdef __cplusplus
 // C++ specific headers and declarations

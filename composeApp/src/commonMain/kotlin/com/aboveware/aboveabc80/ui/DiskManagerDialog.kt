@@ -1,6 +1,6 @@
 package com.aboveware.aboveabc80.ui
 
-import abovecpm.composeapp.generated.resources.Res
+import aboveabc80.composeapp.generated.resources.Res
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box

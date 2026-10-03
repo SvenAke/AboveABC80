@@ -1,6 +1,6 @@
 package com.aboveware.aboveabc80.core
 
-import abovecpm.composeapp.generated.resources.Res
+import aboveabc80.composeapp.generated.resources.Res
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf

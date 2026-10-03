@@ -1,4 +1,4 @@
-rootProject.name = "AboveCPM"
+rootProject.name = "AboveABC80"
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
 pluginManagement {

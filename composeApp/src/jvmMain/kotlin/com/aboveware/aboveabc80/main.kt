@@ -1,7 +1,7 @@
 package com.aboveware.aboveabc80
 
-import abovecpm.composeapp.generated.resources.Res
-import abovecpm.composeapp.generated.resources.windows_icon
+import aboveabc80.composeapp.generated.resources.Res
+import aboveabc80.composeapp.generated.resources.windows_icon
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import org.jetbrains.compose.resources.painterResource

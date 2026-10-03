@@ -142,7 +142,7 @@ val buildNativeDesktop = tasks.register("buildNativeDesktop") {
         searchDirs.forEach { dir ->
             if (dir.exists()) {
                 dir.listFiles()?.forEach { file ->
-                    if (file.name == "abovecpm.dll" || file.name == "libabovecpm.so") {
+                    if (file.name == "aboveabc80.dll" || file.name == "libaboveabc80.so") {
                         val target = outputDirFile.resolve(file.name)
                         file.copyTo(target, overwrite = true)
                         println("NATIVE-BUILD: Copied ${file.name} from ${dir.name} to ${target.absolutePath}")
@@ -152,7 +152,7 @@ val buildNativeDesktop = tasks.register("buildNativeDesktop") {
             }
         }
         if (!found) {
-            val allFiles = buildDirFile.walkTopDown().filter { it.name == "abovecpm.dll" || it.name == "libabovecpm.so" }.toList()
+            val allFiles = buildDirFile.walkTopDown().filter { it.name == "aboveabc80.dll" || it.name == "libaboveabc80.so" }.toList()
             allFiles.forEach { file ->
                 val target = outputDirFile.resolve(file.name)
                 file.copyTo(target, overwrite = true)
@@ -229,7 +229,7 @@ compose.desktop {
         jvmArgs("--enable-native-access=ALL-UNNAMED")
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb, TargetFormat.Exe)
-            packageName = "AboveCPM"
+            packageName = "AboveABC80"
             packageVersion = "1.0.0"
             
             // Låter jpackage hitta sidobilder (main-dialog.bmp, main-banner.bmp) i denna mapp

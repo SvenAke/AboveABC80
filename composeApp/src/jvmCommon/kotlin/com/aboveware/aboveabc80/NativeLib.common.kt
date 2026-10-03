@@ -8,7 +8,7 @@ import java.io.InputStream
 private fun loadNativeLibraryFromCopy(source: String, extension: String, input: InputStream): Boolean {
     try {
         input.use { stream ->
-            val tempFile = File.createTempFile("abovecpm-", extension)
+            val tempFile = File.createTempFile("aboveabc80-", extension)
             tempFile.deleteOnExit()
             tempFile.outputStream().use { output -> stream.copyTo(output) }
             @Suppress("UnsafeDynamicallyLoadedCode")
@@ -32,7 +32,7 @@ actual fun loadNativeLibrary() {
 
     val osName = System.getProperty("os.name").lowercase()
     val isWindows = osName.contains("win")
-    val libName = if (isWindows) "abovecpm.dll" else "libabovecpm.so"
+    val libName = if (isWindows) "aboveabc80.dll" else "libaboveabc80.so"
     val extension = if (isWindows) ".dll" else ".so"
 
     val resourceStream = NativeLib::class.java.getResourceAsStream("/$libName")
@@ -69,5 +69,5 @@ actual fun loadNativeLibrary() {
     }
 
     System.err.println("NATIVE-LOAD: FATAL - Could not load library from any location.")
-    throw UnsatisfiedLinkError("Could not load native library 'abovecpm' from any of the searched locations. Checked paths: $paths")
+    throw UnsatisfiedLinkError("Could not load native library 'aboveabc80' from any of the searched locations. Checked paths: $paths")
 }

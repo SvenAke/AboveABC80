@@ -2,8 +2,8 @@
 // Created by svena on 2026-09-12.
 //
 
-#ifndef ABOVECPM_NOMARCH_H
-#define ABOVECPM_NOMARCH_H
+#ifndef ABOVEABC80_NOMARCH_H
+#define ABOVEABC80_NOMARCH_H
 #include "readrle.h"
 #include "readhuff.h"
 #include "readlzw.h"
@@ -15,4 +15,4 @@
 #  include <unistd.h>
 
 #endif
-#endif //ABOVECPM_NOMARCH_H
+#endif //ABOVEABC80_NOMARCH_H

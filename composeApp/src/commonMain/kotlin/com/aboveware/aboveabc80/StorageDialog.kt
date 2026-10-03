@@ -1,6 +1,6 @@
 package com.aboveware.aboveabc80
 
-import abovecpm.composeapp.generated.resources.Res
+import aboveabc80.composeapp.generated.resources.Res
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background

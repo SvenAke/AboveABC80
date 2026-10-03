@@ -1,6 +1,6 @@
 package com.aboveware.aboveabc80.terminal
 
-import abovecpm.composeapp.generated.resources.Res
+import aboveabc80.composeapp.generated.resources.Res
 import com.aboveware.aboveabc80.ZXLog
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 

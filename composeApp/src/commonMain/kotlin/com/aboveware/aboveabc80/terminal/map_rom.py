@@ -1,4 +1,4 @@
-path = 'C:/Users/svena/AndroidStudioProjects/aboveCPM/composeApp/src/commonMain/composeResources/files/23-054E7.bin'
+path = 'C:/Users/svena/AndroidStudioProjects/aboveABC80/composeApp/src/commonMain/composeResources/files/23-054E7.bin'
 with open(path, 'rb') as f:
     data = f.read()
 

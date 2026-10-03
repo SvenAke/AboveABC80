@@ -10,7 +10,7 @@ endif ()
 set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
 
 # 3. Initialize project without languages first to avoid the "Running" crash
-project(abovecpm LANGUAGES NONE)
+project(aboveabc80 LANGUAGES NONE)
 
 # 4. Enable C and C++ explicitly.
 enable_language(C CXX)
@@ -37,7 +37,7 @@ if (NOT ANDROID)
     endif ()
 endif ()
 
-add_library(abovecpm SHARED
+add_library(aboveabc80 SHARED
         src/main/cpp/native-lib.cpp
         src/main/cpp/Patch.cpp
         src/main/cpp/Watchers.cpp
@@ -53,9 +53,9 @@ add_library(abovecpm SHARED
 
 if (ANDROID)
     # Link standard Android NDK libraries
-    target_link_libraries(abovecpm log jnigraphics)
+    target_link_libraries(aboveabc80 log jnigraphics)
     # Align LOAD segments at 16 KB boundaries for compatibility with 16 KB page devices (Android 15+)
-    target_link_options(abovecpm PRIVATE "-Wl,-z,max-page-size=16384")
+    target_link_options(aboveabc80 PRIVATE "-Wl,-z,max-page-size=16384")
 else ()
     # On desktop, no extra libraries needed
 endif ()
