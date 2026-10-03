@@ -449,7 +449,7 @@ fun CPMScreen(startWithStorageOpen: Boolean = false) {
                     .padding(if (isFocused.value) 2.dp else 0.dp),
                 contentAlignment = Alignment.BottomCenter
             ) {
-                TerminalView()
+                ABC80Screen(nativeLib = nativeLib)
 
                 if (showCpuAndFps) Row(
                     modifier = Modifier

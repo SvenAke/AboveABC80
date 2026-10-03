@@ -85,8 +85,9 @@ unsigned int executeFor() {
 
 int onReadPort(int port, int hi) {
     int port8 = port & 0xFF;
-    // Default values for ports. 0x00 is safer for status ports in CP/M.
-    return (port8 == 3 || port8 == 15) ? 0x00 : 0xFF;
+    // Minimal "no disk" status for the DOS ROM's floppy controller: bit7/bit0 set (ready), bit1 clear.
+    if (port8 == 1) return 0x81;
+    return (port8 <= 7) ? 0x00 : 0xFF;
 }
 
 void onWritePort(int port, int value) {
