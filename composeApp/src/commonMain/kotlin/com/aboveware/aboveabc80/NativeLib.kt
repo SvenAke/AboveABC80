@@ -91,6 +91,12 @@ class NativeLib {
     fun startEmulator(cpuFrequency: Int) = startEmulatorNative(cpuFrequency)
     private external fun startEmulatorNative(cpuFrequency: Int)
 
+    val bus = Abc80Bus().also { it.run() }
+
+    // Called from the native emulator thread for ports 0-7.
+    fun portRead(port: Int): Int = try { bus.read(port) } catch (e: Throwable) { 0xFF }
+    fun portWrite(port: Int, data: Int) { try { bus.write(port, data) } catch (_: Throwable) {} }
+
     fun sendKey(code: Int) = sendKeyNative(code)
     private external fun sendKeyNative(code: Int)
 

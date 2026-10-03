@@ -83,25 +83,40 @@ unsigned int executeFor() {
     return value > 0 ? (unsigned int) value : g_t_states_per_frame;
 }
 
+static jmethodID g_port_read_method = nullptr;
+static jmethodID g_port_write_method = nullptr;
+
 int onReadPort(int port, int hi) {
     int port8 = port & 0xFF;
-    // Minimal "no disk" status for the DOS ROM's floppy controller: bit7/bit0 set (ready), bit1 clear.
-    if (port8 == 1) return 0x81;
     // Keyboard PIO data port: bit 7 is the key strobe, 0 means "no key pressed".
     if (port8 == 0x38) return abc80_read_keyboard();
-    return (port8 <= 7) ? 0x00 : 0xFF;
+    // Ports 0-7 belong to the ABC bus (floppy / printer cards), handled in Kotlin.
+    if (port8 <= 7 && g_native_lib_object && g_port_read_method && g_vm) {
+        JNIEnv *env = nullptr;
+        if (attach_current_thread(&env) == JNI_OK) {
+            return env->CallIntMethod(g_native_lib_object, g_port_read_method, port8) & 0xFF;
+        }
+    }
+    return 0xFF;
 }
 
 void onWritePort(int port, int value) {
-    // Port writes are currently ignored
+    int port8 = port & 0xFF;
+    if (port8 <= 7 && g_native_lib_object && g_port_write_method && g_vm) {
+        JNIEnv *env = nullptr;
+        if (attach_current_thread(&env) == JNI_OK) {
+            env->CallVoidMethod(g_native_lib_object, g_port_write_method, port8, value & 0xFF);
+        }
+    }
 }
-
 JNIEXPORT void JNICALL
 Java_com_aboveware_aboveabc80_NativeLib_registerInstanceNative(JNIEnv *env, jobject instance) {
     if (g_native_lib_object) env->DeleteGlobalRef(g_native_lib_object);
     g_native_lib_object = env->NewGlobalRef(instance);
     jclass clazz = env->GetObjectClass(instance);
     g_disassemble_method = env->GetMethodID(clazz, "disassemble", "(I)Ljava/lang/String;");
+    g_port_read_method = env->GetMethodID(clazz, "portRead", "(I)I");
+    g_port_write_method = env->GetMethodID(clazz, "portWrite", "(II)V");
 }
 
 JNIEXPORT jbyteArray JNICALL
