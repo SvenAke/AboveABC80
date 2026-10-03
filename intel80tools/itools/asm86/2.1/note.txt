@@ -1,1 +1,0 @@
-asm86.ov0 is not standard omf format

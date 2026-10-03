@@ -1,9 +1,0 @@
-Load: DO;
-$include(:f3:Load.ipx)
-
-Load: procedure (path$p, Load$offset, switch, entry$p, status$p) public;
-    declare (path$p, Load$offset, switch, entry$p, status$p) address;
-    CALL ISIS(ILOAD, .path$p);
-end Load;
-
-end;

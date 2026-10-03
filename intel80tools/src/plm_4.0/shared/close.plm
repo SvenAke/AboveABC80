@@ -1,9 +1,0 @@
-Close: DO;
-$include(:f3:Close.ipx)
-
-Close: PROCEDURE(conn, status$p) public;
-	declare (conn, status$p) address;
-	CALL ISIS(ICLOSE, .conn);
-end Close;
-
-end;
