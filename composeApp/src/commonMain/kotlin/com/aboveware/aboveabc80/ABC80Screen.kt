@@ -23,6 +23,17 @@ import kotlinx.coroutines.delay
 internal const val ABC80_SCREEN_ROWS = 24
 internal const val ABC80_SCREEN_COLUMNS = 40
 
+const val SCREEN_ROW = 0xFDF3      // 253:243 Screen row
+const val SCREEN_COLUMN = 0xFDF4   // 253:244 Screen column
+
+/** Cursor (row, column) read from system RAM, or null if outside the screen. */
+internal fun decodeABC80Cursor(memory: ByteArray): Pair<Int, Int>? {
+    if (memory.size <= SCREEN_COLUMN) return null
+    val row = memory[SCREEN_ROW].toInt() and 0xFF
+    val col = memory[SCREEN_COLUMN].toInt() and 0xFF
+    return if (row < ABC80_SCREEN_ROWS && col < ABC80_SCREEN_COLUMNS) row to col else null
+}
+
 // Little-endian (low byte, high byte) start address of each of the 24 rows.
 private val tkn40 = intArrayOf(
     0x00, 0x7c, // ROW0
@@ -69,9 +80,15 @@ internal fun decodeABC80Screen(memory: ByteArray): List<String> {
 fun ABC80Screen(nativeLib: NativeLib, modifier: Modifier = Modifier) {
     val charMap = remember { Abc80MonitorCharacterMap() }
     var rows by remember { mutableStateOf(List(ABC80_SCREEN_ROWS) { " ".repeat(ABC80_SCREEN_COLUMNS) }) }
+    var cursor by remember { mutableStateOf<Pair<Int, Int>?>(null) }
+    var blinkOn by remember { mutableStateOf(true) }
     LaunchedEffect(nativeLib) {
+        var ticks = 0
         while (true) {
-            rows = decodeABC80Screen(nativeLib.getMemory())
+            val memory = nativeLib.getMemory()
+            rows = decodeABC80Screen(memory)
+            cursor = decodeABC80Cursor(memory)
+            if (++ticks % 10 == 0) blinkOn = !blinkOn
             delay(50)
         }
     }
@@ -82,6 +99,9 @@ fun ABC80Screen(nativeLib: NativeLib, modifier: Modifier = Modifier) {
             val px = size.width / (ABC80_SCREEN_COLUMNS * cw)
             val py = size.height / (ABC80_SCREEN_ROWS * ch)
             val pixel = Size(px, py)
+            cursor?.takeIf { blinkOn }?.let { (r, c) ->
+                drawRect(Color(0xFF90EE90), Offset(c * cw * px, r * ch * py), Size(cw * px, ch * py))
+            }
             rows.forEachIndexed { r, line ->
                 line.forEachIndexed { c, char ->
                     if (char == ' ') return@forEachIndexed
