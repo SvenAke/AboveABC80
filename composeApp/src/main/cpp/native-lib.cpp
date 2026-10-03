@@ -87,11 +87,13 @@ int onReadPort(int port, int hi) {
     int port8 = port & 0xFF;
     // Minimal "no disk" status for the DOS ROM's floppy controller: bit7/bit0 set (ready), bit1 clear.
     if (port8 == 1) return 0x81;
+    // Keyboard PIO data port: bit 7 is the key strobe, 0 means "no key pressed".
+    if (port8 == 0x38) return abc80_read_keyboard();
     return (port8 <= 7) ? 0x00 : 0xFF;
 }
 
 void onWritePort(int port, int value) {
-    // Port writes ignored as CP/M I/O is HLE'd via BIOS intercepts
+    // Port writes are currently ignored
 }
 
 JNIEXPORT void JNICALL
@@ -107,6 +109,11 @@ Java_com_aboveware_aboveabc80_NativeLib_getMemoryNative(JNIEnv *env, jobject) {
     jbyteArray result = env->NewByteArray(0x10000);
     env->SetByteArrayRegion(result, 0, 0x10000, (jbyte *) memory);
     return result;
+}
+
+JNIEXPORT void JNICALL
+Java_com_aboveware_aboveabc80_NativeLib_sendKeyNative(JNIEnv *env, jobject, jint code) {
+    abc80_send_key(code);
 }
 
 JNIEXPORT jboolean JNICALL

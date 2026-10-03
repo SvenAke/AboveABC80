@@ -9,6 +9,8 @@ libspectrum_dword tStates;
 libspectrum_dword event_next_event;
 libspectrum_dword g_cpu_frequency;
 libspectrum_dword g_t_states_per_frame;
+/* Byte placed on the data bus by the interrupting device in IM 2 */
+libspectrum_byte g_im2_vector = 0xff;
 
 /* Whether a half carry occurred or not can be determined by looking at
    the 3rd bit of the two arguments and the result; these are hashed
@@ -184,7 +186,7 @@ int z80_interrupt(void) {
                    high when the end-of-frame interrupt is delivered.  Our interrupt
                    vector is therefore 0xff. */
             {
-                libspectrum_word inttemp = (libspectrum_word) ((0x100 * I) + 0xff);
+                libspectrum_word inttemp = (libspectrum_word) ((0x100 * I) + g_im2_vector);
                 PCL = readByte(inttemp++);
                 PCH = readByte(inttemp);
                 break;

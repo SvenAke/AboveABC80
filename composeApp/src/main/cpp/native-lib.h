@@ -59,6 +59,8 @@ void hexdump(const char* desc, const void* addr, int len);
 #endif
 
 int onReadPort(int port, int value);
+int abc80_read_keyboard();
+void abc80_send_key(int code);
 void onWritePort(int port, int value);
 void onUpdate();
 unsigned int executeFor();

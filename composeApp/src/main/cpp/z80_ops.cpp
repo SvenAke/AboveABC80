@@ -45,6 +45,8 @@ extern void onTState(libspectrum_dword tStates, libspectrum_word pc);
 
 extern void add_time(libspectrum_dword time);
 
+extern bool abc80_try_keyboard_interrupt();
+
 void z80_do_opcodes(void) {
     libspectrum_byte opcode = 0x00;
     static libspectrum_word previous_pc = 0;
@@ -55,6 +57,10 @@ void z80_do_opcodes(void) {
     while (tStates < event_next_event) {
         if (g_frozen) {
             break;
+        }
+
+        if (abc80_try_keyboard_interrupt()) {
+            continue;
         }
 
         libspectrum_dword tState = tStates;

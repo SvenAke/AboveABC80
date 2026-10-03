@@ -91,6 +91,9 @@ class NativeLib {
     fun startEmulator(cpuFrequency: Int) = startEmulatorNative(cpuFrequency)
     private external fun startEmulatorNative(cpuFrequency: Int)
 
+    fun sendKey(code: Int) = sendKeyNative(code)
+    private external fun sendKeyNative(code: Int)
+
     fun getMemory(): ByteArray = getMemoryNative()
     private external fun getMemoryNative(): ByteArray
 

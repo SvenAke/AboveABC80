@@ -21,6 +21,7 @@ typedef uint32_t libspectrum_dword;
 
 extern libspectrum_dword g_cpu_frequency;
 extern libspectrum_dword g_t_states_per_frame;
+extern libspectrum_byte g_im2_vector;
 extern libspectrum_dword tStates;
 extern uint64_t g_last_interrupt_tstate;
 extern libspectrum_dword event_next_event;

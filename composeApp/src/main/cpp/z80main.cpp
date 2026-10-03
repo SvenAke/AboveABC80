@@ -7,6 +7,8 @@
 #include <atomic>
 #include <chrono>
 #include <thread>
+#include <deque>
+#include <mutex>
 
 #ifdef _MSC_VER
 #define GCC_UNUSED
@@ -38,6 +40,58 @@ void add_time(libspectrum_dword time) {
     TOTAL_CYCLES += (uint64_t)time;
 }
 
+/* ABC80 keyboard: Z80-PIO port A (0x38). Bit 7 is the strobe, bits 0-6 the key code. */
+static std::atomic<int> g_key_value{0};
+static std::atomic<bool> g_key_irq_pending{false};
+static std::atomic_flag g_key_lock = ATOMIC_FLAG_INIT;
+struct KeyLock {
+    KeyLock() { while (g_key_lock.test_and_set(std::memory_order_acquire)) std::this_thread::yield(); }
+    ~KeyLock() { g_key_lock.clear(std::memory_order_release); }
+};
+static std::deque<int> g_key_queue;
+static int g_key_hold_frames = 0;
+static constexpr libspectrum_byte KEYBOARD_PIO_VECTOR = 0x34;
+
+void abc80_send_key(int code) {
+    KeyLock lock;
+    if (g_key_queue.size() < 64) g_key_queue.push_back(code & 0x7F);
+}
+
+int abc80_read_keyboard() {
+    return g_key_value.load(std::memory_order_relaxed);
+}
+
+/* Called between instructions; delivers the pending keyboard interrupt once the CPU accepts it. */
+bool abc80_try_keyboard_interrupt() {
+    if (!g_key_irq_pending.load(std::memory_order_relaxed)) return false;
+    if (!IFF1 || tStates == z80.interrupts_enabled_at) return false;
+    const libspectrum_byte previous_vector = g_im2_vector;
+    g_im2_vector = KEYBOARD_PIO_VECTOR;
+    const bool accepted = z80_interrupt() != 0;
+    g_im2_vector = previous_vector;
+    if (accepted) g_key_irq_pending.store(false, std::memory_order_relaxed);
+    return accepted;
+}
+
+/* Called once per emulated frame: holds each key for two frames, then releases it. */
+static void abc80_keyboard_frame() {
+    if (g_key_value.load(std::memory_order_relaxed) != 0) {
+        if (++g_key_hold_frames >= 2) {
+            g_key_value.store(0, std::memory_order_relaxed);
+            g_key_hold_frames = 0;
+        }
+        return;
+    }
+    KeyLock lock;
+    if (!g_key_queue.empty()) {
+        const int code = g_key_queue.front();
+        g_key_queue.pop_front();
+        g_key_value.store(code | 0x80, std::memory_order_relaxed);
+        g_key_irq_pending.store(true, std::memory_order_relaxed);
+        g_key_hold_frames = 0;
+    }
+}
+
 int run() {
     libspectrum_dword execute = g_t_states_per_frame;
     z80_reset(true);
@@ -60,6 +114,7 @@ int run() {
 
         // event_next_event is the limit for this run
         z80_do_opcodes();
+        abc80_keyboard_frame();
 
         // Maintain long-term timing for tape pulses by keeping track of the overshoot
         // tStates is the relative counter used inside z80_do_opcodes.

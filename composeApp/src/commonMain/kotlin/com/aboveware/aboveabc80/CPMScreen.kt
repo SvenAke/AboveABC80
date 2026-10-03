@@ -1290,8 +1290,7 @@ private fun handleTerminalKeyEvent(
             val sanitized = text.replace("\r\n", "\r").replace("\n", "\r")
             scope.launch {
                 for (char in sanitized) {
-                    activeTerminal.onKeyEvent(char)
-                    activeTerminal.triggerClick()
+                    abc80CharCode(char)?.let { NativeLib.getObject().sendKey(it) }
                     delay(10.milliseconds)
                 }
             }
@@ -1299,6 +1298,13 @@ private fun handleTerminalKeyEvent(
         return true
     }
 
+    if (!isCtrl && !activeTerminal.isSetupVisible) {
+        val code = abc80KeyCode(key, charValue, isShift)
+        if (code != null) {
+            if (type == KeyEventType.KeyDown) NativeLib.getObject().sendKey(code)
+            return true
+        }
+    }
     if (type == KeyEventType.KeyDown &&
         !isCtrl &&
         !isShift &&
