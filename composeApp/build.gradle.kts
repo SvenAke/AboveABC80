@@ -177,11 +177,11 @@ tasks.withType<JavaExec>().configureEach {
 }
 
 android {
-    namespace = "com.aboveware.abovecpm"
+    namespace = "com.aboveware.aboveabc80"
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "com.aboveware.abovecpm"
+        applicationId = "com.aboveware.aboveabc80"
         minSdk = 24
         targetSdk = 37
         versionCode = 1
@@ -225,7 +225,7 @@ dependencies {
 
 compose.desktop {
     application {
-        mainClass = "com.aboveware.abovecpm.MainKt"
+        mainClass = "com.aboveware.aboveabc80.MainKt"
         jvmArgs("--enable-native-access=ALL-UNNAMED")
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb, TargetFormat.Exe)

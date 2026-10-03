@@ -14,7 +14,7 @@ static uint8_t g_patch_values[65536];
 static bool g_patch_active[65536];
 
 extern "C" JNIEXPORT jint JNICALL
-Java_com_aboveware_abovecpm_NativeLib_peekMemory(
+Java_com_aboveware_aboveabc80_NativeLib_peekMemory(
         JNIEnv *env,
         jobject /* this */,
         jint address) {
@@ -30,7 +30,7 @@ Java_com_aboveware_abovecpm_NativeLib_peekMemory(
 
 // JNI function to add or remove a patch. A value < 0 removes the patch.
 extern "C" JNIEXPORT void JNICALL
-Java_com_aboveware_abovecpm_NativeLib_patchMemory(
+Java_com_aboveware_aboveabc80_NativeLib_patchMemory(
         JNIEnv *env,
         jobject /* this */,
         jint address,
@@ -46,7 +46,7 @@ Java_com_aboveware_abovecpm_NativeLib_patchMemory(
 
 // JNI function to clear all patches
 extern "C" JNIEXPORT void JNICALL
-Java_com_aboveware_abovecpm_NativeLib_clearPatches(
+Java_com_aboveware_aboveabc80_NativeLib_clearPatches(
         JNIEnv *env,
         jobject /* this */) {
     for (int i = 0; i < 65536; ++i) {

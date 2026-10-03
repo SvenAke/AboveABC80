@@ -1497,7 +1497,7 @@ static void add_to_log(char c) {
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_aboveware_abovecpm_Z80Test_runZexall(JNIEnv *env, jobject thiz, jboolean runAll) {
+Java_com_aboveware_aboveabc80_Z80Test_runZexall(JNIEnv *env, jobject thiz, jboolean runAll) {
     const uint8_t *test_bin = runAll ? zexall_com : zexdoc_com;
     size_t bin_size = runAll ? sizeof(zexall_com) : sizeof(zexdoc_com);
 

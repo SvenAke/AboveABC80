@@ -987,7 +987,7 @@ void usage_help(void) {
 }
 
 extern "C" JNIEXPORT jbyteArray JNICALL
-Java_com_aboveware_abovecpm_NativeLib_extractArkArchiveNative(
+Java_com_aboveware_aboveabc80_NativeLib_extractArkArchiveNative(
     JNIEnv *env, jobject, jbyteArray ark_data) {
   // 1. Get a pointer to the Kotlin byte array data
   jsize ark_size = (*env).GetArrayLength(ark_data);
@@ -1047,7 +1047,7 @@ Java_com_aboveware_abovecpm_NativeLib_extractArkArchiveNative(
 }
 
 extern "C" JNIEXPORT jbyteArray JNICALL
-Java_com_aboveware_abovecpm_NativeLib_decompressSqueezedNative(
+Java_com_aboveware_aboveabc80_NativeLib_decompressSqueezedNative(
     JNIEnv *env, jobject, jbyteArray compressed_data) {
   const jsize input_size = env->GetArrayLength(compressed_data);
   logd("ZZZ: decompress start, input_size=%d", (int)input_size);

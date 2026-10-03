@@ -169,7 +169,7 @@ void hexdump(const char *desc, const void *addr, int len) {
 extern "C" {
 
 JNIEXPORT void JNICALL
-Java_com_aboveware_abovecpm_NativeLib_addMemoryReadWatcherNative(
+Java_com_aboveware_aboveabc80_NativeLib_addMemoryReadWatcherNative(
         JNIEnv *env,
         jobject /* this */,
         jint address,
@@ -196,7 +196,7 @@ Java_com_aboveware_abovecpm_NativeLib_addMemoryReadWatcherNative(
 }
 
 JNIEXPORT void JNICALL
-Java_com_aboveware_abovecpm_NativeLib_removeMemoryReadWatcherNative(
+Java_com_aboveware_aboveabc80_NativeLib_removeMemoryReadWatcherNative(
         JNIEnv *env,
         jobject,
         jint address,
@@ -216,7 +216,7 @@ Java_com_aboveware_abovecpm_NativeLib_removeMemoryReadWatcherNative(
 }
 
 JNIEXPORT void JNICALL
-Java_com_aboveware_abovecpm_NativeLib_addMemoryWriteWatcherNative(
+Java_com_aboveware_aboveabc80_NativeLib_addMemoryWriteWatcherNative(
         JNIEnv *env,
         jobject /* this */,
         jint address,
@@ -243,7 +243,7 @@ Java_com_aboveware_abovecpm_NativeLib_addMemoryWriteWatcherNative(
 }
 
 JNIEXPORT void JNICALL
-Java_com_aboveware_abovecpm_NativeLib_removeMemoryWriteWatcherNative(
+Java_com_aboveware_aboveabc80_NativeLib_removeMemoryWriteWatcherNative(
         JNIEnv *env,
         jobject /* this */,
         jint address,
