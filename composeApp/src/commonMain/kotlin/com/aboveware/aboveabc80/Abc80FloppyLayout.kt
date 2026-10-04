@@ -42,6 +42,23 @@ class Abc80FloppyLayout(formatName: String, val drive: Int) {
     private fun SSSD() = Abc80Floppy.SectorFormat(40, 1, 8)
 
     val format = formats[formatName]
+
+    companion object {
+        private val imageFormats = listOf("fd2", "abc830", "fd4d", "abc832")
+
+        /** Lists "NAME.EXT" and size in bytes for each file on a raw disk image, or null if the size matches no known format. */
+        fun list(image: ByteArray): List<Pair<String, Int>>? {
+            val layout = imageFormats.map { Abc80FloppyLayout(it, 0) }
+                .firstOrNull { it.format?.sectorFormat?.size == image.size } ?: return null
+            return layout.dir(image).map { entry ->
+                val (name, length) = entry.split("!")
+                val base = name.take(8).trim()
+                val ext = name.drop(8).trim()
+                (if (ext.isEmpty()) base else "$base.$ext") to length.toInt()
+            }
+        }
+    }
+
     private var offset = 0
     private var fileNumber: Int = 0
     private var libraryOffset: Int = 0

@@ -128,6 +128,23 @@ class Abc80Floppy : Abc80Bus.BusInterface {
         for (index in 0..7) disks[index]
     }
 
+    /** Inserts a raw disk image in the given drive. The format is derived from the image size. */
+    fun mount(drive: Int, image: ByteArray, name: String = ""): Boolean {
+        val format = listOf("fd2", "abc830", "fd4d", "abc832")
+            .firstOrNull { Abc80FloppyLayout(it, drive).format?.sectorFormat?.size == image.size }
+            ?: return false
+        disks[drive].close()
+        val layout = Abc80FloppyLayout(format, drive)
+        disks[drive] = layout
+        return layout.load(java.io.ByteArrayInputStream(image), name)
+    }
+
+    /** Removes the disk from the given drive. */
+    fun unmount(drive: Int) {
+        disks[drive].eject()
+        disks[drive] = Abc80FloppyLayout("abc830", drive).open()
+    }
+
     fun run() {}
 
     private val stateMachine = StateMachine()

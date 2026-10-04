@@ -341,7 +341,7 @@ fun CPMScreen(startWithStorageOpen: Boolean = false) {
             if (!localDisks.contains("SYSTEM.DSK")) {
                 try {
                     @OptIn(ExperimentalResourceApi::class)
-                    val data = Res.readBytes("files/CMP22.DSK")
+                    val data = Res.readBytes("files/system.dsk")
                     saveLocalDisk("SYSTEM.DSK", data)
                 } catch (e: Exception) {
                     Abc80Log.wtf("Failed to create SYSTEM.DSK: ${e.message}")

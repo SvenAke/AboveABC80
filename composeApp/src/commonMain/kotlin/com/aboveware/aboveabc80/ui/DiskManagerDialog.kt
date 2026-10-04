@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Delete
@@ -56,6 +57,7 @@ import com.aboveware.aboveabc80.createFolder
 import com.aboveware.aboveabc80.deleteFolder
 import com.aboveware.aboveabc80.deleteLocalDisk
 import com.aboveware.aboveabc80.fileExists
+import com.aboveware.aboveabc80.loadLocalDisk
 import com.aboveware.aboveabc80.folderExists
 import com.aboveware.aboveabc80.getPlatform
 import com.aboveware.aboveabc80.listLocalDisks
@@ -89,6 +91,8 @@ fun DiskManagerDialog(
             it.lowercase().endsWith(".dsk") || it.lowercase().endsWith(".imd")
         })
     }
+
+    var listing by remember { mutableStateOf<Pair<String, List<Pair<String, Int>>?>?>(null) }
 
     data class ExportPending(val parentDir: String, val floppyName: String, val floppy: Floppy)
     var exportPending by remember { mutableStateOf<ExportPending?>(null) }
@@ -125,6 +129,28 @@ fun DiskManagerDialog(
         }
     }
 
+    listing?.let { (diskName, files) ->
+        AlertDialog(
+            onDismissRequest = { listing = null },
+            title = { Text(diskName.substringBeforeLast(".")) },
+            text = {
+                when {
+                    files == null -> Text("Unrecognized disk image")
+                    files.isEmpty() -> Text("No files")
+                    else -> LazyColumn(modifier = Modifier.sizeIn(maxHeight = 400.dp)) {
+                        items(files) { (name, size) ->
+                            ListItem(
+                                headlineContent = { Text(name) },
+                                trailingContent = { Text("${(size + 1023) / 1024} kB") }
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { listing = null }) { Text("Close") } }
+        )
+    }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Disk Manager") },
@@ -133,7 +159,7 @@ fun DiskManagerDialog(
                 if (selectedDriveIndex == null) {
                     LazyColumn {
                         items(DiskController.MAX_DRIVES) { index ->
-                            val driveLetter = ('A' + index).toString()
+                            val driveLetter = "DR$index"
                             val mounted = controller.mountedDisks[index]
 
                             ListItem(
@@ -149,6 +175,24 @@ fun DiskManagerDialog(
                                         )
                                         if (mounted != null) {
                                             Row {
+                                                IconButton(onClick = {
+                                                    scope.launch {
+                                                        val image = when (mounted.source) {
+                                                            DiskController.Source.LOCAL -> loadLocalDisk(mounted.name)
+                                                            DiskController.Source.RESOURCE -> try {
+                                                                Res.readBytes("files/${mounted.name}")
+                                                            } catch (e: Exception) {
+                                                                null
+                                                            }
+                                                        }
+                                                        listing = mounted.name to image?.let { Abc80FloppyLayout.list(it) }
+                                                    }
+                                                }) {
+                                                    Icon(
+                                                        Icons.AutoMirrored.Filled.List,
+                                                        contentDescription = "List contents"
+                                                    )
+                                                }
                                                 if (getPlatform().name.contains("Java")) {
                                                     IconButton(onClick = {
                                                         val floppy = controller.getFloppy(index)
@@ -193,7 +237,7 @@ fun DiskManagerDialog(
                     }
                 } else {
                     val driveIndex = selectedDriveIndex!!
-                    val driveLetter = ('A' + driveIndex).toString()
+                    val driveLetter = "DR$driveIndex"
 
                     Column {
                         Text(
@@ -549,6 +593,7 @@ fun NewDiskDialog(
 ) {
     val templates = listOf("fd2" to "ABC80 80 kB (SSSD)", "abc830" to "ABC80 160 kB (SSDD)", "fd4d" to "ABC80 320 kB (DSDD)", "abc832" to "ABC80 640 kB (DSQD)")
     var selectedTemplate by remember { mutableStateOf(templates[0].first) }
+    var systemDisk by remember { mutableStateOf(true) }
     var newName by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     var showOverwriteConfirmation by remember { mutableStateOf<String?>(null) }
@@ -556,7 +601,11 @@ fun NewDiskDialog(
     fun createDisk(name: String) {
         scope.launch {
             try {
-                val data = Abc80FloppyLayout(selectedTemplate, 0).create()
+                val data = if (systemDisk) {
+                    Res.readBytes("files/system.dsk")
+                } else {
+                    Abc80FloppyLayout(selectedTemplate, 0).create()
+                }
                 if (saveLocalDisk(name, data)) {
                     onCreated(name)
                 }
@@ -571,8 +620,21 @@ fun NewDiskDialog(
         title = { Text("New Disk") },
         text = {
             Column {
-                Text("Select template:", style = MaterialTheme.typography.labelSmall)
-                templates.forEach { (template, label) ->
+                Text("Disk type:", style = MaterialTheme.typography.labelSmall)
+                listOf(true to "System disk (160 kB)", false to "Empty disk").forEach { (isSystem, label) ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { systemDisk = isSystem }
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(selected = systemDisk == isSystem, onClick = { systemDisk = isSystem })
+                        Text(label, modifier = Modifier.padding(start = 8.dp))
+                    }
+                }
+                if (!systemDisk) Text("Format:", style = MaterialTheme.typography.labelSmall)
+                if (!systemDisk) templates.forEach { (template, label) ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()

@@ -939,6 +939,7 @@ fun NewDisketteDialog(
 ) {
     val templates = listOf("fd2" to "ABC80 80 kB (SSSD)", "abc830" to "ABC80 160 kB (SSDD)", "fd4d" to "ABC80 320 kB (DSDD)", "abc832" to "ABC80 640 kB (DSQD)")
     var selectedTemplate by remember { mutableStateOf(templates[0].first) }
+    var systemDisk by remember { mutableStateOf(true) }
     var newName by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     var showOverwriteConfirmation by remember { mutableStateOf<String?>(null) }
@@ -946,7 +947,11 @@ fun NewDisketteDialog(
     fun createDisk(name: String) {
         scope.launch {
             try {
-                val data = Abc80FloppyLayout(selectedTemplate, 0).create()
+                val data = if (systemDisk) {
+                    Res.readBytes("files/system.dsk")
+                } else {
+                    Abc80FloppyLayout(selectedTemplate, 0).create()
+                }
                 if (saveLocalDisk(name, data)) {
                     onCreated(name)
                 }
@@ -961,8 +966,21 @@ fun NewDisketteDialog(
         title = { Text("New Diskette") },
         text = {
             Column {
-                Text("Select template:", style = MaterialTheme.typography.labelSmall)
-                templates.forEach { (template, label) ->
+                Text("Disk type:", style = MaterialTheme.typography.labelSmall)
+                listOf(true to "System disk (160 kB)", false to "Empty disk").forEach { (isSystem, label) ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { systemDisk = isSystem }
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(selected = systemDisk == isSystem, onClick = { systemDisk = isSystem })
+                        Text(label, modifier = Modifier.padding(start = 8.dp))
+                    }
+                }
+                if (!systemDisk) Text("Format:", style = MaterialTheme.typography.labelSmall)
+                if (!systemDisk) templates.forEach { (template, label) ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()

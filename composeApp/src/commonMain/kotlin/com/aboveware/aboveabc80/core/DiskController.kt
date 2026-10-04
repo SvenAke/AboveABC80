@@ -24,7 +24,7 @@ class DiskController {
 
     companion object {
         val instance = DiskController()
-        const val MAX_DRIVES = 16
+        const val MAX_DRIVES = 2
     }
 
     private val drives = arrayOfNulls<Floppy>(MAX_DRIVES)
@@ -69,6 +69,7 @@ class DiskController {
             floppy.loadRawData(data)
             val name = resourcePath.substringAfterLast("/")
             loadDrive(index, floppy, MountedDisk(name, Source.RESOURCE))
+            NativeLib.getObject().bus.floppy.mount(index, data, name)
         } catch (e: Exception) {
             Abc80Log.wtf("Failed to load disk resource $resourcePath: ${e.message}")
         }
@@ -91,6 +92,7 @@ class DiskController {
             }
 
             loadDrive(index, floppy, MountedDisk(actualName, Source.LOCAL))
+            NativeLib.getObject().bus.floppy.mount(index, data, actualName)
             return actualName
         } else {
             Abc80Log.wtf("Failed to load local disk $name")
@@ -102,6 +104,7 @@ class DiskController {
         if (index in 0 until MAX_DRIVES) {
             drives[index] = null
             mountedDisks.remove(index)
+            NativeLib.getObject().bus.floppy.unmount(index)
             Abc80Log.diskett("Disk drive ${'A' + index}: cleared")
         }
     }
