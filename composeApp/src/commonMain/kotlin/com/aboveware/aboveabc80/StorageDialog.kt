@@ -931,13 +931,14 @@ fun StorageFileDialog(
     }
 }
 
+@OptIn(ExperimentalUnsignedTypes::class)
 @Composable
 fun NewDisketteDialog(
     onDismiss: () -> Unit,
     onCreated: (String) -> Unit
 ) {
-    val templates = listOf("CPM22.DSK", "EMPTY.DSK")
-    var selectedTemplate by remember { mutableStateOf(templates[0]) }
+    val templates = listOf("fd2" to "ABC80 80 kB (SSSD)", "abc830" to "ABC80 160 kB (SSDD)", "fd4d" to "ABC80 320 kB (DSDD)", "abc832" to "ABC80 640 kB (DSQD)")
+    var selectedTemplate by remember { mutableStateOf(templates[0].first) }
     var newName by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     var showOverwriteConfirmation by remember { mutableStateOf<String?>(null) }
@@ -945,12 +946,8 @@ fun NewDisketteDialog(
     fun createDisk(name: String) {
         scope.launch {
             try {
-                @OptIn(ExperimentalResourceApi::class)
-                val data = Res.readBytes("files/$selectedTemplate")
-
-                val floppy = Floppy.createFromData(data)
-
-                if (saveLocalDisk(name, floppy.getRawData())) {
+                val data = Abc80FloppyLayout(selectedTemplate, 0).create()
+                if (saveLocalDisk(name, data)) {
                     onCreated(name)
                 }
             } catch (e: Exception) {
@@ -965,7 +962,7 @@ fun NewDisketteDialog(
         text = {
             Column {
                 Text("Select template:", style = MaterialTheme.typography.labelSmall)
-                templates.forEach { template ->
+                templates.forEach { (template, label) ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -977,7 +974,7 @@ fun NewDisketteDialog(
                             selected = selectedTemplate == template,
                             onClick = { selectedTemplate = template })
                         Text(
-                            template.substringBeforeLast("."),
+                            label,
                             modifier = Modifier.padding(start = 8.dp)
                         )
                     }

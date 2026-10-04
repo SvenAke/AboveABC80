@@ -1000,54 +1000,57 @@ RESET_STACK_POINTER     : 006:121 : 44          LD B,H
 0x0691                  : 006:145 : 03          INC BC
 0x0692                  : 006:146 : 0a          LD A,(BC)
 0x0693                  : 006:147 : 67          LD H,A
-PRINT_ERROR_MSG         :                                               ; ------------------------------------------------------
-PRINT_ERROR_MSG         :                                               ; Print error
-PRINT_ERROR_MSG         :                                               ; ------------------------------------------------------
-PRINT_ERROR_MSG         : 006:148 : f1          POP AF                  ; Error code in A
-0x0695                  : 006:149 : cd 9b 06    CALL 0x069B
-0x0698                  : 006:152 : c3 cc 00    JP CHECK_RUN_ONLY
-0x069b                  : 006:155 : eb          EX DE,HL
-0x069c                  : 006:156 : 21 b0 ff    LD HL,0xFFB0
-0x069f                  : 006:159 : 39          ADD HL,SP
-0x06a0                  : 006:160 : f9          LD SP,HL
-0x06a1                  : 006:161 : e5          PUSH HL
-0x06a2                  : 006:162 : 36 0d       LD (HL),0x0D
-0x06a4                  : 006:164 : 23          INC HL
-0x06a5                  : 006:165 : 36 0a       LD (HL),0x0A
-0x06a7                  : 006:167 : 23          INC HL
-0x06a8                  : 006:168 : 36 07       LD (HL),0x07
-0x06aa                  : 006:170 : 23          INC HL
-0x06ab                  : 006:171 : eb          EX DE,HL
-0x06ac                  : 006:172 : e5          PUSH HL
-0x06ad                  : 006:173 : a7          AND A
-0x06ae                  : 006:174 : 20 0a       JR NZ,STORE_BASIC_ERROR
-0x06b0                  : 006:176 : 21 3a 07    LD HL,STOPTEXT
-0x06b3                  : 006:179 : 01 04 00    LD BC,0x0004
-0x06b6                  : 006:182 : ed b0       LDIR
-0x06b8                  : 006:184 : 18 1a       JR RESTORE_REGS_EXIT
-STORE_BASIC_ERROR       : 006:186 : 21 0f fe    LD HL,BASICERR
-0x06bd                  : 006:189 : cb 46       BIT 0,(HL)
-0x06bf                  : 006:191 : 37          SCF
-0x06c0                  : 006:192 : c4 51 60    CALL NZ,GETERROR
-0x06c3                  : 006:195 : 30 0f       JR NC,RESTORE_REGS_EXIT
-0x06c5                  : 006:197 : 21 3e 07    LD HL,ERRTEXT
-0x06c8                  : 006:200 : 01 04 00    LD BC,0x0004
-0x06cb                  : 006:203 : ed b0       LDIR
-0x06cd                  : 006:205 : e6 7f       AND 0x7F
-0x06cf                  : 006:207 : 6f          LD L,A
-0x06d0                  : 006:208 : 60          LD H,B
-0x06d1                  : 006:209 : cd 60 18    CALL BINASCII
-RESTORE_REGS_EXIT       : 006:212 : e1          POP HL
-0x06d5                  : 006:213 : 7c          LD A,H
-0x06d6                  : 006:214 : b5          OR L
-0x06d7                  : 006:215 : 28 0d       JR Z,CLEANUP_AND_EXIT
-0x06d9                  : 006:217 : e5          PUSH HL
-0x06da                  : 006:218 : 21 34 07    LD HL,0x0734
-0x06dd                  : 006:221 : 01 06 00    LD BC,0x0006
-0x06e0                  : 006:224 : ed b0       LDIR
-0x06e2                  : 006:226 : e1          POP HL
-0x06e3                  : 006:227 : cd 60 18    CALL BINASCII
-CLEANUP_AND_EXIT        : 006:230 : e1          POP HL
+; ===================================================================
+; PRINT_ERROR_MSG (0x0694): Formats and displays BASIC error or 'STOP'
+; Input  : Register A = Error Code (0 = STOP, >0 = BASIC error code)
+;          Register DE = Line Number or execution address
+; Output : Prints 'STOP IN <line>' or 'ERR <num> IN <line>' to screen
+; ===================================================================
+PRINT_ERROR_MSG         : 006:148 : f1          POP AF                  ; Retrieve error code into register A
+0x0695                  : 006:149 : cd 9b 06    CALL FORMAT_ERROR_MSG   ; Format error message string on stack and print
+0x0698                  : 006:152 : c3 cc 00    JP CHECK_RUN_ONLY       ; Jump back to main BASIC prompt / REPL
+FORMAT_ERROR_MSG        : 006:155 : eb          EX DE,HL                ; Exchange line number/address into HL
+0x069c                  : 006:156 : 21 b0 ff    LD HL,0xFFB0            ; Load stack allocation offset (-80 bytes)
+0x069f                  : 006:159 : 39          ADD HL,SP               ; Calculate new stack pointer position
+0x06a0                  : 006:160 : f9          LD SP,HL                ; Allocate 80-byte temporary string buffer on stack
+0x06a1                  : 006:161 : e5          PUSH HL                 ; Save buffer base address on stack
+0x06a2                  : 006:162 : 36 0d       LD (HL),0x0D            ; Store Carriage Return (CR / 0x0D) at buffer start
+0x06a4                  : 006:164 : 23          INC HL                  ; Increment buffer pointer
+0x06a5                  : 006:165 : 36 0a       LD (HL),0x0A            ; Store Line Feed (LF / 0x0A)
+0x06a7                  : 006:167 : 23          INC HL                  ; Increment buffer pointer
+0x06a8                  : 006:168 : 36 07       LD (HL),0x07            ; Store BELL tone (0x07 / Beeper tone)
+0x06aa                  : 006:170 : 23          INC HL                  ; Increment buffer pointer
+0x06ab                  : 006:171 : eb          EX DE,HL                ; Move string write pointer to DE
+0x06ac                  : 006:172 : e5          PUSH HL                 ; Save line number pointer on stack
+0x06ad                  : 006:173 : a7          AND A                   ; Test if error code in register A is zero
+0x06ae                  : 006:174 : 20 0a       JR NZ,STORE_BASIC_ERROR ; If A != 0 -> Handle BASIC error code
+0x06b0                  : 006:176 : 21 3a 07    LD HL,STOPTEXT          ; If A == 0 -> Point to 'STOP' text string (0x073A)
+0x06b3                  : 006:179 : 01 04 00    LD BC,0x0004            ; Length of 'STOP' string = 4 bytes
+0x06b6                  : 006:182 : ed b0       LDIR                    ; Copy 'STOP' string into output buffer
+0x06b8                  : 006:184 : 18 1a       JR RESTORE_REGS_EXIT    ; Jump to check for line number suffix
+STORE_BASIC_ERROR       : 006:186 : 21 0f fe    LD HL,BASICERR          ; Point HL to BASIC error status flag (0xFE0F)
+0x06bd                  : 006:189 : cb 46       BIT 0,(HL)              ; Check if bit 0 in BASICERR is set
+0x06bf                  : 006:191 : 37          SCF                     ; Set carry flag
+0x06c0                  : 006:192 : c4 51 60    CALL NZ,GETERROR        ; If bit 0 set -> Fetch extended error description
+0x06c3                  : 006:195 : 30 0f       JR NC,RESTORE_REGS_EXIT ; If carry flag clear -> Exit error formatting
+0x06c5                  : 006:197 : 21 3e 07    LD HL,ERRTEXT           ; Point HL to 'ERR ' string (0x073E)
+0x06c8                  : 006:200 : 01 04 00    LD BC,0x0004            ; Length of 'ERR ' string = 4 bytes
+0x06cb                  : 006:203 : ed b0       LDIR                    ; Copy 'ERR ' prefix into output buffer
+0x06cd                  : 006:205 : e6 7f       AND 0x7F                ; Mask off ASCII bit 7 of error code
+0x06cf                  : 006:207 : 6f          LD L,A                  ; Load error code into L
+0x06d0                  : 006:208 : 60          LD H,B                  ; Clear H register (HL = error number)
+0x06d1                  : 006:209 : cd 60 18    CALL BINASCII           ; Convert error number HL to ASCII string in buffer
+RESTORE_REGS_EXIT       : 006:212 : e1          POP HL                  ; Pop line number/address from stack into HL
+0x06d5                  : 006:213 : 7c          LD A,H                  ; Check if line number HL is zero
+0x06d6                  : 006:214 : b5          OR L                    ; OR H with L
+0x06d7                  : 006:215 : 28 0d       JR Z,CLEANUP_AND_EXIT   ; If line number == 0 -> Skip printing line suffix
+0x06d9                  : 006:217 : e5          PUSH HL                 ; Save line number on stack
+0x06da                  : 006:218 : 21 34 07    LD HL,0x0734            ; Point HL to ' IN ' suffix string (0x0734)
+0x06dd                  : 006:221 : 01 06 00    LD BC,0x0006            ; Length of ' IN ' string = 6 bytes
+0x06e0                  : 006:224 : ed b0       LDIR                    ; Copy ' IN ' prefix into output buffer
+0x06e2                  : 006:226 : e1          POP HL                  ; Pop line number back into HL
+0x06e3                  : 006:227 : cd 60 18    CALL BINASCII           ; Convert line number HL to ASCII string in buffer
+CLEANUP_AND_EXIT        : 006:230 : e1          POP HL                  ; Pop string buffer start address into HL
 0x06e7                  : 006:231 : eb          EX DE,HL
 0x06e8                  : 006:232 : b7          OR A
 0x06e9                  : 006:233 : ed 52       SBC HL,DE
