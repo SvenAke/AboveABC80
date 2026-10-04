@@ -49,23 +49,104 @@ class Assembler {
         }
     }
 
-    // BASIC's TAB on the PR: channel needs the column (IX+6) and width (IX+7) in the channel block,
-    // but the card driver never maintains them, so TAB emitted n spaces instead of padding to column n.
-    private fun patchPrinterColumnTracking() {
-        fun put(address: Int, vararg bytes: Int) =
-            bytes.forEachIndexed { i, b -> memory[address + i] = b.toByte() }
-        put(
-            0x7B00,
-            0xE5, 0xC5, 0x78, 0xB1, 0x28, 0x16, 0x7E, 0xFE, 0x0D, 0x28, 0x0B, 0xFE, 0x20, 0x38, 0x03,
-            0xDD, 0x34, 0x06, 0x23, 0x0B, 0x18, 0xEC, 0xDD, 0x36, 0x06, 0x00, 0x18, 0xF6,
-            0xC1, 0xE1, 0xC3, 0x21, 0x78
-        )
-        put(0x7B30, 0xDD, 0x36, 0x06, 0x00, 0xDD, 0x36, 0x07, 0x50, 0xC3, 0x47, 0x78)
-        put(0x7800, 0xC3, 0x30, 0x7B)
-        put(0x7803, 0xC3, 0x30, 0x7B)
-        put(0x780C, 0xC3, 0x00, 0x7B)
-    }
+    /*
+    "Default" below means the value used when nothing else is specified.
 
+    The first letter selects the printer type or RGB driver.
+    Example: PR:V
+    LETTER                       FUNCTION
+    P                            SPI
+    U                            UART
+    V (default)                  V24 simulated UART
+    C                            Centronics
+    R                            RGB, see separate description
+
+    The second letter selects the parity bit.
+    LETTER                      FUNCTION
+    'S' (default)               SPACE (no parity)
+    'M'                         MARK
+    'E'                         EVEN
+    'O'                         ODD
+    Example: PR:VS
+
+    The third letter selects the number of NULLs sent after <LF>.
+    Example: PR:VSA
+    LETTER                    FUNCTION
+    A (default)               0 NULLs
+    B                         2 NULLs
+    C                         4 NULLs
+    z                         50 NULLs
+
+    The fourth position selects characters per line.
+    DIGIT                    FUNCTION
+    1                        40 CPL
+    2                        72 CPL
+    3 (default)              80 CPL
+    4                        120 CPL
+    5                        132 CPL
+    6                        158 CPL
+    7                        255 CPL
+    Example: PR:VSA2
+
+    The fifth position selects the number of lines to skip at the end of a page
+    (perforation skip).
+    If 0 lines, no LF is sent at the end of a page.
+    Example: PR:VSA26
+    DIGIT                             FUNCTION
+    0 (default)                       0 LINES
+    ....9                             9 LINES
+
+    The sixth position selects whether to simulate form feed, i.e. the printer
+    does not accept the form-feed character, so it is simulated with repeated
+    line feeds. It also selects whether automatic line feed at end of line is wanted.
+    Example: PR:VSA36C
+    LETTER                     FUNCTION
+    A                          NO AUTO LF + NO SIM
+    B                          NO AUTO LF + SIM
+    C (default)                AUTO LF + NO SIM
+    D                          AUTO LF + SIM
+
+    The seventh and eighth positions select lines per page.
+    NOTE: If fewer than 10 lines per page are wanted, this must be written as
+    two digits with a zero in the seventh position. E.g. PR:PSA20N07
+    gives seven lines per page. The default is 46 lines per page.
+    After '.' in the ninth position the baud rate is given if the V24 connector
+    is used.
+    DIGIT                           FUNCTION
+    1                               110 BAUD
+    2                               300 BAUD
+    3                               600 BAUD
+    4 (default)                     1200 BAUD
+    5                               2400 BAUD
+    6                               4800 BAUD
+    7                               9600 BAUD
+    Example: PR:VSA36C 70.4
+
+    The baud rate only matters for the simulated UART on the V24 connector
+    and need not be specified except when using V24.
+    If only "PR:" is specified, the PROM tries to guess the printer type
+    as follows:
+    If an SPI card is connected, type 'P' is selected.
+    If a UART card is connected, type 'U' is selected.
+    If a Centronics interface is connected, type 'C' is selected.
+    If no card is connected, type 'V' is selected, i.e. simulated UART
+    on the V24 connector.
+    Then the default values described earlier are used.
+    If anything follows "PR:", ALL options must be specified,
+    but this only needs to be done once each time the ABC-80 is switched on,
+    since these values then replace the built-in default values on later use
+    of the printer, i.e. if you first write
+    LIST PR:VSC12BIO
+    and then write only
+    LIST PR:
+    the options specified above are used instead of those in the PROM.
+
+ */
+    private fun patchPrinterColumnTracking() {
+        PRINTER_PATCH.forEach { (address, bytes) ->
+            bytes.forEachIndexed { i, b -> memory[address + i] = b.toByte() }
+        }
+    }
     @OptIn(ExperimentalResourceApi::class)
     private suspend fun loadRom(resourcePath: String, startAddress: Int) {
         val bytes = Res.readBytes(resourcePath)
@@ -1410,3 +1491,29 @@ class Assembler {
 fun String.toOpcode() = opcodeList.find {
     it.substring(5).substringBefore(",").substringBefore("$").trim() == this
 }?.substring(2, 4)?.toInt(16)!!
+
+// BASIC's TAB on the PR: channel needs the column (IX+6) and width (IX+7) in the channel block,
+// but the card driver never maintains them. This patch lives in the unused part of the card ROM:
+// 0x7B00 write block (tracks column, wraps at the line width with CR and optional LF),
+// 0x7B60 OPEN (parses the PR: option string; width digit and AUTO LF letter persist in
+// 0x7BA0/0x7BA1, as the real option string does).
+val PRINTER_PATCH: Map<Int, IntArray> = mapOf(
+    0x7B00 to intArrayOf(
+        0xCD, 0x39, 0x78, 0x16, 0xFF, 0x78, 0xB1, 0x28, 0x3D, 0x7E, 0xFE, 0x0D, 0x28, 0x25, 0xFE, 0x20,
+        0x38, 0x26, 0xDD, 0x7E, 0x06, 0xDD, 0xBE, 0x07, 0x38, 0x14, 0x3E, 0x0D, 0xCD, 0x14, 0x7A, 0x3A,
+        0xA1, 0x7B, 0xB7, 0x28, 0x05, 0x3E, 0x0A, 0xCD, 0x14, 0x7A, 0xDD, 0x36, 0x06, 0x00, 0xDD, 0x34,
+        0x06, 0x18, 0x04, 0xDD, 0x36, 0x06, 0x00, 0x7E, 0xBA, 0x20, 0x04, 0xCD, 0x14, 0x7A, 0x7E, 0xCD,
+        0x14, 0x7A, 0x0B, 0x23, 0x18, 0xBF, 0xC3, 0x60, 0x78
+    ),
+    0x7B60 to intArrayOf(
+        0x1A, 0xFE, 0x20, 0x28, 0x22, 0xD5, 0x13, 0x13, 0x13, 0x1A, 0xD6, 0x31, 0xFE, 0x07, 0x30, 0x16,
+        0x21, 0x94, 0x7B, 0x4F, 0x06, 0x00, 0x09, 0x7E, 0x32, 0xA0, 0x7B, 0x13, 0x13, 0x1A, 0xD6, 0x43,
+        0xFE, 0x02, 0x9F, 0x32, 0xA1, 0x7B, 0xD1, 0x3A, 0xA0, 0x7B, 0xDD, 0x77, 0x07, 0xAF, 0xDD, 0x77,
+        0x06, 0xC3, 0x47, 0x78,
+        40, 72, 80, 120, 132, 158, 255
+    ),
+    0x7BA0 to intArrayOf(80, 0xFF),
+    0x7800 to intArrayOf(0xC3, 0x60, 0x7B),
+    0x7803 to intArrayOf(0xC3, 0x60, 0x7B),
+    0x780C to intArrayOf(0xC3, 0x00, 0x7B),
+)
