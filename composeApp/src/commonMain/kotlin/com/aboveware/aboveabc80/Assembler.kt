@@ -20,6 +20,7 @@ class Assembler {
             loadRom("files/prom.rom", 0x0000)
             loadRom("files/dos.rom", 0x6000)
             loadRom("files/printer.rom", 0x7800)
+            patchPrinterColumnTracking()
             loadLabels(Res.readBytes("files/cpm.txt").decodeToString())
             opcodeList = Res.readBytes("files/opcode.lst").decodeToString().lines().toTypedArray()
             NativeLib.getObject().copyToMemory(0, memory)
@@ -46,6 +47,23 @@ class Assembler {
                 Abc80Log.wtf("Kunde inte starta emulatorn: ${e.message}")
             }
         }
+    }
+
+    // BASIC's TAB on the PR: channel needs the column (IX+6) and width (IX+7) in the channel block,
+    // but the card driver never maintains them, so TAB emitted n spaces instead of padding to column n.
+    private fun patchPrinterColumnTracking() {
+        fun put(address: Int, vararg bytes: Int) =
+            bytes.forEachIndexed { i, b -> memory[address + i] = b.toByte() }
+        put(
+            0x7B00,
+            0xE5, 0xC5, 0x78, 0xB1, 0x28, 0x16, 0x7E, 0xFE, 0x0D, 0x28, 0x0B, 0xFE, 0x20, 0x38, 0x03,
+            0xDD, 0x34, 0x06, 0x23, 0x0B, 0x18, 0xEC, 0xDD, 0x36, 0x06, 0x00, 0x18, 0xF6,
+            0xC1, 0xE1, 0xC3, 0x21, 0x78
+        )
+        put(0x7B30, 0xDD, 0x36, 0x06, 0x00, 0xDD, 0x36, 0x07, 0x50, 0xC3, 0x47, 0x78)
+        put(0x7800, 0xC3, 0x30, 0x7B)
+        put(0x7803, 0xC3, 0x30, 0x7B)
+        put(0x780C, 0xC3, 0x00, 0x7B)
     }
 
     @OptIn(ExperimentalResourceApi::class)

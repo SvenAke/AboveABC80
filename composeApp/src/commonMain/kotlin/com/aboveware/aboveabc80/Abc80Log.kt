@@ -18,7 +18,7 @@ enum class Abc80LogTag(val enabled: Boolean) {
     BUS(false),
     DISKETT(true),
     FLOPPY(false),
-    PRINTER(false),
+    PRINTER(true),
     SOUND(false),
     STORAGE(false),
     TERMINAL(true),
@@ -62,6 +62,9 @@ object Abc80Log {
 
     /** Logs ABC bus traffic. */
     fun bus(message: String) = log(Abc80LogTag.BUS, message)
+
+    /** Logs data sent to the printer. */
+    fun printer(message: String) = log(Abc80LogTag.PRINTER, message)
 
     /** Logs floppy controller activity. */
     fun floppy(message: String) = log(Abc80LogTag.FLOPPY, message)

@@ -106,6 +106,8 @@ class Abc80Printer : Abc80Bus.BusInterface {
     }
 
     private fun print(data: UByte) {
+        val code = data.toInt()
+        Abc80Log.printer("$state 0x${code.toString(16).padStart(2, '0')}${if (code and 0x7F in 0x20..0x7E) " '${(code and 0x7F).toChar()}'" else ""}")
         when (state) {
             STATE.NORMAL -> normal(data)
             STATE.FF -> ff(data)
