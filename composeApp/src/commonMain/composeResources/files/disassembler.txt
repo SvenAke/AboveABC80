@@ -1002,9 +1002,27 @@ RESET_STACK_POINTER     : 006:121 : 44          LD B,H
 0x0693                  : 006:147 : 67          LD H,A
 ; ===================================================================
 ; PRINT_ERROR_MSG (0x0694): Formats and displays BASIC error or 'STOP'
-; Input  : Register A = Error Code (0 = STOP, >0 = BASIC error code)
-;          Register DE = Line Number or execution address
-; Output : Prints 'STOP IN <line>' or 'ERR <num> IN <line>' to screen
+;
+; INPUT PARAMETERS:
+;   - Register A  : Error code (0 = program stop / 'STOP', >0 = BASIC error code)
+;   - Register DE : Line number or execution address
+;
+; EXECUTION FLOW (FORMAT_ERROR_MSG at 0x069B):
+;   1. Buffer Allocation:
+;      Allocates a temporary 80-byte string buffer directly on the stack
+;      (ADD HL, SP / LD SP, HL).
+;   2. Control Characters:
+;      Stores CR (0x0D), LF (0x0A), and BELL (0x07 beeper tone) at start of buffer.
+;   3. Message Type Formatting:
+;      - If A == 0 : Copies "STOP" string (STOPTEXT at 0x073A) into buffer.
+;      - If A > 0  : Copies "ERR " string (ERRTEXT at 0x073E) into buffer and
+;                    converts error number in A to ASCII using BINASCII (0x1860).
+;   4. Line Number Formatting:
+;      If line number exists (HL > 0), appends " IN " suffix (0x0734) followed by
+;      line number converted to ASCII.
+;   5. Output & Return:
+;      Prints formatted string to screen (CALL WR_LINE) and jumps back to
+;      main BASIC interpreter loop (JP CHECK_RUN_ONLY).
 ; ===================================================================
 PRINT_ERROR_MSG         : 006:148 : f1          POP AF                  ; Retrieve error code into register A
 0x0695                  : 006:149 : cd 9b 06    CALL FORMAT_ERROR_MSG   ; Format error message string on stack and print
