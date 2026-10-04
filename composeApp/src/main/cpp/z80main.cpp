@@ -27,7 +27,7 @@ std::uint8_t memory[0x10000];
 
 bool running = true;
 uint64_t g_last_interrupt_tstate = 0;
-static std::atomic<int> runtime_cpu_frequency{4'000'000};
+static std::atomic<int> runtime_cpu_frequency{3'000'000};
 
 void set_cpu_frequency(int cpu_frequency) {
     if (cpu_frequency > 0) {

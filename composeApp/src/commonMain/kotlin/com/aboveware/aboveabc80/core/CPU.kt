@@ -50,7 +50,7 @@ class CPU(bytes: ByteArray? = null) {
     val cycle: ULong get() = totalCycles.toULong()
     
     fun tStatesToNs(tStates: ULong) = (tStates * 1000000000UL).floorDiv(frequency)
-    val frequency = 3500000UL
+    val frequency = 3000000UL
 
     init {
         if (bytes != null) {
