@@ -36,6 +36,7 @@ class NativeLib {
                     instance = NativeLib()
                     instance.registerInstanceNative()
                     initialized = true
+                    TKN80.run(instance)
                     try {
                         instance.cassettePlayer.run()
                     } catch (e: Throwable) {
@@ -103,9 +104,15 @@ class NativeLib {
     val pio = Abc80Pio()
     val cassettePlayer = Abc80CassettePlayer()
 
-    fun portRead(port: Int): Int = try {
-        if (port in 0x39..0x3B) cassettePlayer.read(port) else bus.read(port)
-    } catch (e: Throwable) { 0xFF }
+    fun portRead(port: Int): Int {
+        when (port) {
+            0x03 -> { TKN80.setEnabled(false, this); return 0x40 }
+            0x04 -> { TKN80.setEnabled(true, this); return 0x80 }
+        }
+        return try {
+            if (port in 0x39..0x3B) cassettePlayer.read(port) else bus.read(port)
+        } catch (e: Throwable) { 0xFF }
+    }
 
     fun portWrite(port: Int, data: Int) {
         try {

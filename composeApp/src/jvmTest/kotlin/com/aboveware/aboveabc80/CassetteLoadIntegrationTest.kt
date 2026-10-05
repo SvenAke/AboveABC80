@@ -50,6 +50,9 @@ class CassetteLoadIntegrationTest {
             check(home.resolve(".aboveabc80").resolve("dr").mkdirs())
             val lib = NativeLib.getObject()
             native = lib
+            val startupPreference = getPersistedString("tkn80_start", "false")
+            assertEquals(startupPreference.toBoolean(), TKN80.enabled)
+            assertEquals(64, lib.portRead(3))
             val memory = ByteArray(0x10000)
             Res.readBytes("files/prom.rom").copyInto(memory)
             Res.readBytes("files/dos.rom").copyInto(memory, 0x6000)
@@ -124,9 +127,45 @@ class CassetteLoadIntegrationTest {
             val graphicsRows = decodeABC80ScreenGlyphs(lib.getMemory())
             assertTrue(graphicsRows.any { it.contains("\u00b5\u00ea\u00af 5") },
                 "BASIC CHR$(23) must render mosaics and CHR$(22) must restore text")
+            lib.setFastSpeed(true)
+            for (wide in listOf(true, false)) {
+                val width = if (wide) 80 else 40
+                val result = if (wide) 128 else 64
+                type(lib, "PRINT INP(${if (wide) 4 else 3})\r")
+                assertEquals(wide, TKN80.enabled)
+                assertTrue(screen(lib).contains(result.toString()), "INP must return $result")
+                lib.copyToMemory(TKN80.rowAddress(20, !wide), ByteArray(if (wide) 40 else 80) { 'S'.code.toByte() })
+                type(lib, "PRINT CHR$(12);TAB(${width - 1});\"ZX\"\r")
+                await("Printing must finish at $width columns") {
+                    decodeABC80Screen(lib.getMemory(), wide)[0][width - 1] == 'Z'
+                }
+                val rows = decodeABC80Screen(lib.getMemory(), wide)
+                assertEquals('Z', rows[0][width - 1], "BASIC must write the last column ($width):\n${screen(lib)}")
+                assertEquals('X', rows[1][0], "BASIC must wrap at $width columns")
+                assertTrue(decodeABC80Screen(lib.getMemory(), !wide).all { it.isBlank() },
+                    "Clear-screen must also clear the inactive display buffer")
+                type(lib, "NEW\r")
+                type(lib, "10 FOR I=1 TO 25\r")
+                type(lib, "20 PRINT TAB(${width - 1});\"Q\"\r")
+                type(lib, "30 NEXT I\r")
+                type(lib, "RUN\r")
+                val scrollingStarted = TimeSource.Monotonic.markNow()
+                while (scrollingStarted.elapsedNow().inWholeMilliseconds < 12000 &&
+                    !decodeABC80Screen(lib.getMemory(), wide).takeLast(4).any { it.startsWith("ABC80") }) {
+                    Thread.sleep(10)
+                }
+                assertTrue(decodeABC80Screen(lib.getMemory(), wide).takeLast(4).any { it.startsWith("ABC80") },
+                    "The scrolling program must finish at $width columns, CPU ${CPU(lib.getCPU())}:\n${screen(lib)}")
+                assertTrue(decodeABC80Screen(lib.getMemory(), wide).take(2).any { it[width - 1] == 'Q' },
+                    "Scrolling must copy all $width columns:\n${screen(lib)}")
+            }
+            assertEquals(startupPreference, getPersistedString("tkn80_start", "false"),
+                "Runtime switching must not overwrite the startup preference")
         } finally {
             Abc80CassetteStatus.cancel()
             native?.freeze()
+            native?.setFastSpeed(false)
+            native?.let { TKN80.setEnabled(false, it) }
             native?.removeMemoryReadWatcher(0x05a0, delayWatcher)
             native?.removeMemoryReadWatcher(0x0618, readBlockBoundaryWatcher)
             native?.removeMemoryReadWatcher(0x0448, writePulseWatcher)

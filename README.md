@@ -68,6 +68,11 @@ It uses temporary storage instead of the user's saved tapes.
 
 ### ABC80 character graphics
 
+TKN80 supports an 80-by-24 screen. Settings includes **Start with TKN80 (80
+columns)**, applied on the next app start (40 columns by default). BASIC can switch
+at runtime with `PRINT INP(4)` for 80 columns or `PRINT INP(3)` for 40 columns.
+The modes have separate screen RAM; clear-screen clears both buffers.
+
 The screen renderer honors the in-row graphics control `CHR$(23)` and text
 control `CHR$(22)`. In graphics mode, mosaic characters form continuous 2-by-3
 pixel blocks, while letters in the middle character range remain text. Each row

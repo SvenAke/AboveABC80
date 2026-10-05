@@ -31,59 +31,33 @@ const val SCREEN_ROW = 0xFDF3      // 253:243 Screen row
 const val SCREEN_COLUMN = 0xFDF4   // 253:244 Screen column
 
 /** Cursor (row, column) read from system RAM, or null if outside the screen. */
-internal fun decodeABC80Cursor(memory: ByteArray): Pair<Int, Int>? {
+internal fun decodeABC80Cursor(memory: ByteArray, columns: Int = TKN80.columns): Pair<Int, Int>? {
     if (memory.size <= SCREEN_COLUMN) return null
     val row = memory[SCREEN_ROW].toInt() and 0xFF
     val col = memory[SCREEN_COLUMN].toInt() and 0xFF
-    return if (row < ABC80_SCREEN_ROWS && col < ABC80_SCREEN_COLUMNS) row to col else null
+    return if (row < ABC80_SCREEN_ROWS && col < columns) row to col else null
 }
 
-// Little-endian (low byte, high byte) start address of each of the 24 rows.
-private val tkn40 = intArrayOf(
-    0x00, 0x7c, // ROW0
-    0x80, 0x7c, // ROW1
-    0x00, 0x7d, // ROW2
-    0x80, 0x7d, // ROW3
-    0x00, 0x7e, // ROW4
-    0x80, 0x7e, // ROW5
-    0x00, 0x7f, // ROW6
-    0x80, 0x7f, // ROW7
-    0x28, 0x7c, // ROW8
-    0xa8, 0x7c, // ROW9
-    0x28, 0x7d, // ROW10
-    0xa8, 0x7d, // ROW11
-    0x28, 0x7e, // ROW12
-    0xa8, 0x7e, // ROW13
-    0x28, 0x7f, // ROW14
-    0xa8, 0x7f, // ROW15
-    0x50, 0x7c, // ROW16
-    0xd0, 0x7c, // ROW17
-    0x50, 0x7d, // ROW18
-    0xd0, 0x7d, // ROW19
-    0x50, 0x7e, // ROW20
-    0xd0, 0x7e, // ROW21
-    0x50, 0x7f, // ROW22
-    0xd0, 0x7f  // ROW23
-)
+internal fun abc80RowAddress(row: Int) = TKN80.rowAddress(row)
 
-internal fun abc80RowAddress(row: Int) = (tkn40[row * 2 + 1] shl 8) or tkn40[row * 2]
-
-/** Writes the characters 0..255 into screen RAM, 40 per row, starting at [firstRow]. */
+/** Writes the characters 0..255 into screen RAM using the current width, starting at [firstRow]. */
 fun writeAllCharactersToScreen(nativeLib: NativeLib, firstRow: Int = 2) {
-    for (i in 0 until 256 step ABC80_SCREEN_COLUMNS) {
-        val row = firstRow + i / ABC80_SCREEN_COLUMNS
+    val columns = TKN80.columns
+    for (i in 0 until 256 step columns) {
+        val row = firstRow + i / columns
         if (row >= ABC80_SCREEN_ROWS) break
-        val chunk = ByteArray(minOf(ABC80_SCREEN_COLUMNS, 256 - i)) { (i + it).toByte() }
+        val chunk = ByteArray(minOf(columns, 256 - i)) { (i + it).toByte() }
         nativeLib.copyToMemory(abc80RowAddress(row), chunk)
     }
 }
 
-internal fun decodeABC80Screen(memory: ByteArray): List<String> {
+internal fun decodeABC80Screen(memory: ByteArray, wide: Boolean = TKN80.enabled): List<String> {
     require(memory.size >= 0x8000) { "ABC80 screen requires memory through address 0x7fff" }
     return List(ABC80_SCREEN_ROWS) { row ->
-        val start = abc80RowAddress(row)
-        buildString(ABC80_SCREEN_COLUMNS) {
-            for (col in 0 until ABC80_SCREEN_COLUMNS) {
+        val start = TKN80.rowAddress(row, wide)
+        val columns = if (wide) 80 else 40
+        buildString(columns) {
+            for (col in 0 until columns) {
                 val value = memory[start + col].toInt() and 0xFF
                 append(if (value >= 0x20 && value != 0x7F) value.toChar() else ' ')
             }
@@ -91,13 +65,14 @@ internal fun decodeABC80Screen(memory: ByteArray): List<String> {
     }
 }
 
-internal fun decodeABC80ScreenGlyphs(memory: ByteArray): List<String> {
+internal fun decodeABC80ScreenGlyphs(memory: ByteArray, wide: Boolean = TKN80.enabled): List<String> {
     require(memory.size >= 0x8000) { "ABC80 screen requires memory through address 0x7fff" }
     return List(ABC80_SCREEN_ROWS) { row ->
         var graphics = false
-        val start = abc80RowAddress(row)
-        buildString(ABC80_SCREEN_COLUMNS) {
-            for (col in 0 until ABC80_SCREEN_COLUMNS) {
+        val start = TKN80.rowAddress(row, wide)
+        val columns = if (wide) 80 else 40
+        buildString(columns) {
+            for (col in 0 until columns) {
                 val value = memory[start + col].toInt() and 0x7F
                 when (value) {
                     0x16 -> { graphics = false; append(' ') }
@@ -132,9 +107,10 @@ fun ABC80Screen(nativeLib: NativeLib, modifier: Modifier = Modifier) {
     }
     val cw = charMap.charWidth
     val ch = charMap.charHeight
+    val columns = rows.first().length
     Box(modifier.fillMaxSize().background(ABC80_CASE_COLOR), contentAlignment = Alignment.Center) {
-        Canvas(Modifier.aspectRatio((ABC80_SCREEN_COLUMNS * cw).toFloat() / (ABC80_SCREEN_ROWS * ch)).fillMaxSize().background(Color.Black)) {
-            val px = size.width / (ABC80_SCREEN_COLUMNS * cw)
+        Canvas(Modifier.aspectRatio((columns * cw).toFloat() / (ABC80_SCREEN_ROWS * ch)).fillMaxSize().background(Color.Black)) {
+            val px = size.width / (columns * cw)
             val py = size.height / (ABC80_SCREEN_ROWS * ch)
             val pixel = Size(px, py)
             cursor?.takeIf { blinkOn }?.let { (r, c) ->

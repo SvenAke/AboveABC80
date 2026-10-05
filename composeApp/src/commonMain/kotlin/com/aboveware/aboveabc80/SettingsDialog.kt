@@ -1,5 +1,10 @@
 package com.aboveware.aboveabc80
 
+import aboveabc80.composeapp.generated.resources.Res
+import aboveabc80.composeapp.generated.resources.tkn80_start
+import aboveabc80.composeapp.generated.resources.tkn80_restart
+import org.jetbrains.compose.resources.stringResource
+
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -56,6 +61,7 @@ fun SettingsDialog(
     val scope = rememberCoroutineScope()
     var showMx80Config by remember { mutableStateOf(false) }
     var showClearConfirmation by remember { mutableStateOf(false) }
+    var startWide by remember { mutableStateOf(getPersistedString("tkn80_start", "false").toBoolean()) }
 
     if (showMx80Config) {
         AlertDialog(
@@ -245,6 +251,18 @@ fun SettingsDialog(
                 )
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(
+                        checked = startWide,
+                        onCheckedChange = {
+                            startWide = it
+                            setPersistedString("tkn80_start", it.toString())
+                        }
+                    )
+                    Text(stringResource(Res.string.tkn80_start))
+                }
+                Text(stringResource(Res.string.tkn80_restart), style = MaterialTheme.typography.bodySmall)
 
                 Text(
                     "CPU Speed",

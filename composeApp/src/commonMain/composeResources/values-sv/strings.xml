@@ -14,6 +14,8 @@
     <string name="cassette_import_failed">Kunde inte läsa bandfilen</string>
     <string name="cassette_cloud">Hämta band från molnet</string>
     <string name="cassette_close">Stäng</string>
+    <string name="tkn80_start">Starta med TKN80 (80 kolumner)</string>
+    <string name="tkn80_restart">Gäller efter omstart av appen</string>
     <string name="cassette_end_of_tape">Bandet är slut</string>
     <string name="cassette_not_found">Programmet %1$s hittades inte. Spola tillbaka och sök från början?</string>
     <string name="cassette_restart_search">Sök från början</string>

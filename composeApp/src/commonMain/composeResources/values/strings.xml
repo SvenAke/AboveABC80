@@ -20,6 +20,8 @@
     <string name="cassette_import_failed">Could not read the tape file</string>
     <string name="cassette_cloud">Download tape from cloud</string>
     <string name="cassette_close">Close</string>
+    <string name="tkn80_start">Start with TKN80 (80 columns)</string>
+    <string name="tkn80_restart">Applies after restarting the app</string>
     <string name="cassette_end_of_tape">End of tape</string>
     <string name="cassette_not_found">The program %1$s was not found. Rewind and search from the beginning?</string>
     <string name="cassette_restart_search">Search from beginning</string>
