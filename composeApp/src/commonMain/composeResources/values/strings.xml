@@ -5,4 +5,22 @@
     <string name="zx_spectrum_screen">CPM Screen</string>
     <string name="cpu_label">CPU:</string>
     <string name="fps_label">FPS:</string>
-</resources>
+    <string name="cassette_title">Cassette</string>
+    <string name="cassette_empty">The tape is empty</string>
+    <string name="cassette_rewind">Rewind</string>
+    <string name="cassette_back">Previous file</string>
+    <string name="cassette_forward">Next file</string>
+    <string name="cassette_new">Blank tape</string>
+    <string name="cassette_eject">Eject</string>
+    <string name="cassette_import">Import file…</string>
+    <string name="cassette_open_saved">Saved tapes…</string>
+    <string name="cassette_export">Save tape</string>
+    <string name="cassette_exported">Tape saved as %1$s</string>
+    <string name="cassette_save_failed">Could not save %1$s</string>
+    <string name="cassette_import_failed">Could not read the tape file</string>
+    <string name="cassette_cloud">Download tape from cloud</string>
+    <string name="cassette_close">Close</string>
+    <string name="cassette_end_of_tape">End of tape</string>
+    <string name="cassette_not_found">The program %1$s was not found. Rewind and search from the beginning?</string>
+    <string name="cassette_restart_search">Search from beginning</string>
+    <string name="cassette_cancel">Cancel</string></resources>

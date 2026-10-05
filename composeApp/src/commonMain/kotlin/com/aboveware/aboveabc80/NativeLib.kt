@@ -35,6 +35,12 @@ class NativeLib {
                     loadNativeLibrary()
                     instance = NativeLib()
                     instance.registerInstanceNative()
+                    initialized = true
+                    try {
+                        instance.cassettePlayer.run()
+                    } catch (e: Throwable) {
+                        System.err.println("NativeLib: Cassette setup failed: ${e.message}")
+                    }
                 } catch (e: Throwable) {
                     // Fallback for preview mode or missing library
                     System.err.println("NativeLib: Could not initialize native library: ${e.message}")
@@ -94,8 +100,31 @@ class NativeLib {
     val bus = Abc80Bus().also { it.run() }
 
     // Called from the native emulator thread for ports 0-7.
-    fun portRead(port: Int): Int = try { bus.read(port) } catch (e: Throwable) { 0xFF }
-    fun portWrite(port: Int, data: Int) { try { bus.write(port, data) } catch (_: Throwable) {} }
+    val pio = Abc80Pio()
+    val cassettePlayer = Abc80CassettePlayer()
+
+    fun portRead(port: Int): Int = try {
+        if (port in 0x39..0x3B) cassettePlayer.read(port) else bus.read(port)
+    } catch (e: Throwable) { 0xFF }
+
+    fun portWrite(port: Int, data: Int) {
+        try {
+            if (port in 0x39..0x3B) cassettePlayer.write(port, data) else bus.write(port, data)
+        } catch (_: Throwable) {}
+    }
+
+    fun setRegisterB(value: Int) = setRegisterBNative(value)
+    private external fun setRegisterBNative(value: Int)
+
+    fun setZeroFlag(value: Boolean) = setZeroFlagNative(value)
+    private external fun setZeroFlagNative(value: Boolean)
+
+    fun stackPointer(): Int = getStackPointerNative()
+    private external fun getStackPointerNative(): Int
+
+    /** Latches a PIO port B interrupt with the given vector; a negative vector cancels it. */
+    fun requestCassetteInterrupt(vector: Int) = requestCassetteInterruptNative(vector)
+    private external fun requestCassetteInterruptNative(vector: Int)
 
     fun sendKey(code: Int) = sendKeyNative(code)
     private external fun sendKeyNative(code: Int)

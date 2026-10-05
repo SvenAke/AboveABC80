@@ -90,6 +90,13 @@ int onReadPort(int port, int hi) {
     int port8 = port & 0xFF;
     // Keyboard PIO data port: bit 7 is the key strobe, 0 means "no key pressed".
     if (port8 == 0x38) return abc80_read_keyboard();
+    // Cassette PIO (port B data/control, port A control) is handled in Kotlin.
+    if (port8 >= 0x39 && port8 <= 0x3B && g_native_lib_object && g_port_read_method && g_vm) {
+        JNIEnv *env = nullptr;
+        if (attach_current_thread(&env) == JNI_OK) {
+            return env->CallIntMethod(g_native_lib_object, g_port_read_method, port8) & 0xFF;
+        }
+    }
     // Ports 0-7 belong to the ABC bus (floppy / printer cards), handled in Kotlin.
     if (port8 <= 7 && g_native_lib_object && g_port_read_method && g_vm) {
         JNIEnv *env = nullptr;
@@ -102,7 +109,7 @@ int onReadPort(int port, int hi) {
 
 void onWritePort(int port, int value) {
     int port8 = port & 0xFF;
-    if (port8 <= 7 && g_native_lib_object && g_port_write_method && g_vm) {
+    if ((port8 <= 7 || (port8 >= 0x39 && port8 <= 0x3B)) && g_native_lib_object && g_port_write_method && g_vm) {
         JNIEnv *env = nullptr;
         if (attach_current_thread(&env) == JNI_OK) {
             env->CallVoidMethod(g_native_lib_object, g_port_write_method, port8, value & 0xFF);
@@ -333,6 +340,26 @@ Java_com_aboveware_aboveabc80_NativeLib_setRegisterANative(JNIEnv *env, jobject,
 JNIEXPORT void JNICALL
 Java_com_aboveware_aboveabc80_NativeLib_setRegisterHLNative(JNIEnv *env, jobject, jint value) {
     z80.hl.w = static_cast<uint16_t>(value & 0xFFFF);
+}
+
+JNIEXPORT void JNICALL
+Java_com_aboveware_aboveabc80_NativeLib_setRegisterBNative(JNIEnv *env, jobject, jint value) {
+    z80.bc.b.h = static_cast<uint8_t>(value & 0xFF);
+}
+
+JNIEXPORT void JNICALL
+Java_com_aboveware_aboveabc80_NativeLib_setZeroFlagNative(JNIEnv *env, jobject, jboolean value) {
+    if (value) z80.af.b.l |= 0x40; else z80.af.b.l &= ~0x40;
+}
+
+JNIEXPORT jint JNICALL
+Java_com_aboveware_aboveabc80_NativeLib_getStackPointerNative(JNIEnv *env, jobject) {
+    return z80.sp.w;
+}
+
+JNIEXPORT void JNICALL
+Java_com_aboveware_aboveabc80_NativeLib_requestCassetteInterruptNative(JNIEnv *env, jobject, jint vector) {
+    abc80_request_cassette_interrupt(vector);
 }
 
 JNIEXPORT void JNICALL

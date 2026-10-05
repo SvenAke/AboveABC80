@@ -37,4 +37,33 @@ in your IDE’s toolbar or run it directly from the terminal:
 
 ---
 
+### Cassette cloud downloads
+
+Downloading files from the cloud in the cassette dialog saves all selected files
+to the app's internal saved-tapes storage without importing them into the current
+tape. Use **Saved tapes** to open and import a downloaded file explicitly.
+
+### Cassette activity
+
+BASIC tape reads and writes display an animated cassette over a dimmed emulator
+screen. The red REC indicator lights up while writing; reading offers a Cancel
+button. The animation disappears when the tape motor stops. Downloading or
+importing a cassette does not start this animation.
+Temporary PIO interrupt changes between LOAD blocks do not switch the cassette
+to recording mode or restart the animation.
+While searching for a named program, each non-matching program name is displayed
+with a one-second search pause. Cancel interrupts this pause promptly.
+If the tape ends before the requested program is found, a dialog offers to
+rewind and retry the same LOAD from the beginning, or cancel the search.
+
+To load a program with DOS enabled, rewind the inserted tape and use
+`LOAD CAS:MUSIK.BAS`, then `RUN`. The `CAS:` prefix selects the cassette rather
+than the default disk device.
+
+The desktop cassette regression test boots the BASIC ROM, loads a multi-block
+program after another file on a synthetic tape at normal CPU speed, and verifies
+the result with `LIST`. Run it with
+`.\gradlew.bat :composeApp:jvmTest --tests com.aboveware.aboveabc80.CassetteLoadIntegrationTest`.
+It uses temporary storage instead of the user's saved tapes.
+
 Learn more about [Kotlin Multiplatform](https://www.jetbrains.com/help/kotlin-multiplatform-dev/get-started.html)…

@@ -60,6 +60,8 @@ void hexdump(const char* desc, const void* addr, int len);
 
 int onReadPort(int port, int value);
 int abc80_read_keyboard();
+void abc80_request_cassette_interrupt(int vector);
+void abc80_cassette_reti();
 void abc80_send_key(int code);
 void onWritePort(int port, int value);
 void onUpdate();

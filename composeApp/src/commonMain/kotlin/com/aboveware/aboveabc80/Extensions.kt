@@ -154,3 +154,14 @@ fun formatSize(size: Long): String {
     }
     return String.format(Locale.US, "%.1f %s", s, units[unitIndex])
 }
+
+fun String.toAndroid() = replace(']', 'Å')
+fun String.toAbc() = replace('Å', ']')
+
+/** The name is formatted as 8.3 characters with spaces. */
+fun String.eightPointThree() =
+    try {
+        (substring(0..7).trim() + "." + substring(8..10).trim()).toAndroid()
+    } catch (e: IndexOutOfBoundsException) {
+        ""
+    }

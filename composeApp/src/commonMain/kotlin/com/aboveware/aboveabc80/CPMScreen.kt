@@ -11,6 +11,7 @@
 package com.aboveware.aboveabc80
 
 import aboveabc80.composeapp.generated.resources.Res
+import aboveabc80.composeapp.generated.resources.cassette_title
 import aboveabc80.composeapp.generated.resources.cpu_label
 import aboveabc80.composeapp.generated.resources.fps_label
 import aboveabc80.composeapp.generated.resources.menu
@@ -118,7 +119,10 @@ import com.aboveware.aboveabc80.terminal.TerminalManager
 import com.aboveware.aboveabc80.terminal.TerminalType
 import com.aboveware.aboveabc80.terminal.TerminalView
 import com.aboveware.aboveabc80.ui.CpmDebuggerView
+import com.aboveware.aboveabc80.ui.CassetteDialog
+import com.aboveware.aboveabc80.ui.CassetteAnimation
 import com.aboveware.aboveabc80.ui.DiskManagerDialog
+import androidx.compose.material.icons.filled.Album
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -149,6 +153,7 @@ fun CPMScreen(startWithStorageOpen: Boolean = false) {
     var showStorageDialog by remember { mutableStateOf(value = startWithStorageOpen) }
     var showSettingsDialog by remember { mutableStateOf(value = false) }
     var showDiskManagerDialog by remember { mutableStateOf(value = false) }
+    var showCassetteDialog by remember { mutableStateOf(value = false) }
     var showFontDialog by remember { mutableStateOf(value = false) }
     var showTapeStorageDialog by remember { mutableStateOf(value = false) }
 
@@ -512,6 +517,34 @@ fun CPMScreen(startWithStorageOpen: Boolean = false) {
                         )
                     }
 
+                    // Cassette indicator: shown while the tape is moving
+                    if (Abc80CassetteStatus.visible &&
+                        Abc80CassetteStatus.activity == Abc80CassetteStatus.Activity.Idle) {
+                        Surface(
+                            color = Color.White.copy(alpha = 0.4f),
+                            shape = MaterialTheme.shapes.extraSmall,
+                            modifier = Modifier
+                                .padding(horizontal = 4.dp)
+                                .clickable { showCassetteDialog = true }
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp)
+                            ) {
+                                Icon(Icons.Default.Album, contentDescription = null, modifier = Modifier.size(14.dp))
+                                Text(
+                                    text = " ${Abc80CassetteStatus.text}",
+                                    style = MaterialTheme.typography.labelSmall
+                                )
+                                Text(
+                                    text = "  ✕",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    modifier = Modifier.clickable { Abc80CassetteStatus.cancel() }
+                                )
+                            }
+                        }
+                    }
+
                     // Disk Indicator
                     val mountedDisks = DiskController.instance.mountedDisks
                     if (mountedDisks.isNotEmpty()) {
@@ -590,6 +623,8 @@ fun CPMScreen(startWithStorageOpen: Boolean = false) {
                         }
                     }
                 }
+
+                CassetteAnimation(modifier = Modifier.zIndex(2f))
 
                 if (!TerminalManager.activeTerminal.isSetupVisible && printer.isVisible) {
                     Abc80Log.terminal("CPMScreen: Showing VirtualPrinterView (isVisible=${printer.isVisible})")
@@ -768,6 +803,35 @@ fun CPMScreen(startWithStorageOpen: Boolean = false) {
                                             Icons.Default.Storage,
                                             contentDescription = "Disk Manager"
                                         )
+                                    }
+                                }
+
+                                // Cassette
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.padding(bottom = 16.dp)
+                                ) {
+                                    Surface(
+                                        shape = MaterialTheme.shapes.small,
+                                        color = MaterialTheme.colorScheme.surface,
+                                        shadowElevation = 4.dp,
+                                        modifier = Modifier.padding(end = 12.dp)
+                                    ) {
+                                        Text(
+                                            stringResource(Res.string.cassette_title) + "...",
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                            style = MaterialTheme.typography.labelLarge
+                                        )
+                                    }
+                                    SmallFloatingActionButton(
+                                        onClick = {
+                                            speedDialOpen = false
+                                            showCassetteDialog = true
+                                        },
+                                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                                    ) {
+                                        Icon(Icons.Default.Album, contentDescription = stringResource(Res.string.cassette_title))
                                     }
                                 }
 
@@ -952,6 +1016,13 @@ fun CPMScreen(startWithStorageOpen: Boolean = false) {
     if (showDiskManagerDialog) {
         DiskManagerDialog {
             showDiskManagerDialog = false
+            focusRequester.requestFocus()
+        }
+    }
+
+    if (showCassetteDialog) {
+        CassetteDialog {
+            showCassetteDialog = false
             focusRequester.requestFocus()
         }
     }

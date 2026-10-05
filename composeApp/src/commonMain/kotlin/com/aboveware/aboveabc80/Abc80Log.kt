@@ -18,6 +18,8 @@ enum class Abc80LogTag(val enabled: Boolean) {
     BUS(false),
     DISKETT(true),
     FLOPPY(false),
+    CASSETTE(true),
+    TAPE(false),
     PRINTER(true),
     SOUND(false),
     STORAGE(false),
@@ -96,6 +98,12 @@ object Abc80Log {
     }
 
     fun diskett(string: String) = log(Abc80LogTag.DISKETT, string)
+
+    /** Logs cassette storage activity. */
+    fun cassette(string: String) = log(Abc80LogTag.CASSETTE, string)
+
+    /** Logs cassette tape state machine activity. */
+    fun tape(string: String) = log(Abc80LogTag.TAPE, string)
 }
 
 /**

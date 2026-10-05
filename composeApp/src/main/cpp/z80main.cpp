@@ -52,6 +52,18 @@ static std::deque<int> g_key_queue;
 static int g_key_hold_frames = 0;
 static constexpr libspectrum_byte KEYBOARD_PIO_VECTOR = 0x34;
 
+/* ABC80 cassette: Z80-PIO port B interrupt, latched until the CPU accepts it. */
+static std::atomic<int> g_cassette_vector{-1};
+static std::atomic<bool> g_cassette_in_service{false};
+
+void abc80_request_cassette_interrupt(int vector) {
+    g_cassette_vector.store(vector, std::memory_order_relaxed);
+}
+
+void abc80_cassette_reti() {
+    g_cassette_in_service.store(false, std::memory_order_relaxed);
+}
+
 void abc80_send_key(int code) {
     KeyLock lock;
     if (g_key_queue.size() < 64) g_key_queue.push_back(code & 0x7F);
@@ -63,8 +75,20 @@ int abc80_read_keyboard() {
 
 /* Called between instructions; delivers the pending keyboard interrupt once the CPU accepts it. */
 bool abc80_try_keyboard_interrupt() {
-    if (!g_key_irq_pending.load(std::memory_order_relaxed)) return false;
     if (!IFF1 || tStates == z80.interrupts_enabled_at) return false;
+    if (!g_key_irq_pending.load(std::memory_order_relaxed)) {
+        const int vector = g_cassette_vector.load(std::memory_order_relaxed);
+        if (vector < 0 || g_cassette_in_service.load(std::memory_order_relaxed)) return false;
+        const libspectrum_byte previous = g_im2_vector;
+        g_im2_vector = static_cast<libspectrum_byte>(vector);
+        const bool taken = z80_interrupt() != 0;
+        g_im2_vector = previous;
+        if (taken) {
+            g_cassette_vector.store(-1, std::memory_order_relaxed);
+            g_cassette_in_service.store(true, std::memory_order_relaxed);
+        }
+        return taken;
+    }
     const libspectrum_byte previous_vector = g_im2_vector;
     g_im2_vector = KEYBOARD_PIO_VECTOR;
     const bool accepted = z80_interrupt() != 0;
@@ -166,6 +190,10 @@ void contend_write_no_mreq(libspectrum_word GCC_UNUSED address, libspectrum_dwor
 
 libspectrum_byte readByte(libspectrum_word address) {
     add_time(3);
+    libspectrum_byte value;
+    if (get_patched_byte(address, &value)) {
+        return value;
+    }
     return memory[address];
 }
 

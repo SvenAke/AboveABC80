@@ -248,4 +248,4 @@ static void z80_nmi(libspectrum_dword ts, int type, void *user_data) {
 }
 
 /* Special peripheral processing for RETN */
-void z80_retn(void) {}
+void z80_retn(void) { abc80_cassette_reti(); }

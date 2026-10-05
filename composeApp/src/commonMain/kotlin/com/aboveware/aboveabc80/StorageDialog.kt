@@ -73,6 +73,7 @@ import org.jetbrains.compose.resources.ExperimentalResourceApi
 fun StorageFileDialog(
     filter: String = "",
     targetDriveIndex: Int? = null,
+    rootPath: String = "abc80/",
     onDismiss: () -> Unit,
     onFilesSelected: ((List<Pair<String, ByteArray>>, Boolean) -> Unit)? = null
 ) {
@@ -80,7 +81,7 @@ fun StorageFileDialog(
     val scope = rememberCoroutineScope()
     val controller = remember { DiskController.instance }
     var nodes by remember { mutableStateOf<List<StorageNode>>(emptyList()) }
-    var pathStack by remember { mutableStateOf(listOf("abc80/")) }
+    var pathStack by remember { mutableStateOf(listOf(rootPath)) }
     var isLoading by remember { mutableStateOf(true) }
     var isDownloading by remember { mutableStateOf(false) }
     var downloadingFileName by remember { mutableStateOf("") }
@@ -685,7 +686,7 @@ fun StorageFileDialog(
                 Column(modifier = Modifier.fillMaxWidth()) {
                     val activeFloppy =
                         controller.getFloppy(targetDriveIndex ?: controller.currentDriveIndex)
-                    if (activeFloppy != null) {
+                    if (activeFloppy != null && rootPath == "abc80/") {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
