@@ -91,6 +91,28 @@ internal fun decodeABC80Screen(memory: ByteArray): List<String> {
     }
 }
 
+internal fun decodeABC80ScreenGlyphs(memory: ByteArray): List<String> {
+    require(memory.size >= 0x8000) { "ABC80 screen requires memory through address 0x7fff" }
+    return List(ABC80_SCREEN_ROWS) { row ->
+        var graphics = false
+        val start = abc80RowAddress(row)
+        buildString(ABC80_SCREEN_COLUMNS) {
+            for (col in 0 until ABC80_SCREEN_COLUMNS) {
+                val value = memory[start + col].toInt() and 0x7F
+                when (value) {
+                    0x16 -> { graphics = false; append(' ') }
+                    0x17 -> { graphics = true; append(' ') }
+                    in 0x20..0x7F -> append(
+                        if (graphics) (value or 0x80).toChar()
+                        else if (value == 0x7F) ' ' else value.toChar()
+                    )
+                    else -> append(' ')
+                }
+            }
+        }
+    }
+}
+
 @OptIn(ExperimentalUnsignedTypes::class)
 @Composable
 fun ABC80Screen(nativeLib: NativeLib, modifier: Modifier = Modifier) {
@@ -102,7 +124,7 @@ fun ABC80Screen(nativeLib: NativeLib, modifier: Modifier = Modifier) {
         var ticks = 0
         while (true) {
             val memory = nativeLib.getMemory()
-            rows = decodeABC80Screen(memory)
+            rows = decodeABC80ScreenGlyphs(memory)
             cursor = decodeABC80Cursor(memory)
             if (++ticks % 10 == 0) blinkOn = !blinkOn
             delay(50)

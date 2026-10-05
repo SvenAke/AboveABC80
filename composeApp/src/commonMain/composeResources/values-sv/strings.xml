@@ -1,0 +1,20 @@
+<resources>
+    <string name="cassette_title">Kassett</string>
+    <string name="cassette_empty">Bandet är tomt</string>
+    <string name="cassette_rewind">Spola tillbaka</string>
+    <string name="cassette_back">Föregående fil</string>
+    <string name="cassette_forward">Nästa fil</string>
+    <string name="cassette_new">Tomt band</string>
+    <string name="cassette_eject">Mata ut</string>
+    <string name="cassette_import">Importera fil…</string>
+    <string name="cassette_open_saved">Sparade band…</string>
+    <string name="cassette_export">Spara band</string>
+    <string name="cassette_exported">Bandet sparades som %1$s</string>
+    <string name="cassette_save_failed">Kunde inte spara %1$s</string>
+    <string name="cassette_import_failed">Kunde inte läsa bandfilen</string>
+    <string name="cassette_cloud">Hämta band från molnet</string>
+    <string name="cassette_close">Stäng</string>
+    <string name="cassette_end_of_tape">Bandet är slut</string>
+    <string name="cassette_not_found">Programmet %1$s hittades inte. Spola tillbaka och sök från början?</string>
+    <string name="cassette_restart_search">Sök från början</string>
+    <string name="cassette_cancel">Avbryt</string></resources>

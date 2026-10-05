@@ -66,4 +66,12 @@ the result with `LIST`. Run it with
 `.\gradlew.bat :composeApp:jvmTest --tests com.aboveware.aboveabc80.CassetteLoadIntegrationTest`.
 It uses temporary storage instead of the user's saved tapes.
 
+### ABC80 character graphics
+
+The screen renderer honors the in-row graphics control `CHR$(23)` and text
+control `CHR$(22)`. In graphics mode, mosaic characters form continuous 2-by-3
+pixel blocks, while letters in the middle character range remain text. Each row
+starts in text mode. This allows programs such as MUSIK.BAS to draw their keyboard
+without changing the source-code display in `LIST`.
+
 Learn more about [Kotlin Multiplatform](https://www.jetbrains.com/help/kotlin-multiplatform-dev/get-started.html)…

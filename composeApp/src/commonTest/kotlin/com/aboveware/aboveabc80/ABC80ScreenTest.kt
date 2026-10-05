@@ -6,6 +6,30 @@ import kotlin.test.assertFailsWith
 
 class ABC80ScreenTest {
     @Test
+    fun graphicsControlsSelectMosaicsUntilTextModeOrNextRow() {
+        val memory = ByteArray(0x10000)
+        byteArrayOf(0x17, 0x35, 0x6a, 0x2f, 0x16, 0x35).copyInto(memory, abc80RowAddress(0))
+        memory[abc80RowAddress(1)] = 0x35
+        val glyphs = decodeABC80ScreenGlyphs(memory)
+        assertEquals(" \u00b5\u00ea\u00af 5", glyphs[0].take(6))
+        assertEquals('5', glyphs[1][0])
+        assertEquals(" 5j/ 5", decodeABC80Screen(memory)[0].take(6))
+    }
+
+    @OptIn(ExperimentalUnsignedTypes::class)
+    @Test
+    fun keyboardMosaicsHaveSolidEdgesAndLettersStayText() {
+        val map = Abc80MonitorCharacterMap()
+        for (row in 0 until map.charHeight) {
+            assertEquals(0xf0, map.character(0xb5, row).toInt())
+            assertEquals(0x0f, map.character(0xea, row).toInt())
+            assertEquals(map.character('W'.code, row), map.character(0xd7, row))
+        }
+        assertEquals(0xff, map.character(0xaf, 0).toInt())
+        assertEquals(0, map.character(0xaf, 13).toInt())
+    }
+
+    @Test
     fun readsAsciiFromInterleavedRowAddresses() {
         val memory = ByteArray(0x10000)
         memory[0x7c00] = 'A'.code.toByte()
