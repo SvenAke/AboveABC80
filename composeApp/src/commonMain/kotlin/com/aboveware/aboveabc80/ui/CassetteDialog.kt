@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
@@ -27,9 +28,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,12 +45,17 @@ import com.aboveware.aboveabc80.StorageFileDialog
 import com.aboveware.aboveabc80.getCurrentTimestamp
 import com.aboveware.aboveabc80.saveLocalFile
 import org.jetbrains.compose.resources.stringResource
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 private const val SAVED_TAPES = "tapes"
 
 @Composable
 fun CassetteDialog(onDismiss: () -> Unit) {
-    var files by remember { mutableStateOf(Abc80Cassette.list()) }
+    var files by remember { mutableStateOf(emptyList<Abc80Cassette.FileInfo>()) }
+    var loading by remember { mutableStateOf(true) }
+    val scope = rememberCoroutineScope()
     var showImport by remember { mutableStateOf(false) }
     var showSaved by remember { mutableStateOf(false) }
     var showCloud by remember { mutableStateOf(false) }
@@ -56,47 +64,67 @@ fun CassetteDialog(onDismiss: () -> Unit) {
     val exportedFormat = stringResource(Res.string.cassette_exported)
     val saveFailedFormat = stringResource(Res.string.cassette_save_failed)
 
+    LaunchedEffect(Unit) {
+        try {
+            files = withContext(Dispatchers.IO) { Abc80Cassette.list() }
+        } finally {
+            loading = false
+        }
+    }
+
     fun refresh(list: List<Abc80Cassette.FileInfo> = Abc80Cassette.list()) {
         files = list
     }
 
     fun importTape(name: String, data: ByteArray) {
-        message = if (Abc80Cassette.import(data.inputStream(), name)) null else importFailed
-        refresh()
+        loading = true
+        message = null
+        scope.launch {
+            try {
+                val (imported, contents) = withContext(Dispatchers.IO) {
+                    val imported = Abc80Cassette.import(data.inputStream(), name)
+                    imported to Abc80Cassette.list()
+                }
+                message = if (imported) null else importFailed
+                files = contents
+            } finally {
+                loading = false
+            }
+        }
     }
 
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = { if (!loading) onDismiss() },
         title = { Text(stringResource(Res.string.cassette_title)) },
         text = {
             Column {
                 Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                    IconButton(onClick = { Abc80Cassette.rewind(); refresh() }) {
+                    IconButton(enabled = !loading, onClick = { Abc80Cassette.rewind(); refresh() }) {
                         Icon(Icons.Default.FastRewind, stringResource(Res.string.cassette_rewind))
                     }
-                    IconButton(onClick = { refresh(Abc80Cassette.back()) }) {
+                    IconButton(enabled = !loading, onClick = { refresh(Abc80Cassette.back()) }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(Res.string.cassette_back))
                     }
-                    IconButton(onClick = { refresh(Abc80Cassette.forward()) }) {
+                    IconButton(enabled = !loading, onClick = { refresh(Abc80Cassette.forward()) }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowForward, stringResource(Res.string.cassette_forward))
                     }
-                    IconButton(onClick = { Abc80Cassette.format(); refresh() }) {
+                    IconButton(enabled = !loading, onClick = { Abc80Cassette.format(); refresh() }) {
                         Icon(Icons.Default.Add, stringResource(Res.string.cassette_new))
                     }
-                    IconButton(onClick = { Abc80Cassette.eject(); refresh() }) {
+                    IconButton(enabled = !loading, onClick = { Abc80Cassette.eject(); refresh() }) {
                         Icon(Icons.Default.Eject, stringResource(Res.string.cassette_eject))
                     }
-                    IconButton(onClick = { showImport = true }) {
+                    IconButton(enabled = !loading, onClick = { showImport = true }) {
                         Icon(Icons.Default.Upload, stringResource(Res.string.cassette_import))
                     }
-                    IconButton(onClick = { showCloud = true }) {
+                    IconButton(enabled = !loading, onClick = { showCloud = true }) {
                         Icon(Icons.Default.CloudDownload, stringResource(Res.string.cassette_cloud))
                     }
-                    IconButton(onClick = { showSaved = true }) {
+                    IconButton(enabled = !loading, onClick = { showSaved = true }) {
                         Icon(Icons.Default.FolderOpen, stringResource(Res.string.cassette_open_saved))
                     }
                     IconButton(
-                        enabled = Abc80Cassette.anyCassette(),
+                        enabled = !loading && Abc80Cassette.anyCassette(),
                         onClick = {
                             val name = "tape-${getCurrentTimestamp()}.tape"
                             if (saveLocalFile(SAVED_TAPES, name, Abc80Cassette.exportBytes()))
@@ -108,7 +136,9 @@ fun CassetteDialog(onDismiss: () -> Unit) {
                 }
                 message?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
                 Box(modifier = Modifier.sizeIn(minHeight = 200.dp, maxHeight = 400.dp).fillMaxWidth()) {
-                    if (files.none { it.name.isNotBlank() }) {
+                    if (loading) {
+                        CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                    } else if (files.none { it.name.isNotBlank() }) {
                         Text(
                             stringResource(Res.string.cassette_empty),
                             modifier = Modifier.align(Alignment.Center)
@@ -134,7 +164,7 @@ fun CassetteDialog(onDismiss: () -> Unit) {
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(Res.string.cassette_close)) } }
+        confirmButton = { TextButton(enabled = !loading, onClick = onDismiss) { Text(stringResource(Res.string.cassette_close)) } }
     )
 
     LocalFilePicker(

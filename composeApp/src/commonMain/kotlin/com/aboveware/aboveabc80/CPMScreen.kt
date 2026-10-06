@@ -23,6 +23,7 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
@@ -89,6 +90,12 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType
@@ -594,6 +601,34 @@ fun CPMScreen(startWithStorageOpen: Boolean = false) {
                                         )
                                     }
                                 }
+                            }
+                        }
+                    }
+
+                    val cassetteButtonDescription = stringResource(Res.string.cassette_title)
+                    Surface(
+                        color = Color.White.copy(alpha = 0.4f),
+                        shape = MaterialTheme.shapes.extraSmall,
+                        modifier = Modifier
+                            .padding(horizontal = 4.dp)
+                            .semantics { contentDescription = cassetteButtonDescription }
+                            .clickable(role = Role.Button) { showCassetteDialog = true }
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp)
+                        ) {
+                            Canvas(Modifier.size(16.dp)) {
+                                val ink = Color.Black.copy(alpha = 0.7f)
+                                val outline = Stroke(width = 1.dp.toPx())
+                                drawRect(ink, Offset(0f, size.height * 0.15f),
+                                    Size(size.width, size.height * 0.7f), style = outline)
+                                for (x in listOf(0.3f, 0.7f)) {
+                                    drawCircle(ink, size.width * 0.12f,
+                                        Offset(size.width * x, size.height * 0.42f), style = outline)
+                                }
+                                drawRect(ink, Offset(size.width * 0.25f, size.height * 0.65f),
+                                    Size(size.width * 0.5f, size.height * 0.2f), style = outline)
                             }
                         }
                     }
