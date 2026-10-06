@@ -1,6 +1,10 @@
 package com.aboveware.aboveabc80.ui
 
 import aboveabc80.composeapp.generated.resources.Res
+import aboveabc80.composeapp.generated.resources.disk_list_contents
+import aboveabc80.composeapp.generated.resources.disk_export_pc
+import aboveabc80.composeapp.generated.resources.disk_import_cloud
+import aboveabc80.composeapp.generated.resources.disk_delete
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -26,7 +30,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
@@ -68,6 +71,7 @@ import com.aboveware.aboveabc80.splitFilename
 import com.aboveware.aboveabc80.writeFileToFolder
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.ExperimentalResourceApi
+import org.jetbrains.compose.resources.stringResource
 
 
 @Composable
@@ -76,6 +80,10 @@ fun DiskManagerDialog(
 ) {
     val controller = DiskController.instance
     val scope = rememberCoroutineScope()
+    val listContentsLabel = stringResource(Res.string.disk_list_contents)
+    val exportPcLabel = stringResource(Res.string.disk_export_pc)
+    val importCloudLabel = stringResource(Res.string.disk_import_cloud)
+    val deleteLabel = stringResource(Res.string.disk_delete)
     var selectedDriveIndex by remember { mutableStateOf<Int?>(null) }
     var showNewDiskDialog by remember { mutableStateOf(false) }
     var showCloudImportDialog by remember { mutableStateOf(false) }
@@ -175,7 +183,7 @@ fun DiskManagerDialog(
                                         )
                                         if (mounted != null) {
                                             Row {
-                                                IconButton(onClick = {
+                                                TooltipIconButton(label = listContentsLabel, onClick = {
                                                     scope.launch {
                                                         val image = when (mounted.source) {
                                                             DiskController.Source.LOCAL -> loadLocalDisk(mounted.name)
@@ -190,11 +198,11 @@ fun DiskManagerDialog(
                                                 }) {
                                                     Icon(
                                                         Icons.AutoMirrored.Filled.List,
-                                                        contentDescription = "List contents"
+                                                        contentDescription = listContentsLabel
                                                     )
                                                 }
                                                 if (getPlatform().name.contains("Java")) {
-                                                    IconButton(onClick = {
+                                                    TooltipIconButton(label = exportPcLabel, onClick = {
                                                         val floppy = controller.getFloppy(index)
                                                         if (floppy != null) {
                                                             val parentDir = pickFolder()
@@ -210,18 +218,18 @@ fun DiskManagerDialog(
                                                     }) {
                                                         Icon(
                                                             Icons.Default.Download,
-                                                            contentDescription = "Export to PC"
+                                                            contentDescription = exportPcLabel
                                                         )
                                                     }
                                                 }
 
-                                                IconButton(onClick = {
+                                                TooltipIconButton(label = importCloudLabel, onClick = {
                                                     targetImportDriveIndex = index
                                                     showCloudImportDialog = true
                                                 }) {
                                                     Icon(
                                                         Icons.Default.CloudDownload,
-                                                        contentDescription = "Import from Cloud"
+                                                        contentDescription = importCloudLabel
                                                     )
                                                 }
                                             }
@@ -291,7 +299,8 @@ fun DiskManagerDialog(
                                         }
                                     } else null,
                                     trailingContent = {
-                                        IconButton(
+                                        TooltipIconButton(
+                                            label = deleteLabel,
                                             onClick = {
                                                 deleteLocalDisk(diskName)
                                                 localDisks = listLocalDisks().filter {
@@ -310,7 +319,7 @@ fun DiskManagerDialog(
                                         ) {
                                             Icon(
                                                 Icons.Default.Delete,
-                                                contentDescription = "Delete",
+                                                contentDescription = deleteLabel,
                                                 tint = if (isMountedElsewhere) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.error
                                             )
                                         }

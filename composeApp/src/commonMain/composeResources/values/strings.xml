@@ -1,4 +1,8 @@
 <resources>
+    <string name="disk_list_contents">List contents</string>
+    <string name="disk_export_pc">Export files to PC</string>
+    <string name="disk_import_cloud">Import from cloud</string>
+    <string name="disk_delete">Delete disk</string>
     <string name="download">Download</string>
     <string name="download_files">Download Files</string>
     <string name="menu">Menu</string>

@@ -1,4 +1,8 @@
 <resources>
+    <string name="disk_list_contents">Visa innehåll</string>
+    <string name="disk_export_pc">Exportera filer till datorn</string>
+    <string name="disk_import_cloud">Importera från molnet</string>
+    <string name="disk_delete">Ta bort diskett</string>
     <string name="cassette_title">Kassett</string>
     <string name="cassette_empty">Bandet är tomt</string>
     <string name="cassette_rewind">Spola tillbaka</string>

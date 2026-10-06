@@ -49,6 +49,8 @@ The cassette button in the upper-right corner, between the disk indicator and
 FPS, opens the cassette dialog. The icon-only button remains visible when CPU/FPS
 is hidden. A circular progress indicator is shown while the selected tape is
 imported and its files are listed; this work runs off the UI thread.
+The cassette and disk manager dialogs' icon buttons show localized tooltips on
+hover or long press.
 
 BASIC tape reads and writes display an animated cassette over a dimmed emulator
 screen. The red REC indicator lights up while writing; reading offers a Cancel
