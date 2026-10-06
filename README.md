@@ -43,6 +43,17 @@ Downloading files from the cloud in the cassette dialog saves all selected files
 to the app's internal saved-tapes storage without importing them into the current
 tape. Use **Saved tapes** to open and import a downloaded file explicitly.
 
+Cloud cassette WAV files are streamed directly to internal storage with a
+64 KiB buffer, rather than loaded into memory or cached in the diskette importer.
+This also applies when browsing `abc80/cassettes/` from the general cloud dialog.
+The dialog shows downloaded bytes and reports HTTP/storage errors. Incomplete
+downloads are removed; an existing saved tape is replaced only after the full
+download has been checked.
+
+Opening a WAV recording from **Saved tapes** also streams the file directly
+through the cassette decoder on a background thread. Only decoded cassette
+blocks are retained in memory, not the full WAV recording.
+
 ### Cassette activity
 
 The cassette button in the upper-right corner, between the disk indicator and

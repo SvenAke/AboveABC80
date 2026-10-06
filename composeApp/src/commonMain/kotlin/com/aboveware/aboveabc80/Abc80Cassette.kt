@@ -203,6 +203,10 @@ object Abc80Cassette {
         try {
             val decoder = Abc80CassetteDecoder(progressText)
             if (!decoder.decode(stream)) return false
+            if (decoder.files().isEmpty()) {
+                Abc80Log.cassette("No valid programs found in $name")
+                return false
+            }
             format()
             decoder.files().forEach { write(it.rawData()) }
             rewind()

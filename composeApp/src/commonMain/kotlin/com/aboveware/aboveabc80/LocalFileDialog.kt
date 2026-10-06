@@ -23,12 +23,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import java.io.File
 
 @Composable
 fun LocalFileDialog(
     folder: String,
     title: String = "Local Files",
     onDismiss: () -> Unit,
+    onFileOpened: ((String, File) -> Unit)? = null,
     onFileSelected: (String, ByteArray) -> Unit
 ) {
     var files by remember {
@@ -75,9 +77,13 @@ fun LocalFileDialog(
                                     }
                                 },
                                 modifier = Modifier.clickable {
-                                    val data = loadLocalFile(folder, filename)
-                                    if (data != null) {
-                                        onFileSelected(filename, data)
+                                    if (onFileOpened != null) {
+                                        onFileOpened(filename, getLocalFileDirectory(folder).resolve(filename))
+                                    } else {
+                                        val data = loadLocalFile(folder, filename)
+                                        if (data != null) {
+                                            onFileSelected(filename, data)
+                                        }
                                     }
                                 }
                             )

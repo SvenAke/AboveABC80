@@ -7,7 +7,17 @@ import io.ktor.client.request.delete
 import io.ktor.client.request.get
 import io.ktor.client.request.parameter
 import io.ktor.client.request.post
+import io.ktor.client.request.prepareGet
 import io.ktor.client.request.setBody
+import io.ktor.client.statement.bodyAsChannel
+import io.ktor.http.HttpHeaders
+import io.ktor.http.encodeURLPathPart
+import io.ktor.utils.io.readAvailable
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.io.File
+import java.io.IOException
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -36,18 +46,86 @@ data class StorageNode(
 )
 
 class FirebaseRestStorageProvider(
-    bucketName: String = "abovecpm-1a939.firebasestorage.app"
+    bucketName: String = "abovecpm-1a939.firebasestorage.app",
+    private val client: HttpClient = HttpClient {
+        install(ContentNegotiation) {
+            json(Json { ignoreUnknownKeys = true })
+        }
+    }
 ) {
 
-    private val client = HttpClient {
-        install(ContentNegotiation) {
-            json(Json {
-                ignoreUnknownKeys = true
-            })
+    private val baseUrl = "https://firebasestorage.googleapis.com/v0/b/$bucketName/o"
+
+    fun close() = client.close()
+
+    suspend fun downloadToFile(
+        fileName: String,
+        destination: File,
+        expectedSize: Long = 0,
+        onProgress: (Long) -> Unit = {}
+    ) = withContext(Dispatchers.IO) {
+        val directory = checkNotNull(destination.parentFile)
+        check(directory.isDirectory || directory.mkdirs()) { "Could not create download directory" }
+        val temporary = File.createTempFile("cloud-", ".part", directory)
+        try {
+            client.prepareGet("$baseUrl/${fileName.encodeURLPathPart()}") {
+                parameter("alt", "media")
+            }.execute { response ->
+                check(response.status.value in 200..299) {
+                    "HTTP ${response.status.value} downloading ${destination.name}"
+                }
+                val contentLength = response.headers[HttpHeaders.ContentLength]?.toLongOrNull()
+                val channel = response.bodyAsChannel()
+                val buffer = ByteArray(64 * 1024)
+                var received = 0L
+                temporary.outputStream().use { output ->
+                    while (true) {
+                        val count = channel.readAvailable(buffer, 0, buffer.size)
+                        if (count < 0) break
+                        if (count == 0) continue
+                        output.write(buffer, 0, count)
+                        received += count
+                        onProgress(received)
+                    }
+                }
+                val requiredSize = contentLength ?: expectedSize.takeIf { it > 0 }
+                check(requiredSize == null || received == requiredSize) {
+                    "Incomplete download: $received of $requiredSize bytes"
+                }
+                check(expectedSize <= 0 || received == expectedSize) {
+                    "Unexpected download size: $received of $expectedSize bytes"
+                }
+                check(received > 0) { "Downloaded file is empty" }
+            }
+            replaceDownloadedFile(temporary, destination)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Abc80Log.wtf("Cloud download failed for ${destination.name}: ${e.message}")
+            throw e
+        } finally {
+            if (temporary.exists() && !temporary.delete()) {
+                Abc80Log.wtf("Could not remove partial download ${temporary.name}")
+            }
         }
     }
 
-    private val baseUrl = "https://firebasestorage.googleapis.com/v0/b/$bucketName/o"
+    private fun replaceDownloadedFile(temporary: File, destination: File) {
+        if (!destination.exists()) {
+            check(temporary.renameTo(destination)) { "Could not save ${destination.name}" }
+            return
+        }
+        val backup = File.createTempFile("cloud-", ".backup", destination.parentFile)
+        check(backup.delete()) { "Could not prepare download backup" }
+        check(destination.renameTo(backup)) { "Could not replace ${destination.name}" }
+        if (!temporary.renameTo(destination)) {
+            if (!backup.renameTo(destination)) {
+                throw IOException("Could not restore ${destination.name}; previous file is in ${backup.name}")
+            }
+            throw IOException("Could not save ${destination.name}")
+        }
+        if (!backup.delete()) Abc80Log.wtf("Could not remove download backup ${backup.name}")
+    }
 
     suspend fun listFiles(prefix: String = ""): List<StorageNode> = coroutineScope {
         try {

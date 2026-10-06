@@ -26,6 +26,17 @@ fun setAndroidContext(context: Context) {
 
 actual fun getPlatform(): Platform = AndroidPlatform(_androidContext!!)
 
+actual fun getAppStorageDir(): File {
+    val context = androidContext
+    val root = if (context != null) {
+        File(context.filesDir, ".aboveabc80")
+    } else {
+        File(System.getProperty("user.home") ?: ".", ".aboveabc80")
+    }
+    if (!root.exists()) root.mkdirs()
+    return root
+}
+
 actual fun setPersistedString(key: String, value: String) {
     val prefs = androidContext?.getSharedPreferences("aboveabc80_prefs", Context.MODE_PRIVATE)
     prefs?.edit()?.putString(key, value)?.apply()
@@ -93,7 +104,11 @@ actual fun saveLocalFile(folder: String, name: String, data: ByteArray): Boolean
     } catch (e: Exception) {
         false
     }
+
 }
+
+actual fun getLocalFileDirectory(folder: String): File =
+    File(checkNotNull(androidContext) { "Android storage is not initialized" }.filesDir, folder)
 
 actual fun loadLocalFile(folder: String, name: String): ByteArray? {
     return try {

@@ -1,6 +1,7 @@
 package com.aboveware.aboveabc80
 
 import androidx.compose.ui.input.key.KeyEvent
+import java.io.File
 import java.io.InputStream
 
 interface Platform {
@@ -8,6 +9,7 @@ interface Platform {
 }
 
 expect fun getPlatform(): Platform
+expect fun getAppStorageDir(): File
 
 // Persisted settings
 expect fun setPersistedString(key: String, value: String)
@@ -22,6 +24,7 @@ expect fun listLocalDisks(): List<String>
 expect fun deleteLocalDisk(name: String): Boolean
 
 // Generic file saving
+expect fun getLocalFileDirectory(folder: String): File
 expect fun saveLocalFile(folder: String, name: String, data: ByteArray): Boolean
 expect fun loadLocalFile(folder: String, name: String): ByteArray?
 expect fun listLocalFiles(folder: String): List<String>

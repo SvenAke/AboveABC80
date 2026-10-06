@@ -39,6 +39,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.aboveware.aboveabc80.Abc80Cassette
+import com.aboveware.aboveabc80.Abc80Log
 import com.aboveware.aboveabc80.Abc80CassetteStatus
 import com.aboveware.aboveabc80.LocalFileDialog
 import com.aboveware.aboveabc80.StorageFileDialog
@@ -88,17 +89,22 @@ fun CassetteDialog(onDismiss: () -> Unit) {
         files = list
     }
 
-    fun importTape(name: String, data: ByteArray) {
+    fun importTape(name: String, openStream: () -> java.io.InputStream) {
         loading = true
         message = null
         scope.launch {
             try {
                 val (imported, contents) = withContext(Dispatchers.IO) {
-                    val imported = Abc80Cassette.import(data.inputStream(), name)
+                    val imported = openStream().use { Abc80Cassette.import(it, name) }
                     imported to Abc80Cassette.list()
                 }
                 message = if (imported) null else importFailed
                 files = contents
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Abc80Log.wtf("Could not import cassette $name: ${e.message}")
+                message = "$importFailed: ${e.message}"
             } finally {
                 loading = false
             }
@@ -183,7 +189,7 @@ fun CassetteDialog(onDismiss: () -> Unit) {
         show = showImport,
         onFileSelected = { name, data ->
             showImport = false
-            importTape(name, data)
+            importTape(name) { data.inputStream() }
         },
         onDismiss = { showImport = false }
     )
@@ -191,16 +197,12 @@ fun CassetteDialog(onDismiss: () -> Unit) {
     if (showCloud) {
         StorageFileDialog(
             rootPath = "abc80/cassettes/",
+            downloadFolder = SAVED_TAPES,
             onDismiss = { showCloud = false },
-            onFilesSelected = { selected, _ ->
+            onFilesDownloaded = { names ->
                 showCloud = false
-                message = selected.joinToString("\n") { (name, data) ->
-                    val resultFormat = if (saveLocalFile(SAVED_TAPES, name, data)) {
-                        exportedFormat
-                    } else {
-                        saveFailedFormat
-                    }
-                    resultFormat.replace("%1\$s", name)
+                message = names.joinToString("\n") { name ->
+                    exportedFormat.replace("%1\$s", name)
                 }
             }
         )
@@ -211,9 +213,13 @@ fun CassetteDialog(onDismiss: () -> Unit) {
             folder = SAVED_TAPES,
             title = stringResource(Res.string.cassette_open_saved),
             onDismiss = { showSaved = false },
+            onFileOpened = { name, file ->
+                showSaved = false
+                importTape(name) { file.inputStream() }
+            },
             onFileSelected = { name, data ->
                 showSaved = false
-                importTape(name, data)
+                importTape(name) { data.inputStream() }
             }
         )
     }

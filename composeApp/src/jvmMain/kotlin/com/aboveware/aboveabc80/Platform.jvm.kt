@@ -18,6 +18,12 @@ class JVMPlatform : Platform {
 
 actual fun getPlatform(): Platform = JVMPlatform()
 
+actual fun getAppStorageDir(): File {
+    val root = File(System.getProperty("user.home") ?: ".", ".aboveabc80")
+    if (!root.exists()) root.mkdirs()
+    return root
+}
+
 actual fun setPersistedString(key: String, value: String) {
     try {
         val prefs = Preferences.userRoot().node("com.aboveware.aboveabc80")
@@ -95,7 +101,11 @@ actual fun saveLocalFile(folder: String, name: String, data: ByteArray): Boolean
     } catch (e: Exception) {
         false
     }
+
 }
+
+actual fun getLocalFileDirectory(folder: String): File =
+    File((getPlatform() as JVMPlatform).disksDir.parentFile, folder)
 
 actual fun loadLocalFile(folder: String, name: String): ByteArray? {
     return try {

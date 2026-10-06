@@ -85,9 +85,8 @@ class Abc80FloppyLayout(formatName: String, val drive: Int) {
     }
 
     private fun diskPath(): String {
-        val dir = "$root${File.separator}dr"
-        File(dir).mkdir()
-        return "$dir${File.separator}$drive.dsk"
+        val dir = File(getAppStorageDir(), "dr").apply { if (!exists()) mkdirs() }
+        return File(dir, "$drive.dsk").absolutePath
     }
 
     fun read(): Byte {
@@ -365,5 +364,4 @@ class Abc80FloppyLayout(formatName: String, val drive: Int) {
         return image
     }
 
-    private val root = System.getProperty("user.home") + File.separator + ".aboveabc80"
 }

@@ -333,13 +333,15 @@ class Abc80CassetteDecoder(progressText: String) {
             data[0] == 0xff.toByte() && data[1] == 0xff.toByte() && data[2] == 0xff.toByte()
 
         fun save() {
+            if (buffers.isEmpty()) return
             val file = File(buffers, rawBuffers)
             val valid = file.validate()
             val text = if (valid) {
                 files.add(file)
                 "$progressText ${file.name().eightPointThree()}"
             } else {
-                "Format error ${file.name().eightPointThree()}"
+                Abc80Log.cassette("Invalid cassette file blocks")
+                "Format error"
             }
             Abc80CassetteStatus.show(text)
             buffers = mutableListOf()

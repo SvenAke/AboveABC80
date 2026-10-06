@@ -45,6 +45,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -64,6 +65,8 @@ import com.aboveware.aboveabc80.core.DiskController
 import com.aboveware.aboveabc80.core.Floppy
 import com.aboveware.aboveabc80.core.unzipFile
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
+import java.io.File
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.ExperimentalResourceApi
@@ -74,17 +77,24 @@ fun StorageFileDialog(
     filter: String = "",
     targetDriveIndex: Int? = null,
     rootPath: String = "abc80/",
+    downloadFolder: String? = null,
+    onFilesDownloaded: ((List<String>) -> Unit)? = null,
     onDismiss: () -> Unit,
     onFilesSelected: ((List<Pair<String, ByteArray>>, Boolean) -> Unit)? = null
 ) {
     val provider = remember { FirebaseRestStorageProvider() }
+    DisposableEffect(provider) {
+        onDispose { provider.close() }
+    }
     val scope = rememberCoroutineScope()
     val controller = remember { DiskController.instance }
     var nodes by remember { mutableStateOf<List<StorageNode>>(emptyList()) }
     var pathStack by remember { mutableStateOf(listOf(rootPath)) }
+    val destinationFolder = cloudDownloadFolder(pathStack.last(), downloadFolder)
     var isLoading by remember { mutableStateOf(true) }
     var isDownloading by remember { mutableStateOf(false) }
     var downloadingFileName by remember { mutableStateOf("") }
+    var downloadedBytes by remember { mutableStateOf(0L) }
     var clearDestinationBeforeDownload by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
@@ -661,7 +671,10 @@ fun StorageFileDialog(
                                 LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
                                 Spacer(modifier = Modifier.height(12.dp))
                                 Text(
-                                    text = if (downloadingFileName.isNotEmpty()) "Downloading $downloadingFileName…" else "Downloading…",
+                                    text = if (downloadingFileName.isNotEmpty()) {
+                                        "Downloading $downloadingFileName…" +
+                                            if (destinationFolder != null) " (${formatSize(downloadedBytes)})" else ""
+                                    } else "Downloading…",
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.Medium,
                                     color = MaterialTheme.colorScheme.onSurface,
@@ -686,7 +699,7 @@ fun StorageFileDialog(
                 Column(modifier = Modifier.fillMaxWidth()) {
                     val activeFloppy =
                         controller.getFloppy(targetDriveIndex ?: controller.currentDriveIndex)
-                    if (activeFloppy != null && rootPath == "abc80/") {
+                    if (activeFloppy != null && rootPath == "abc80/" && destinationFolder == null) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -735,26 +748,49 @@ fun StorageFileDialog(
                                 onClick = {
                                     scope.launch {
                                         isDownloading = true
+                                        errorMessage = null
                                         val results = mutableListOf<Pair<String, ByteArray>>()
+                                        val savedNames = mutableListOf<String>()
                                         var allOk = true
-                                        for (node in selectedNodes) {
-                                            downloadingFileName = node.name
-                                            val data =
-                                                fileCache[node.fullName] ?: provider.downloadFile(
-                                                    node.fullName
-                                                )
-                                            if (data != null) {
-                                                if (!fileCache.containsKey(node.fullName)) {
-                                                    fileCache = fileCache + (node.fullName to data)
+                                        try {
+                                            for (node in selectedNodes) {
+                                                downloadingFileName = node.name
+                                                downloadedBytes = 0
+                                                if (destinationFolder != null) {
+                                                    provider.downloadToFile(
+                                                        node.fullName,
+                                                        File(getLocalFileDirectory(destinationFolder), node.name),
+                                                        node.size
+                                                    ) { received ->
+                                                        downloadedBytes = received
+                                                    }
+                                                    savedNames.add(node.name)
+                                                    continue
                                                 }
-                                                results.add(node.name to data)
-                                            } else {
-                                                allOk = false
-                                                errorMessage = "Could not download ${node.name}"
-                                                break
+                                                val data = fileCache[node.fullName] ?: provider.downloadFile(node.fullName)
+                                                if (data != null) {
+                                                    if (!fileCache.containsKey(node.fullName)) {
+                                                        fileCache = fileCache + (node.fullName to data)
+                                                    }
+                                                    results.add(node.name to data)
+                                                } else {
+                                                    allOk = false
+                                                    errorMessage = "Could not download ${node.name}"
+                                                    break
+                                                }
                                             }
+                                        } catch (e: CancellationException) {
+                                            throw e
+                                        } catch (e: Exception) {
+                                            allOk = false
+                                            errorMessage = "Could not download $downloadingFileName: ${e.message}"
+                                        } finally {
+                                            isDownloading = false
                                         }
-                                        isDownloading = false
+                                        if (allOk && savedNames.isNotEmpty()) {
+                                            onFilesDownloaded?.invoke(savedNames)
+                                            onDismiss()
+                                        }
                                         if (allOk && results.isNotEmpty()) {
                                             handleFilesSelection(results)
                                         }
@@ -765,7 +801,7 @@ fun StorageFileDialog(
                                     Text(if (selectedNodes.size > 1) "Download (${selectedNodes.size})" else "Download")
                                     if (selectedNodes.isNotEmpty()) {
                                         val totalSize = selectedNodes.sumOf { it.size }
-                                        val currentFloppy = controller.getFloppy(
+                                        val currentFloppy = if (destinationFolder != null) null else controller.getFloppy(
                                             targetDriveIndex ?: controller.currentDriveIndex
                                         )
                                         val freeSpace =
