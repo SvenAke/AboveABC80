@@ -38,7 +38,6 @@ actual fun getEventTime(event: KeyEvent): Long {
 }
 
 actual fun triggerKeyClick(haptic: androidx.compose.ui.hapticfeedback.HapticFeedback) {
-    playKeyClick()
 }
 
 actual fun triggerBell(haptic: androidx.compose.ui.hapticfeedback.HapticFeedback) {

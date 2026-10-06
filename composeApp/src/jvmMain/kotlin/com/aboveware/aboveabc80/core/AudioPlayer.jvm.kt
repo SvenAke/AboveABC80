@@ -23,11 +23,17 @@ actual class AudioPlayer actual constructor(actual val sampleRate: Int) {
             val s = (sample * 32767).toInt().toShort()
             byteBuffer.putShort(s)
         }
-        line?.write(byteBuffer.array(), 0, byteBuffer.capacity())
+        val output = checkNotNull(line) { "Audio playback has not started" }
+        var offset = 0
+        while (offset < byteBuffer.capacity()) {
+            val written = output.write(byteBuffer.array(), offset, byteBuffer.capacity() - offset)
+            check(written > 0) { "Audio output write failed: $written" }
+            offset += written
+        }
     }
 
     actual fun stop() {
-        line?.drain()
+        line?.flush()
         line?.stop()
         line?.close()
         line = null

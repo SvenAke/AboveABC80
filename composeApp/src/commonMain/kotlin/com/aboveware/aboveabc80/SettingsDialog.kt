@@ -3,6 +3,10 @@ package com.aboveware.aboveabc80
 import aboveabc80.composeapp.generated.resources.Res
 import aboveabc80.composeapp.generated.resources.tkn80_start
 import aboveabc80.composeapp.generated.resources.tkn80_restart
+import aboveabc80.composeapp.generated.resources.sound_volume
+import aboveabc80.composeapp.generated.resources.sound_volume_boost
+import aboveabc80.composeapp.generated.resources.sound_mute
+import aboveabc80.composeapp.generated.resources.sound_unmute
 import org.jetbrains.compose.resources.stringResource
 
 import androidx.compose.foundation.clickable
@@ -18,6 +22,8 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.VolumeOff
+import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
@@ -40,6 +46,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.aboveware.aboveabc80.core.StateManager
 import com.aboveware.aboveabc80.printer.Diablo630ConfigView
@@ -49,9 +57,13 @@ import com.aboveware.aboveabc80.printer.PrinterType
 import com.aboveware.aboveabc80.terminal.TerminalColor
 import com.aboveware.aboveabc80.terminal.TerminalManager
 import com.aboveware.aboveabc80.terminal.TerminalType
+import com.aboveware.aboveabc80.ui.TooltipIconButton
+import kotlin.math.roundToInt
 
 @Composable
 fun SettingsDialog(
+    soundVolume: Int,
+    onSoundVolumeChange: (Int) -> Unit,
     showCpuAndFps: Boolean,
     onCpuAndFpsVisibilityChange: (Boolean) -> Unit,
     cpuSpeedSetting: Int,
@@ -62,6 +74,8 @@ fun SettingsDialog(
     var showMx80Config by remember { mutableStateOf(false) }
     var showClearConfirmation by remember { mutableStateOf(false) }
     var startWide by remember { mutableStateOf(getPersistedString("tkn80_start", "false").toBoolean()) }
+    var lastSoundVolume by remember { mutableStateOf(soundVolume.takeIf { it > 0 } ?: 100) }
+    val volumeLabel = stringResource(Res.string.sound_volume)
 
     if (showMx80Config) {
         AlertDialog(
@@ -234,6 +248,49 @@ fun SettingsDialog(
                         }
                     }
                 }
+
+                HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
+
+                Text(volumeLabel, style = MaterialTheme.typography.titleMedium)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    val muteLabel = stringResource(
+                        if (soundVolume == 0) Res.string.sound_unmute else Res.string.sound_mute
+                    )
+                    TooltipIconButton(
+                        label = muteLabel,
+                        onClick = {
+                            if (soundVolume == 0) {
+                                onSoundVolumeChange(lastSoundVolume)
+                            } else {
+                                lastSoundVolume = soundVolume
+                                onSoundVolumeChange(0)
+                            }
+                        }
+                    ) {
+                        Icon(
+                            if (soundVolume == 0) Icons.Default.VolumeOff else Icons.Default.VolumeUp,
+                            contentDescription = muteLabel
+                        )
+                    }
+                    Slider(
+                        value = soundVolume.toFloat(),
+                        onValueChange = {
+                            val percent = it.roundToInt()
+                            if (percent > 0) lastSoundVolume = percent
+                            onSoundVolumeChange(percent)
+                        },
+                        valueRange = 0f..400f,
+                        modifier = Modifier.weight(1f).semantics { contentDescription = volumeLabel }
+                    )
+                    Text("$soundVolume %")
+                }
+                Text(
+                    stringResource(Res.string.sound_volume_boost),
+                    style = MaterialTheme.typography.bodySmall
+                )
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
 

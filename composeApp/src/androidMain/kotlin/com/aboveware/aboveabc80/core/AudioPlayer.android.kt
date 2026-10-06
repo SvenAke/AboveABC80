@@ -13,8 +13,9 @@ actual class AudioPlayer actual constructor(actual val sampleRate: Int) {
             AudioFormat.CHANNEL_OUT_MONO,
             AudioFormat.ENCODING_PCM_FLOAT
         )
+        check(minBufferSize > 0) { "AudioTrack buffer query failed: $minBufferSize" }
 
-        audioTrack = AudioTrack.Builder()
+        val track = AudioTrack.Builder()
             .setAudioAttributes(
                 AudioAttributes.Builder()
                     .setUsage(AudioAttributes.USAGE_GAME)
@@ -32,16 +33,31 @@ actual class AudioPlayer actual constructor(actual val sampleRate: Int) {
             .setTransferMode(AudioTrack.MODE_STREAM)
             .build()
 
-        audioTrack?.play()
+        if (track.state != AudioTrack.STATE_INITIALIZED) {
+            track.release()
+            error("AudioTrack initialization failed")
+        }
+        audioTrack = track
+        track.play()
     }
 
     actual fun play(samples: FloatArray) {
-        audioTrack?.write(samples, 0, samples.size, AudioTrack.WRITE_NON_BLOCKING)
+        val track = checkNotNull(audioTrack) { "Audio playback has not started" }
+        var offset = 0
+        while (offset < samples.size) {
+            val written = track.write(samples, offset, samples.size - offset, AudioTrack.WRITE_BLOCKING)
+            check(written > 0) { "AudioTrack write failed: $written" }
+            offset += written
+        }
     }
 
     actual fun stop() {
-        audioTrack?.stop()
-        audioTrack?.release()
-        audioTrack = null
+        val track = audioTrack ?: return
+        try {
+            if (track.playState != AudioTrack.PLAYSTATE_STOPPED) track.stop()
+        } finally {
+            track.release()
+            audioTrack = null
+        }
     }
 }

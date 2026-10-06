@@ -40,6 +40,7 @@ class ADM3A : Terminal {
 
     override var onBell: (() -> Unit)? = null
     override var onKeyClick: (() -> Unit)? = null
+    override var onKeyInput: ((Char) -> Unit)? = null
 
     private val inputBuffer = mutableListOf<Int>()
     private val lock = Any()
@@ -163,6 +164,7 @@ class ADM3A : Terminal {
     }
 
     override fun onKeyEvent(char: Char) {
+        onKeyInput?.let { it(char); return }
         if (!BIOS.instance.isTransientProgramRunning) {
             TerminalManager.commandHistory.record(char)
         }

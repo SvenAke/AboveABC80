@@ -39,6 +39,8 @@ endif ()
 
 add_library(aboveabc80 SHARED
         src/main/cpp/native-lib.cpp
+        src/main/cpp/sn76477.cpp
+        src/main/cpp/Abc80Sound.cpp
         src/main/cpp/Patch.cpp
         src/main/cpp/Watchers.cpp
         src/main/cpp/z80.cpp

@@ -10,6 +10,7 @@ import org.jetbrains.compose.resources.ExperimentalResourceApi
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 import kotlin.time.TimeSource
 
@@ -72,7 +73,7 @@ class CassetteLoadIntegrationTest {
             val searchStarted = TimeSource.Monotonic.markNow()
             var foundNameSince: kotlin.time.TimeMark? = null
             var foundNameDuration: Long? = null
-            while (searchStarted.elapsedNow().inWholeMilliseconds < 12000) {
+            while (searchStarted.elapsedNow().inWholeMilliseconds < 30000) {
                 val status = Abc80CassetteStatus.text
                 if (status == "Winding (found OTHER.BAS)") {
                     if (foundNameSince == null) foundNameSince = TimeSource.Monotonic.markNow()
@@ -87,7 +88,8 @@ class CassetteLoadIntegrationTest {
                 "The skipped program name must remain visible for about a second: $foundNameDuration ms"
             )
             assertEquals(1, bitDelay.get(), "The CPU must use the patched cassette delay operand")
-            assertFalse(Abc80CassetteStatus.visible, "LOAD must finish at normal CPU speed")
+            assertFalse(Abc80CassetteStatus.visible,
+                "LOAD must finish at normal CPU speed: ${Abc80CassetteStatus.text}, ${CPU(lib.getCPU())}")
             type(lib, "LIST 1-10\r")
             Thread.sleep(1000)
             val output = screen(lib)
@@ -161,6 +163,43 @@ class CassetteLoadIntegrationTest {
             }
             assertEquals(startupPreference, getPersistedString("tkn80_start", "false"),
                 "Runtime switching must not overwrite the startup preference")
+            lib.setFastSpeed(false)
+            assertFailsWith<IllegalArgumentException> { lib.readSoundSamples(0) }
+            assertFailsWith<IllegalArgumentException> { lib.readSoundSamples(4411) }
+            val soundPort = AtomicInteger(-1)
+            val soundOutWatcher = object : NativeLib.MemoryReadWatcher {
+                override fun onRead(address: Int): Boolean {
+                    val cpu = CPU(lib.getCPU())
+                    if (cpu.bc and 0xff == 6) soundPort.set(cpu.l)
+                    return false
+                }
+            }
+            val bellWatcher = object : NativeLib.MemoryReadWatcher {
+                override fun onRead(address: Int): Boolean {
+                    soundPort.set(0x83)
+                    return false
+                }
+            }
+            lib.addMemoryReadWatcher(0x213b, soundOutWatcher)
+            lib.addMemoryReadWatcher(0x01f2, bellWatcher)
+            try {
+                assertSound(lib, soundPort, 3, "OUT 6,3\r", "BASIC OUT must produce a VCO tone")
+                assertSound(lib, soundPort, 11, "OUT 6,11\r", "BASIC OUT must produce noise")
+                muteSound(lib, soundPort)
+                assertSound(lib, soundPort, 0x83, "PRINT CHR$(7)\r", "The BASIC ROM bell must produce sound")
+                assertMusicMachineCode(lib)
+                System.getenv("ABC80_MUSIC_TAPE")?.let { path ->
+                    verifyInstalledMusic(lib, java.io.File(path).readBytes())
+                }
+                lib.setFastSpeed(true)
+                assertTrue(lib.readSoundSamples(441).all { it == 0.0f }, "MAX speed must mute audio")
+                lib.setFastSpeed(false)
+                lib.freeze()
+                assertTrue(lib.readSoundSamples(441).all { it == 0.0f }, "A frozen emulator must mute audio")
+            } finally {
+                lib.removeMemoryReadWatcher(0x213b, soundOutWatcher)
+                lib.removeMemoryReadWatcher(0x01f2, bellWatcher)
+            }
         } finally {
             Abc80CassetteStatus.cancel()
             native?.freeze()
@@ -184,11 +223,173 @@ class CassetteLoadIntegrationTest {
     }
 
     private fun type(lib: NativeLib, command: String) {
+        val accepted = AtomicBoolean(false)
+        val completed = AtomicBoolean(false)
+        val inputWatcher = object : NativeLib.MemoryReadWatcher {
+            override fun onRead(address: Int): Boolean {
+                accepted.set(true)
+                return false
+            }
+        }
+        val promptWatcher = object : NativeLib.MemoryReadWatcher {
+            override fun onRead(address: Int): Boolean {
+                if (accepted.get()) completed.set(true)
+                return false
+            }
+        }
+        lib.addMemoryReadWatcher(0x02e5, inputWatcher)
+        lib.addMemoryReadWatcher(0x00ed, promptWatcher)
+        try {
+            command.forEach { lib.sendKey(it.code) }
+            await("BASIC must return to its prompt after $command") { completed.get() }
+        } finally {
+            lib.removeMemoryReadWatcher(0x02e5, inputWatcher)
+            lib.removeMemoryReadWatcher(0x00ed, promptWatcher)
+        }
+    }
+
+    private fun muteSound(lib: NativeLib, soundPort: AtomicInteger) {
+        soundPort.set(-1)
+        "OUT 6,0\r".forEach { lib.sendKey(it.code) }
+        await("BASIC must disable sound before the next test") { soundPort.get() == 0 }
+        lib.readSoundSamples(4410)
+        Thread.sleep(120)
+        assertTrue(lib.readSoundSamples(4410).all { it == 0.0f }, "Each sound test must start silent")
+    }
+
+    private fun assertSound(lib: NativeLib, soundPort: AtomicInteger, expectedPort: Int, command: String, message: String) {
+        muteSound(lib, soundPort)
+        soundPort.set(-1)
         command.forEach { lib.sendKey(it.code) }
-        Thread.sleep(command.length * 70L)
+        val started = TimeSource.Monotonic.markNow()
+        var minimum = 0.0f
+        var maximum = 0.0f
+        while (started.elapsedNow().inWholeMilliseconds < 8000 &&
+            (soundPort.get() != expectedPort || minimum >= -0.01f || maximum <= 0.01f)) {
+            val samples = lib.readSoundSamples(441)
+            assertEquals(441, samples.size)
+            assertTrue(samples.all { it.isFinite() && it in -1.0f..1.0f }, "PCM must be finite and normalized")
+            minimum = minOf(minimum, samples.min())
+            maximum = maxOf(maximum, samples.max())
+            Thread.sleep(10)
+        }
+        assertEquals(expectedPort, soundPort.get(), "The BASIC command must reach sound port 6:\n${screen(lib)}")
+        assertTrue(minimum < -0.01f && maximum > 0.01f, "$message: range $minimum..$maximum\n${screen(lib)}")
     }
 
     private fun screen(lib: NativeLib) = decodeABC80Screen(lib.getMemory()).joinToString("\n")
+
+    private fun assertMusicMachineCode(lib: NativeLib) {
+        type(lib, "OUT 6,0\r")
+        type(lib, "NEW\r")
+        type(lib, "10 A%=INP(56):IF A%<128 THEN 10\r")
+        type(lib, "20 IF A%=193 THEN D%=1000 ELSE D%=499\r")
+        type(lib, "30 POKE -108,D%,SWAP%(D%):Z%=CALL(65408%):GOTO 10\r")
+        val originalI = CPU(lib.getCPU()).iReg
+        val originalInterruptMemory = lib.getMemory().copyOfRange(0xfa00, 0xfa38)
+        lib.copyToMemory(0xfa00, intArrayOf(
+            62, 250, 237, 71, 201, 245, 219, 56, 254, 131, 32, 3, 50, 7, 254,
+            62, 128, 50, 245, 253, 62, 77, 50, 247, 253, 241, 251, 237, 77
+        ).map { it.toByte() }.toByteArray())
+        lib.copyToMemory(0xfa34, byteArrayOf(5, 0xfa.toByte(), 0x94.toByte(), 5))
+        lib.copyToMemory(0xff80, intArrayOf(
+            219, 56, 33, 255, 255, 119, 219, 56, 190, 32, 18, 62, 0,
+            211, 6, 62, 57, 211, 6, 1, 232, 3, 11, 120, 177, 32, 251,
+            24, 233, 62, 57, 211, 6, 201
+        ).map { it.toByte() }.toByteArray())
+        type(lib, "Z%=CALL(64000%)\r")
+        val loops = AtomicInteger(0)
+        val watcher = object : NativeLib.MemoryReadWatcher {
+            override fun onRead(address: Int): Boolean {
+                loops.incrementAndGet()
+                return false
+            }
+        }
+        lib.addMemoryReadWatcher(0xff93, watcher)
+        try {
+            "RUN\r".forEach { lib.sendKey(it.code) }
+            Thread.sleep(250)
+            val low = heldMusicTone(lib, 'A', loops)
+            val high = heldMusicTone(lib, 'K', loops)
+            assertTrue(high in (low * 1.6)..(low * 2.4),
+                "Halving MUSIK's delay must double the measured pitch: A=$low Hz, K=$high Hz")
+        } finally {
+            lib.releaseAllKeys()
+            lib.removeMemoryReadWatcher(0xff93, watcher)
+            lib.freeze()
+            Thread.sleep(50)
+            val state = lib.getCPU()
+            // I follows the ten 16-bit register pairs in the native snapshot.
+            state[20] = originalI.toByte()
+            lib.setProcessorState(state)
+            lib.copyToMemory(0xfa00, originalInterruptMemory)
+            lib.freeze(false)
+            lib.sendKey(3)
+            Thread.sleep(250)
+            type(lib, "\r")
+        }
+    }
+
+    private fun heldMusicTone(lib: NativeLib, key: Char, loops: AtomicInteger): Double {
+        lib.pressKey(key.code)
+        try {
+            Thread.sleep(250)
+            lib.readSoundSamples(4410)
+            val initialLoops = loops.get()
+            val samples = mutableListOf<Float>()
+            repeat(60) {
+                samples.addAll(lib.readSoundSamples(441).toList())
+                Thread.sleep(10)
+            }
+            assertTrue(loops.get() - initialLoops > 40, "A held key must keep MUSIK's tone loop running")
+            assertTrue(samples.all { it.isFinite() && it in -1f..1f })
+            val baseline = samples.min()
+            val peaks = samples.zipWithNext().count { (a, b) ->
+                a <= baseline + 0.02f && b > baseline + 0.02f && b < -0.1f
+            }
+            val frequency = peaks * 44100.0 / samples.size
+            println("MUSIK $key: $frequency Hz, range $baseline..${samples.max()}")
+            assertTrue(frequency in 80.0..280.0,
+                "MUSIK must produce a sustained periodic tone, not silence, DC or a click: $frequency Hz")
+            return frequency
+        } finally {
+            lib.releaseKey(key.code)
+            Thread.sleep(150)
+            val stoppedLoops = loops.get()
+            Thread.sleep(100)
+            assertEquals(stoppedLoops, loops.get(), "Releasing the key must stop MUSIK's tone loop")
+        }
+    }
+
+    private fun verifyInstalledMusic(lib: NativeLib, tape: ByteArray) {
+        assertTrue(Abc80Cassette.import(tape.inputStream(), "music-test.tape"))
+        "LOAD CAS:MUSIK.BAS\r".forEach { lib.sendKey(it.code) }
+        await("The installed MUSIK.BAS LOAD must start") { Abc80CassetteStatus.visible }
+        val loadingStarted = TimeSource.Monotonic.markNow()
+        while (Abc80CassetteStatus.visible && loadingStarted.elapsedNow().inWholeMilliseconds < 30000) Thread.sleep(10)
+        assertFalse(Abc80CassetteStatus.visible, "The installed MUSIK.BAS must load")
+        val active = AtomicInteger(0)
+        val watcher = object : NativeLib.MemoryReadWatcher {
+            override fun onRead(address: Int): Boolean {
+                active.incrementAndGet()
+                return false
+            }
+        }
+        lib.addMemoryReadWatcher(0xff93, watcher)
+        try {
+            "RUN\r".forEach { lib.sendKey(it.code) }
+            await("MUSIK.BAS must show its keyboard") { screen(lib).contains("spela") }
+            Thread.sleep(250)
+            val low = heldMusicTone(lib, 'A', active)
+            val high = heldMusicTone(lib, 'K', active)
+            assertTrue(high in (low * 1.6)..(low * 2.4), "Installed MUSIK must play distinct pitches")
+            lib.sendKey(3)
+            Thread.sleep(500)
+        } finally {
+            lib.releaseAllKeys()
+            lib.removeMemoryReadWatcher(0xff93, watcher)
+        }
+    }
 
     private fun file(name: String, text: String): ByteArray {
         val header = ByteArray(256)

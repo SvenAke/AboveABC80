@@ -46,6 +46,7 @@ class VT320 : Terminal {
 
     override var onBell: (() -> Unit)? = { playBell() }
     override var onKeyClick: (() -> Unit)? = null
+    override var onKeyInput: ((Char) -> Unit)? = null
 
     override fun triggerClick() {
         if (VT320Settings.keyClick == 1) {
@@ -857,6 +858,9 @@ class VT320 : Terminal {
     override fun getChar(): Int = getCharInput()
     override fun onKeyEvent(char: Char) {
         if (keyboard.interceptKeyEvent(char)) return
+        if (!setup.isVisible && !keyboardLocked) {
+            onKeyInput?.let { it(char); return }
+        }
         if (!setup.isVisible && !keyboardLocked &&
             !com.aboveware.aboveabc80.core.BIOS.instance.isTransientProgramRunning
         ) {

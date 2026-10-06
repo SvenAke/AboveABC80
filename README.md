@@ -73,6 +73,39 @@ the result with `LIST`. Run it with
 `.\gradlew.bat :composeApp:jvmTest --tests com.aboveware.aboveabc80.CassetteLoadIntegrationTest`.
 It uses temporary storage instead of the user's saved tapes.
 
+### ABC80 sound
+
+Key presses do not play click sounds. Android keyboard haptic feedback and
+program-generated sound remain available.
+
+Settings includes a saved **Sound volume** slider (0-400 %) and a mute button.
+100 % is the normal level; higher values boost quiet programs such as MUSIK.BAS.
+Changes apply immediately on desktop and Android. The output removes DC bias
+before amplification, smoothly changes gain, and limits PCM to the valid range.
+Boosting loud sounds can cause clipping. Hold a musical key to sustain its note.
+
+The native SN76477 emulator receives writes to ABC80 sound port 6 and generates
+44.1 kHz mono PCM timed to the CPU cycles. Desktop uses Java Sound; Android uses
+AudioTrack. The BASIC ROM bell (`PRINT CHR$(7)`) and `OUT 6,value` use the same
+chip, including its oscillator, noise, mixer and envelope controls.
+
+Short software-generated sound pulses (including MUSIK.BAS) are integrated at
+16 times the output sample rate before downsampling. The envelope capacitor
+keeps its charge across short inhibit pulses instead of being reset instantly.
+Physical and on-screen keys remain pressed until release, so MUSIK plays a
+note for as long as its key is held. Pasted text retains timed key pulses.
+
+For example, `OUT 6,0:OUT 6,3` starts a tone and `OUT 6,0` disables sound.
+Audio is muted while the CPU is frozen or running at MAX speed. A bounded
+100 ms buffer prevents old sound from accumulating when playback falls behind.
+Audio-device failures are logged and displayed in the app.
+
+The BASIC-ROM regression test above also checks tone, noise, bell, normalized
+PCM, disabling sound, freeze/MAX muting, and MUSIK's machine-code routine
+(sustained notes, pitch changes, and key release) without requiring an audio
+device. Set `ABC80_MUSIC_TAPE` to a raw cassette image to additionally test
+the complete MUSIK.BAS program from that image; the source image is not modified.
+
 ### ABC80 character graphics
 
 TKN80 supports an 80-by-24 screen. Settings includes **Start with TKN80 (80

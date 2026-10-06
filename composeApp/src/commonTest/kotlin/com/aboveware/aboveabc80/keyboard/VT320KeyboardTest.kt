@@ -62,6 +62,7 @@ class VT320KeyboardTest {
 
         override var onBell: (() -> Unit)? = null
         override var onKeyClick: (() -> Unit)? = null
+        override var onKeyInput: ((Char) -> Unit)? = null
         override fun putChar(c: Char) {}
         override fun onKeyEvent(char: Char) {
             sentChars.add(char)

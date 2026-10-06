@@ -135,6 +135,18 @@ class NativeLib {
 
     fun sendKey(code: Int) = sendKeyNative(code)
     private external fun sendKeyNative(code: Int)
+    fun pressKey(code: Int) = pressKeyNative(code)
+    private external fun pressKeyNative(code: Int)
+    fun releaseKey(code: Int) = releaseKeyNative(code)
+    private external fun releaseKeyNative(code: Int)
+    fun releaseAllKeys() = releaseAllKeysNative()
+    private external fun releaseAllKeysNative()
+
+    fun readSoundSamples(count: Int): FloatArray {
+        require(count in 1..4410) { "Sound sample count must be between 1 and 4410" }
+        return readSoundSamplesNative(count)
+    }
+    private external fun readSoundSamplesNative(count: Int): FloatArray
 
     fun getMemory(): ByteArray = getMemoryNative()
     private external fun getMemoryNative(): ByteArray

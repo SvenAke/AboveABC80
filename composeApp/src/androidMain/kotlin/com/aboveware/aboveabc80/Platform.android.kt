@@ -181,11 +181,4 @@ actual fun playBell() {
     }
 }
 
-actual fun playKeyClick() {
-    Abc80Log.terminal("playKeyClick")
-    val audioManager =
-        androidContext?.getSystemService(Context.AUDIO_SERVICE) as? android.media.AudioManager
-    audioManager?.playSoundEffect(android.media.AudioManager.FX_KEYPRESS_STANDARD)
-}
-
 actual fun currentTimeMillis(): Long = System.currentTimeMillis()

@@ -9,11 +9,6 @@ import java.util.Date
 import java.util.Locale
 import java.util.prefs.Preferences
 import javax.swing.JFileChooser
-import javax.sound.sampled.AudioFormat
-import javax.sound.sampled.AudioSystem
-import javax.sound.sampled.Clip
-import kotlin.math.exp
-import kotlin.math.sin
 
 class JVMPlatform : Platform {
     override val name: String = "Java ${System.getProperty("java.version")}"
@@ -205,28 +200,6 @@ actual val KeyEvent.char: Char? get() = awtEventOrNull?.keyChar?.takeIf { it != 
 
 private var lastBellTime = 0L
 
-private val clickClip: Clip? by lazy {
-    try {
-        val sampleRate = 44100f
-        val durationMs = 15
-        val numSamples = (sampleRate * durationMs / 1000).toInt()
-        val buffer = ByteArray(numSamples)
-        for (i in 0 until numSamples) {
-            val time = i / sampleRate
-            // Generate a short "tick" using a damped sine wave
-            val freq = 1200.0
-            val envelope = exp(-time * 400.0)
-            buffer[i] = (sin(2.0 * Math.PI * freq * time) * 100 * envelope).toInt().toByte()
-        }
-        val format = AudioFormat(sampleRate, 8, 1, true, false)
-        val clip = AudioSystem.getClip()
-        clip.open(format, buffer, 0, buffer.size)
-        clip
-    } catch (e: Exception) {
-        null
-    }
-}
-
 actual fun playBell() {
     Abc80Log.terminal("playBell")
     val now = System.currentTimeMillis()
@@ -236,19 +209,6 @@ actual fun playBell() {
     try {
         java.awt.Toolkit.getDefaultToolkit().beep()
     } catch (e: Exception) {
-        // Ignore
-    }
-}
-
-actual fun playKeyClick() {
-    Abc80Log.terminal("playKeyClick")
-    try {
-        clickClip?.let {
-            it.stop()
-            it.framePosition = 0
-            it.start()
-        }
-    } catch (_: Exception) {
         // Ignore
     }
 }

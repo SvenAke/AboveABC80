@@ -23,6 +23,7 @@
 #include "z80.h"
 #include "z80_macros.h"
 #include "native-lib.h"
+#include "Abc80Sound.h"
 
 #define ZX_SPECTRUM_SCREEN_START 0x4000
 #define ZX_SPECTRUM_PIXEL_DATA_SIZE 0x1800
@@ -109,12 +110,28 @@ int onReadPort(int port, int hi) {
 
 void onWritePort(int port, int value) {
     int port8 = port & 0xFF;
+    if (port8 == 0x06) {
+        abc80_write_sound(value & 0xFF);
+        return;
+    }
     if ((port8 <= 7 || (port8 >= 0x39 && port8 <= 0x3B)) && g_native_lib_object && g_port_write_method && g_vm) {
         JNIEnv *env = nullptr;
         if (attach_current_thread(&env) == JNI_OK) {
             env->CallVoidMethod(g_native_lib_object, g_port_write_method, port8, value & 0xFF);
         }
     }
+}
+JNIEXPORT jfloatArray JNICALL
+Java_com_aboveware_aboveabc80_NativeLib_readSoundSamplesNative(JNIEnv *env, jobject, jint count) {
+    if (count <= 0 || count > ABC80_SOUND_SAMPLE_RATE / 10) {
+        env->ThrowNew(env->FindClass("java/lang/IllegalArgumentException"), "Invalid sound sample count");
+        return nullptr;
+    }
+    std::vector<float> samples(count);
+    abc80_sound_read(samples.data(), count, g_frozen.load() || g_fast_speed.load());
+    jfloatArray result = env->NewFloatArray(count);
+    if (result) env->SetFloatArrayRegion(result, 0, count, samples.data());
+    return result;
 }
 JNIEXPORT void JNICALL
 Java_com_aboveware_aboveabc80_NativeLib_registerInstanceNative(JNIEnv *env, jobject instance) {
@@ -136,6 +153,21 @@ Java_com_aboveware_aboveabc80_NativeLib_getMemoryNative(JNIEnv *env, jobject) {
 JNIEXPORT void JNICALL
 Java_com_aboveware_aboveabc80_NativeLib_sendKeyNative(JNIEnv *env, jobject, jint code) {
     abc80_send_key(code);
+}
+
+JNIEXPORT void JNICALL
+Java_com_aboveware_aboveabc80_NativeLib_pressKeyNative(JNIEnv *, jobject, jint code) {
+    abc80_press_key(code);
+}
+
+JNIEXPORT void JNICALL
+Java_com_aboveware_aboveabc80_NativeLib_releaseKeyNative(JNIEnv *, jobject, jint code) {
+    abc80_release_key(code);
+}
+
+JNIEXPORT void JNICALL
+Java_com_aboveware_aboveabc80_NativeLib_releaseAllKeysNative(JNIEnv *, jobject) {
+    abc80_release_all_keys();
 }
 
 JNIEXPORT jboolean JNICALL

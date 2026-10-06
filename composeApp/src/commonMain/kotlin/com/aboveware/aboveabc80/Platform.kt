@@ -38,6 +38,5 @@ expect fun deleteFolder(path: String): Boolean
 expect val KeyEvent.char: Char?
 
 expect fun playBell()
-expect fun playKeyClick()
 
 expect fun currentTimeMillis(): Long

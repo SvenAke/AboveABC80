@@ -23,6 +23,7 @@ internal fun abc80KeyCode(key: Key, char: Char?, shift: Boolean): Int? {
 /** Letters are typed in upper case by default; Shift gives lower case (ABC80 BASIC keywords are upper case). */
 internal fun abc80CharCode(char: Char, shift: Boolean = false): Int? = when (char) {
     '\r', '\n' -> 0x0D
+    in '\u0000'..'\u001F', '\u007F' -> char.code
     'Å', 'å' -> if (char == 'Å') 0x5D else 0x7D
     'Ä', 'ä' -> if (char == 'Ä') 0x5B else 0x7B
     'Ö', 'ö' -> if (char == 'Ö') 0x5C else 0x7C

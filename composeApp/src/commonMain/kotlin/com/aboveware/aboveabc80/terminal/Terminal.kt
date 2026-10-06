@@ -44,6 +44,7 @@ interface Terminal {
 
     var onBell: (() -> Unit)?
     var onKeyClick: (() -> Unit)?
+    var onKeyInput: ((Char) -> Unit)?
 
     fun triggerClick() {
         onKeyClick?.invoke()

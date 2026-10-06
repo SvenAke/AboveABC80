@@ -21,6 +21,7 @@
 #include "native-lib.h"
 #include "watchers.h"
 #include "patch.h"
+#include "Abc80Sound.h"
 
 /* 64Kb of RAM, first 16kb is ROM */
 std::uint8_t memory[0x10000];
@@ -28,6 +29,11 @@ std::uint8_t memory[0x10000];
 bool running = true;
 uint64_t g_last_interrupt_tstate = 0;
 static std::atomic<int> runtime_cpu_frequency{3'000'000};
+
+void abc80_write_sound(int value) {
+    abc80_sound_write(value, TOTAL_CYCLES, runtime_cpu_frequency.load(std::memory_order_relaxed),
+                      g_fast_speed.load(std::memory_order_relaxed));
+}
 
 void set_cpu_frequency(int cpu_frequency) {
     if (cpu_frequency > 0) {
@@ -48,7 +54,10 @@ struct KeyLock {
     KeyLock() { while (g_key_lock.test_and_set(std::memory_order_acquire)) std::this_thread::yield(); }
     ~KeyLock() { g_key_lock.clear(std::memory_order_release); }
 };
-static std::deque<int> g_key_queue;
+struct KeyPress { int code; bool held; };
+static std::deque<KeyPress> g_key_queue;
+static std::atomic<int> g_held_key{-1};
+static bool g_current_key_held = false;
 static int g_key_hold_frames = 0;
 static constexpr libspectrum_byte KEYBOARD_PIO_VECTOR = 0x34;
 
@@ -66,7 +75,31 @@ void abc80_cassette_reti() {
 
 void abc80_send_key(int code) {
     KeyLock lock;
-    if (g_key_queue.size() < 64) g_key_queue.push_back(code & 0x7F);
+    if (g_key_queue.size() < 64) g_key_queue.push_back({code & 0x7F, false});
+}
+
+void abc80_press_key(int code) {
+    KeyLock lock;
+    code &= 0x7F;
+    if (g_held_key.load() == code) {
+        if (g_key_value.load() == (code | 0x80)) g_key_irq_pending.store(true);
+        return;
+    }
+    if (g_key_queue.size() >= 64) {
+        logd("ABC80 keyboard queue is full; physical key press dropped");
+        return;
+    }
+    g_held_key.store(code);
+    g_key_queue.push_back({code, true});
+}
+
+void abc80_release_key(int code) {
+    int expected = code & 0x7F;
+    g_held_key.compare_exchange_strong(expected, -1);
+}
+
+void abc80_release_all_keys() {
+    g_held_key.store(-1);
 }
 
 int abc80_read_keyboard() {
@@ -97,10 +130,13 @@ bool abc80_try_keyboard_interrupt() {
     return accepted;
 }
 
-/* Called once per emulated frame: holds each key for two frames, then releases it. */
+/* Queued text uses a two-frame pulse; physical keys stay down until release. */
 static void abc80_keyboard_frame() {
     if (g_key_value.load(std::memory_order_relaxed) != 0) {
-        if (++g_key_hold_frames >= 2) {
+        if (g_key_hold_frames < 2) ++g_key_hold_frames;
+        if (g_current_key_held &&
+            g_held_key.load() == (g_key_value.load() & 0x7F)) return;
+        if (g_key_hold_frames >= 2) {
             g_key_value.store(0, std::memory_order_relaxed);
             g_key_hold_frames = 0;
         }
@@ -108,9 +144,10 @@ static void abc80_keyboard_frame() {
     }
     KeyLock lock;
     if (!g_key_queue.empty()) {
-        const int code = g_key_queue.front();
+        const auto code = g_key_queue.front();
         g_key_queue.pop_front();
-        g_key_value.store(code | 0x80, std::memory_order_relaxed);
+        g_current_key_held = code.held;
+        g_key_value.store(code.code | 0x80, std::memory_order_relaxed);
         g_key_irq_pending.store(true, std::memory_order_relaxed);
         g_key_hold_frames = 0;
     }
@@ -121,6 +158,7 @@ int run() {
     z80_reset(true);
     tStates = 0;
     g_last_interrupt_tstate = 0;
+    abc80_sound_reset(TOTAL_CYCLES);
 
     auto frame_start = std::chrono::steady_clock::now();
     int loop_count = 0;
@@ -138,6 +176,8 @@ int run() {
 
         // event_next_event is the limit for this run
         z80_do_opcodes();
+        abc80_sound_advance(TOTAL_CYCLES, runtime_cpu_frequency.load(std::memory_order_relaxed),
+                            g_fast_speed.load(std::memory_order_relaxed));
         abc80_keyboard_frame();
 
         // Maintain long-term timing for tape pulses by keeping track of the overshoot

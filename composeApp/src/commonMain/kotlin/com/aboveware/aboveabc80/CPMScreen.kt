@@ -15,6 +15,7 @@ import aboveabc80.composeapp.generated.resources.cassette_title
 import aboveabc80.composeapp.generated.resources.cpu_label
 import aboveabc80.composeapp.generated.resources.fps_label
 import aboveabc80.composeapp.generated.resources.menu
+import aboveabc80.composeapp.generated.resources.sound_playback_failed
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -110,9 +111,8 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
-import com.aboveware.aboveabc80.core.Audio
 import com.aboveware.aboveabc80.core.AudioPlayer
-import com.aboveware.aboveabc80.core.Beeper
+import com.aboveware.aboveabc80.core.SoundOutput
 import com.aboveware.aboveabc80.core.BIOS
 import com.aboveware.aboveabc80.core.CpmDebugger
 import com.aboveware.aboveabc80.core.DiskController
@@ -131,9 +131,11 @@ import com.aboveware.aboveabc80.ui.CassetteAnimation
 import com.aboveware.aboveabc80.ui.DiskManagerDialog
 import androidx.compose.material.icons.filled.Album
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.yield
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.stringResource
@@ -150,12 +152,14 @@ fun CPMScreen(startWithStorageOpen: Boolean = false) {
                 .toIntOrNull()?.coerceIn(1, 9) ?: (Constants.CPU_FREQUENCY / 1_000_000)
         )
     }
-    val beeper = remember {
-        Beeper(cpuFrequency = cpuSpeedSetting.coerceAtMost(8) * 1_000_000)
-    }
     val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
     val audioPlayer = remember { AudioPlayer() }
+    var soundVolume by remember {
+        mutableIntStateOf(getPersistedString("sound_volume_percent", "100").toIntOrNull()?.coerceIn(0, 400) ?: 100)
+    }
+    val soundOutput = remember { SoundOutput(audioPlayer.sampleRate, soundVolume) }
     val focusRequester = remember { FocusRequester() }
+    val pressedKeys = remember { mutableMapOf<Key, Int>() }
 
     var showStorageDialog by remember { mutableStateOf(value = startWithStorageOpen) }
     var showSettingsDialog by remember { mutableStateOf(value = false) }
@@ -178,6 +182,7 @@ fun CPMScreen(startWithStorageOpen: Boolean = false) {
     val frameCount = remember { mutableIntStateOf(0) }
 
     val snackbarHostState = remember { SnackbarHostState() }
+    val soundPlaybackFailed = stringResource(Res.string.sound_playback_failed)
     val scope = rememberCoroutineScope()
     @Suppress("DEPRECATION")
     val clipboardManager = LocalClipboardManager.current
@@ -191,27 +196,62 @@ fun CPMScreen(startWithStorageOpen: Boolean = false) {
             showDebugger = true
         }
 
-        audioPlayer.start()
-        Audio.instance.setOnEarChangedListener { level, tStates ->
-            beeper.onEarChanged(level, tStates.toLong())
-        }
-
         onDispose {
+            nativeLib.releaseAllKeys()
+            TerminalManager.activeTerminal.onKeyInput = null
             TerminalManager.activeTerminal.disconnect()
-            audioPlayer.stop()
-            Audio.instance.setOnEarChangedListener(null)
         }
     }
 
-    LaunchedEffect(TerminalManager.activeTerminal, TerminalManager.autoUppercase) {
+    LaunchedEffect(audioPlayer, nativeLib) {
+        launch(Dispatchers.IO) {
+            try {
+                audioPlayer.start()
+                while (isActive) {
+                    audioPlayer.play(soundOutput.process(nativeLib.readSoundSamples(audioPlayer.sampleRate / 100)))
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Abc80Log.terminal("Sound playback failed: ${e.message}")
+                scope.launch { snackbarHostState.showSnackbar(soundPlaybackFailed) }
+            } finally {
+                audioPlayer.stop()
+            }
+        }
+    }
+
+    DisposableEffect(TerminalManager.activeTerminal, TerminalManager.autoUppercase) {
         val activeTerminal = TerminalManager.activeTerminal
         Abc80Log.keyboard("CPMScreen: Attaching keyboard listeners to ${activeTerminal::class.simpleName}")
         activeTerminal.connect()
+        val touchKeys = java.util.concurrent.ConcurrentHashMap<String, Int>()
+        val touchCode = ThreadLocal<String>()
+        activeTerminal.onKeyInput = { char ->
+            val code = if (char.code in 0..31) char.code else abc80CharCode(char)
+            code?.let {
+                val source = touchCode.get()
+                if (source != null) {
+                    touchKeys[source] = it
+                    nativeLib.pressKey(it)
+                } else if (it in touchKeys.values) {
+                    nativeLib.pressKey(it)
+                } else {
+                    nativeLib.sendKey(it)
+                }
+            }
+        }
         keyboard.onKeyCodes = { codes, l1, l2, l3, l4, l5, l6 ->
             Abc80Log.keyboard("CPMScreen: onKeyCodes received codes='$codes' label='$l1'")
-            activeTerminal.keyboard.handleKeyEvent(codes, l1, l2, l3, l4, l5, l6)
+            touchCode.set(codes)
+            try {
+                activeTerminal.keyboard.handleKeyEvent(codes, l1, l2, l3, l4, l5, l6)
+            } finally {
+                touchCode.remove()
+            }
         }
         keyboard.onKeyUpCodes = { codes ->
+            touchKeys.remove(codes)?.let { nativeLib.releaseKey(it) }
             activeTerminal.keyboard.handleKeyRelease(codes)
         }
         keyboard.onFocusRequest = {
@@ -220,8 +260,15 @@ fun CPMScreen(startWithStorageOpen: Boolean = false) {
         keyboard.leds = activeTerminal.keyboard.leds
         keyboard.isRepeatActive = false // Handle repeating in TerminalKeyboard
         keyboard.onCharacter = { char ->
-            activeTerminal.onKeyEvent(char)
+            if (activeTerminal.isSetupVisible) {
+                activeTerminal.onKeyEvent(char)
+            } else {
+                abc80CharCode(char)?.let { nativeLib.pressKey(it) }
+            }
             activeTerminal.triggerClick()
+        }
+        keyboard.onCharacterReleased = { char ->
+            abc80CharCode(char)?.let { nativeLib.releaseKey(it) }
         }
 
         activeTerminal.onKeyClick = {
@@ -230,6 +277,17 @@ fun CPMScreen(startWithStorageOpen: Boolean = false) {
 
         activeTerminal.onBell = {
             triggerBell(haptic)
+        }
+        onDispose {
+            activeTerminal.onKeyInput = null
+            activeTerminal.keyboard.stopRepeating()
+            nativeLib.releaseAllKeys()
+            pressedKeys.clear()
+            keyboard.onCharacter = null
+            keyboard.onCharacterReleased = null
+            keyboard.onKeyCodes = null
+            keyboard.onKeyUpCodes = null
+            keyboard.onFocusRequest = null
         }
     }
 
@@ -306,20 +364,6 @@ fun CPMScreen(startWithStorageOpen: Boolean = false) {
             try {
                 focusRequester.requestFocus()
             } catch (_: Exception) {
-            }
-        }
-
-        beeper.reset(nativeLib.getTStates())
-
-        // Audio update loop: move to a separate coroutine to avoid blocking the UI
-        launch(Dispatchers.Default) {
-            while (true) {
-                val currentTStates = nativeLib.getTStates()
-                val samples = beeper.getPendingSamples(currentTStates)
-                if (samples.isNotEmpty()) {
-                    audioPlayer.play(samples)
-                }
-                delay(10.milliseconds)
             }
         }
 
@@ -428,6 +472,10 @@ fun CPMScreen(startWithStorageOpen: Boolean = false) {
                 .focusRequester(focusRequester)
                 .onFocusChanged { state ->
                     Abc80Log.keyboard("CPMScreen: Column focus changed: ${state.isFocused}")
+                    if (!state.isFocused) {
+                        pressedKeys.clear()
+                        nativeLib.releaseAllKeys()
+                    }
                 }
                 .focusable()
                 .pointerInput(Unit) {
@@ -437,7 +485,7 @@ fun CPMScreen(startWithStorageOpen: Boolean = false) {
                     }
                 }
                 .onKeyEvent { keyEvent ->
-                    val handled = handleTerminalKeyEvent(keyEvent, scope, clipboardManager)
+                    val handled = handleTerminalKeyEvent(keyEvent, scope, clipboardManager, pressedKeys)
                     if (handled) return@onKeyEvent true
 
                     // Fallback for F3 if handleTerminalKeyEvent failed for some reason
@@ -1015,6 +1063,12 @@ fun CPMScreen(startWithStorageOpen: Boolean = false) {
 
     if (showSettingsDialog) {
         SettingsDialog(
+            soundVolume = soundVolume,
+            onSoundVolumeChange = {
+                soundVolume = it
+                soundOutput.volumePercent = it
+                setPersistedString("sound_volume_percent", it.toString())
+            },
             showCpuAndFps = showCpuAndFps,
             onCpuAndFpsVisibilityChange = {
                 showCpuAndFps = it
@@ -1027,7 +1081,6 @@ fun CPMScreen(startWithStorageOpen: Boolean = false) {
                 val frequency = it.coerceAtMost(8) * 1_000_000
                 nativeLib.setFastSpeed(it == 9)
                 nativeLib.setCpuFrequency(frequency)
-                beeper.setCpuFrequency(frequency)
                 currentCpuMHz = if (it == 9) "MAX" else "$it.0 MHz"
                 TerminalManager.cpuSpeed = currentCpuMHz
             },
@@ -1210,7 +1263,8 @@ private suspend fun loadFont(fontFile: String) {
 private fun handleTerminalKeyEvent(
     event: KeyEvent,
     scope: CoroutineScope,
-    clipboardManager: ClipboardManager
+    clipboardManager: ClipboardManager,
+    pressedKeys: MutableMap<Key, Int>
 ): Boolean {
     val type = event.type
     val key = event.key
@@ -1218,6 +1272,12 @@ private fun handleTerminalKeyEvent(
     val isShift = event.isShiftPressed
     var charValue = event.char
     val activeTerminal = TerminalManager.activeTerminal
+    if (type == KeyEventType.KeyUp) {
+        pressedKeys.remove(key)?.let {
+            NativeLib.getObject().releaseKey(it)
+            return true
+        }
+    }
 
     // Check for paste shortcut (Ctrl+V or Shift+Insert)
     if (type == KeyEventType.KeyDown && ((isCtrl && key == Key.V) || (isShift && key == Key.Insert))) {
@@ -1234,10 +1294,14 @@ private fun handleTerminalKeyEvent(
         return true
     }
 
-    if (!isCtrl && !activeTerminal.isSetupVisible) {
-        val code = abc80KeyCode(key, charValue, isShift)
+    if (!activeTerminal.isSetupVisible) {
+        val mapped = abc80KeyCode(key, charValue, isShift)
+        val code = if (isCtrl && mapped != null) mapped and 0x1f else mapped
         if (code != null) {
-            if (type == KeyEventType.KeyDown) NativeLib.getObject().sendKey(code)
+            if (type == KeyEventType.KeyDown) {
+                pressedKeys[key] = code
+                NativeLib.getObject().pressKey(code)
+            }
             return true
         }
     }

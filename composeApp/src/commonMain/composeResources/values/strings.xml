@@ -1,4 +1,9 @@
 <resources>
+    <string name="sound_volume">Sound volume</string>
+    <string name="sound_volume_boost">100 % is normal volume. Higher values amplify quiet sounds and may distort loud sounds.</string>
+    <string name="sound_mute">Mute sound</string>
+    <string name="sound_unmute">Enable sound</string>
+    <string name="sound_playback_failed">Could not play audio. Check the audio output device.</string>
     <string name="disk_list_contents">List contents</string>
     <string name="disk_export_pc">Export files to PC</string>
     <string name="disk_import_cloud">Import from cloud</string>

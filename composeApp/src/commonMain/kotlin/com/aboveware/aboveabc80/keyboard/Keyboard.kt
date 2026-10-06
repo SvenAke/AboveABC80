@@ -60,6 +60,7 @@ class Keyboard {
     private val keys = Array(8) { 0xFF.toUByte() }
 
     var onCharacter: ((Char) -> Unit)? = null
+    var onCharacterReleased: ((Char) -> Unit)? = null
     var onKeyCodes: ((String, String?, String?, String?, String?, String?, String?) -> Unit)? = null
     var onKeyUpCodes: ((String) -> Unit)? = null
     var isRepeatActive = false
@@ -167,6 +168,7 @@ class Keyboard {
     }
 
     fun onKeyReleaseEvent(char: Char) {
+        onCharacterReleased?.invoke(char)
         repeatingJob?.cancel()
         repeatingJob = null
     }
@@ -211,7 +213,7 @@ class Keyboard {
                     sixthLabel
                 )
 
-                codes.toIntOrNull()?.let { ascii ->
+                if (onKeyCodes == null) codes.toIntOrNull()?.let { ascii ->
                     Abc80Log.keyboard("Keyboard: codes ascii $ascii")
                     onCharacter?.invoke(ascii.toChar())
                     dumpKey("onKeyDown Character", codes)
