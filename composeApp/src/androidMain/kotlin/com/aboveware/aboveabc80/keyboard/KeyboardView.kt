@@ -390,6 +390,9 @@ class KeyboardView(
         if (totalUnits * fontSize > labelAreaHeight) {
             fontSize = labelAreaHeight / totalUnits
         }
+        if (key.ledId == "upper_case") {
+            fontSize *= 0.75f
+        }
 
         val occupiedHeight = totalUnits * fontSize
 
@@ -418,6 +421,9 @@ class KeyboardView(
         if (hasLongText && hasMultipleRows) {
             // Adjust down slightly for multi-row buttons with long text (e.g. FEED LINE, RETURN)
             yOffset += fontSize * 0.2f
+        }
+        if (key.ledId == "upper_case") {
+            yOffset += key.height * 0.08f
         }
 
         if (yOffset != 0f) {
@@ -466,7 +472,7 @@ class KeyboardView(
         val ledName = key.ledId ?: return
         val ledOn = keyboard?.leds?.get(ledName)?.isOn ?: (key.on || isInEditMode)
         val radius = (key.height * 0.055f).coerceAtLeast(2f)
-        val centerX = key.width * 0.80f
+        val centerX = key.width * 0.66f
         val centerY = key.height * 0.16f
         val oldColor = paint.color
         val oldStyle = paint.style
