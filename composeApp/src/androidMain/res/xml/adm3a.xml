@@ -18,7 +18,7 @@
             app:secondKeyLabel="3" />
         <Key
             app:codes="52"
-            app:keyLabel="$"
+            app:keyLabel="¤"
             app:secondKeyLabel="4" />
         <Key
             app:codes="53"
@@ -42,34 +42,26 @@
             app:secondKeyLabel="9" />
         <Key
             app:codes="48"
-            app:keyLabel=" "
+            app:keyLabel="="
             app:secondKeyLabel="0" />
         <Key
             app:codes="58"
-            app:keyLabel="*"
-            app:secondKeyLabel=":" />
+            app:keyLabel="\?"
+            app:secondKeyLabel="+" />
         <Key
             app:codes="45"
-            app:keyLabel="="
-            app:secondKeyLabel="-" />
+            app:keyLabel="É"/>
         <Key
             app:codes="45"
-            app:keyLabel="{"
-            app:secondKeyLabel="[" />
-        <Key
-            app:codes="45"
-            app:keyLabel="}"
-            app:secondKeyLabel="]" />
-        <Key
-            app:codes="8"
-            app:keyLabel="~"
-            app:secondKeyLabel="^"
-            app:thirdKeyLabel="HOME" />
+            app:keyLabel="&gt;"
+            app:secondKeyLabel="&lt;" />
     </Row>
     <Row>
         <Key
             app:codes="27"
-            app:keyLabel="ESC" />
+            app:keyBackground="@drawable/red_key"
+            app:keyLabel="Upper"
+            app:secondKeyLabel="Case" />
         <Key
             app:codes="81"
             app:keyLabel="Q" />
@@ -102,21 +94,21 @@
             app:keyLabel="P" />
         <Key
             app:codes="10"
-            app:keyLabel="FEED"
-            app:secondKeyLabel="LINE" />
-        <Key
-            app:codes="13"
-            app:keyLabel="RETURN"
-            app:keyWidth="15%p" />
+            app:keyLabel="Å" />
         <Key
             app:codes="5"
-            app:keyLabel="HERE"
-            app:secondKeyLabel="IS" />
+            app:keyLabel="Ü" />
+        <Key
+            app:codes="13"
+            app:keyCustomBitmap="@drawable/red_key"
+            app:keyLabel="RETURN"
+            app:keyWidth="10.7%p" />
     </Row>
     <Row app:initialIndent="2%p">
         <Key
             app:codes="7,1"
             app:isSticky="true"
+            app:keyBackground="@drawable/red_key"
             app:keyLabel="CTRL" />
         <Key
             app:codes="65"
@@ -135,45 +127,37 @@
             app:keyLabel="G" />
         <Key
             app:codes="72"
-            app:keyIcon="@drawable/arrow_left"
             app:sixthKeyLabel="H" />
         <Key
             app:codes="74"
-            app:keyIcon="@drawable/arrow_down"
             app:sixthKeyLabel="J" />
         <Key
             app:codes="75"
-            app:keyIcon="@drawable/arrow_up"
             app:sixthKeyLabel="K" />
         <Key
             app:codes="76"
-            app:keyIcon="@drawable/arrow_right"
             app:sixthKeyLabel="L" />
         <Key
             app:codes="59"
-            app:keyLabel="+"
-            app:secondKeyLabel=";" />
+            app:sixthKeyLabel="Ö" />
         <Key
             app:codes="93"
-            app:keyLabel="`"
-            app:secondKeyLabel="\@" />
+            app:sixthKeyLabel="Ä" />
         <Key
             app:codes="93"
-            app:keyLabel="|"
-            app:secondKeyLabel="\" />
+            app:keyLabel="*"
+            app:secondKeyLabel="'" />
         <Key
             app:codes="127"
-            app:keyLabel="RUB"
-            app:secondKeyLabel="───" />
-        <Key
-            app:codes="-1"
-            app:keyLabel="BREAK" />
+            app:keyBackground="@drawable/red_key"
+            app:keyIcon="@drawable/arrow_left"/>
     </Row>
     <Row>
         <Key
             app:codes="0,0"
             app:isSticky="true"
             app:keyAttachTo="7"
+            app:keyCustomBitmap="@drawable/red_key"
             app:keyLabel="SHIFT"
             app:keyWidth="10.7%p" />
         <Key
@@ -199,36 +183,35 @@
             app:keyLabel="M" />
         <Key
             app:codes="44"
-            app:keyLabel="&lt;"
+            app:keyLabel=";"
             app:secondKeyLabel="," />
         <Key
             app:codes="46"
-            app:keyLabel="&gt;"
+            app:keyLabel=":"
             app:secondKeyLabel="." />
         <Key
             app:codes="47"
-            app:keyLabel="\?"
-            app:secondKeyLabel="/" />
+            app:keyLabel="-"
+            app:secondKeyLabel="_" />
         <Key
             app:codes="0,0"
             app:isSticky="true"
             app:keyEdgeFlags="right"
+            app:keyCustomBitmap="@drawable/red_key"
             app:keyLabel="SHIFT"
             app:keyWidth="10.7%p" />
         <Key
             app:codes="-1"
             app:isSticky="true"
-            app:keyLabel="REPEAT" />
-        <Key
-            app:codes="26"
-            app:keyLabel="CLEAR" />
+            app:keyBackground="@drawable/red_key"
+            app:keyIcon="@drawable/arrow_right"/>
     </Row>
     <Row>
         <Key
             app:codes="32"
-            app:keyAttachTo="83"
+            app:keyAttachTo="88"
             app:keyCustomBitmap="@drawable/adm3a_key"
             app:keyLabel=" "
-            app:keyWidth="65%p" />
+            app:keyWidth="55%p" />
     </Row>
 </Keyboard>
