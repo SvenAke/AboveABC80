@@ -3,6 +3,7 @@
 package com.aboveware.aboveabc80.keyboard
 
 import android.view.KeyEvent
+import com.aboveware.aboveabc80.Abc80Log
 
 /**
  * Android-specific extensions for the common Keyboard class.
@@ -42,6 +43,16 @@ private fun Keyboard.handleLabelLogic(key: KeyboardViewController.Key, isDown: B
     val upperLabel = label.uppercase()
 
     when (upperLabel) {
+        "UPPER" -> {
+            if (isDown) {
+                leds["upper_case"]?.let {
+                    it.isOn = !it.isOn
+                    Abc80Log.keyboard("Upper Case LED: ${it.isOn}")
+                }
+            }
+            return true
+        }
+
         "REPEAT" -> {
             isRepeatActive = isDown
             return true

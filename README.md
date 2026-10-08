@@ -37,6 +37,11 @@ in your IDE’s toolbar or run it directly from the terminal:
 
 ---
 
+### Startup
+
+Startup prepares character sets and restores saved disks on background
+dispatchers so file I/O and disk parsing do not block Android input handling.
+
 ### Cassette cloud downloads
 
 Downloading files from the cloud in the cassette dialog saves all selected files

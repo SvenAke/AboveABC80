@@ -7,6 +7,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.aboveware.aboveabc80.R
 import com.aboveware.aboveabc80.setAndroidContext
 import com.aboveware.aboveabc80.terminal.CharacterSet
+import com.aboveware.aboveabc80.terminal.ADM3AKeyboard
 import com.aboveware.aboveabc80.terminal.CursorStyle
 import com.aboveware.aboveabc80.terminal.Tabulator
 import com.aboveware.aboveabc80.terminal.Terminal
@@ -17,6 +18,8 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import kotlin.test.assertTrue
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 
 @RunWith(AndroidJUnit4::class)
 @OptIn(ExperimentalUnsignedTypes::class)
@@ -72,6 +75,27 @@ class KeyboardLayoutTest {
         override fun getGlyph(c: Char): CharacterSet.Glyph? = null
         override fun getScreenState(): ByteArray = byteArrayOf()
         override fun setScreenState(data: ByteArray) {}
+    }
+
+    @Test
+    fun adm3aUpperCaseKeyTogglesItsRedLed() {
+        val layout = KeyboardViewController(context, R.xml.adm3a)
+        val key = layout.keys.single { it.label?.toString() == "Upper" }
+        assertEquals("Case", key.secondLabel?.toString())
+        assertTrue(key.isLed)
+        assertEquals("upper_case", key.ledId)
+        assertEquals(android.graphics.Color.RED, key.ledColor)
+
+        val ledMap = ADM3AKeyboard(MockTerminal()).leds
+        val keyboard = Keyboard().apply { leds = ledMap }
+        keyboard.onKeyDown(key)
+        assertTrue(ledMap.getValue("upper_case").isOn)
+        keyboard.onKeyUp(key)
+        assertTrue(ledMap.getValue("upper_case").isOn)
+        keyboard.onKeyDown(key)
+        assertFalse(ledMap.getValue("upper_case").isOn)
+        keyboard.onKeyUp(key)
+        assertFalse(ledMap.getValue("upper_case").isOn)
     }
 
     @Test

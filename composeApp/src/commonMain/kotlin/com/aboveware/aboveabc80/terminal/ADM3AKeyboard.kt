@@ -3,12 +3,13 @@ package com.aboveware.aboveabc80.terminal
 import androidx.compose.ui.input.key.Key
 import com.aboveware.aboveabc80.Abc80Log
 import com.aboveware.aboveabc80.keyboard.KeyboardLed
+import androidx.compose.runtime.mutableStateMapOf
 
 class ADM3AKeyboard(private val terminal: Terminal) : TerminalKeyboard {
-    override val leds = emptyMap<String, KeyboardLed>()
+    override val leds = mutableStateMapOf("upper_case" to KeyboardLed("upper_case"))
 
     override fun setLed(index: Int, on: Boolean) {
-        // ADM3A has no LEDs
+        leds["upper_case"]?.isOn = on
     }
 
     override fun updateMappings(mappings: Map<Char, Char>) {

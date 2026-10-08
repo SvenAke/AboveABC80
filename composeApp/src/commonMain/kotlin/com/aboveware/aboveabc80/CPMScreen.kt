@@ -137,6 +137,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.yield
+import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.stringResource
 import kotlin.time.Duration.Companion.milliseconds
@@ -376,35 +377,40 @@ fun CPMScreen(startWithStorageOpen: Boolean = false) {
     // Load persisted disks on startup
     LaunchedEffect(Unit) {
         focusRequester.requestFocus()
-        CharacterSet.load()
+        withContext(Dispatchers.Default) { CharacterSet.load() }
         val terminal = TerminalManager.activeTerminal
         terminal.reset() // Force a full reset to refresh character sets
 
-        var aLoaded = false
-        for (i in 0 until DiskController.MAX_DRIVES) {
-            val persistence = getPersistedString("drive_$i")
-            if (persistence.isNotEmpty()) {
-                val diskName =
-                    if (persistence.contains(":")) persistence.substringAfter(":") else persistence
-                DiskController.instance.loadFromLocal(i, diskName)
-                if (i == 0) aLoaded = true
-            }
-        }
-
-        // Auto-create SYSTEM.DSK if Drive A is still empty
-        if (!aLoaded) {
-            val localDisks = listLocalDisks()
-            if (!localDisks.contains("SYSTEM.DSK")) {
-                try {
-                    @OptIn(ExperimentalResourceApi::class)
-                    val data = Res.readBytes("files/system.dsk")
-                    saveLocalDisk("SYSTEM.DSK", data)
-                } catch (e: Exception) {
-                    Abc80Log.wtf("Failed to create SYSTEM.DSK: ${e.message}")
+        withContext(Dispatchers.IO) {
+            var aLoaded = false
+            for (i in 0 until DiskController.MAX_DRIVES) {
+                val persistence = getPersistedString("drive_$i")
+                if (persistence.isNotEmpty()) {
+                    val diskName =
+                        if (persistence.contains(":")) persistence.substringAfter(":") else persistence
+                    val loaded = DiskController.instance.loadFromLocal(i, diskName)
+                    if (i == 0) aLoaded = loaded != null
                 }
             }
-            DiskController.instance.loadFromLocal(0, "SYSTEM.DSK")
-            setPersistedString("drive_0", "LOCAL:SYSTEM.DSK")
+
+            // Auto-create SYSTEM.DSK if Drive A is still empty
+            if (!aLoaded) {
+                val localDisks = listLocalDisks()
+                if (!localDisks.contains("SYSTEM.DSK")) {
+                    try {
+                        @OptIn(ExperimentalResourceApi::class)
+                        val data = Res.readBytes("files/system.dsk")
+                        check(saveLocalDisk("SYSTEM.DSK", data)) { "Could not save SYSTEM.DSK" }
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        Abc80Log.wtf("Failed to create SYSTEM.DSK: ${e.message}")
+                    }
+                }
+                if (DiskController.instance.loadFromLocal(0, "SYSTEM.DSK") != null) {
+                    setPersistedString("drive_0", "LOCAL:SYSTEM.DSK")
+                }
+            }
         }
 
         // Wait for composition to settle then request focus

@@ -320,7 +320,7 @@ class KeyboardView(
         canvas: Canvas,
         paint: Paint
     ) {
-        if (key.isLed) {
+        if (key.isLed && key.ledId.isNullOrEmpty()) {
             drawLed(key, canvas, paint)
             return
         }
@@ -457,6 +457,26 @@ class KeyboardView(
         if (yOffset != 0f) {
             canvas.translate(0f, -yOffset)
         }
+        if (key.isLed && !key.ledId.isNullOrEmpty()) {
+            drawInlineLed(key, canvas, paint)
+        }
+    }
+
+    private fun drawInlineLed(key: KeyboardViewController.Key, canvas: Canvas, paint: Paint) {
+        val ledName = key.ledId ?: return
+        val ledOn = keyboard?.leds?.get(ledName)?.isOn ?: (key.on || isInEditMode)
+        val radius = (key.height * 0.055f).coerceAtLeast(2f)
+        val centerX = key.width * 0.80f
+        val centerY = key.height * 0.16f
+        val oldColor = paint.color
+        val oldStyle = paint.style
+        paint.style = Paint.Style.FILL
+        paint.color = Color.DKGRAY
+        canvas.drawCircle(centerX, centerY, radius * 1.45f, paint)
+        paint.color = if (ledOn) key.ledColor else Color.BLACK
+        canvas.drawCircle(centerX, centerY, radius, paint)
+        paint.color = oldColor
+        paint.style = oldStyle
     }
 
     private fun drawLed(key: KeyboardViewController.Key, canvas: Canvas, paint: Paint) {
