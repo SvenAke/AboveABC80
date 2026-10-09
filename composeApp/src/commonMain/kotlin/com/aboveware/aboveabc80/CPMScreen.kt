@@ -121,7 +121,6 @@ import com.aboveware.aboveabc80.printer.VirtualPrinter
 import com.aboveware.aboveabc80.printer.VirtualPrinterView
 import com.aboveware.aboveabc80.tape.TapeController
 import com.aboveware.aboveabc80.tape.TapeView
-import com.aboveware.aboveabc80.terminal.CharacterSet
 import com.aboveware.aboveabc80.terminal.TerminalManager
 import com.aboveware.aboveabc80.terminal.TerminalType
 import com.aboveware.aboveabc80.terminal.TerminalView
@@ -377,9 +376,8 @@ fun CPMScreen(startWithStorageOpen: Boolean = false) {
     // Load persisted disks on startup
     LaunchedEffect(Unit) {
         focusRequester.requestFocus()
-        withContext(Dispatchers.Default) { CharacterSet.load() }
         val terminal = TerminalManager.activeTerminal
-        terminal.reset() // Force a full reset to refresh character sets
+        terminal.reset()
 
         withContext(Dispatchers.IO) {
             var aLoaded = false

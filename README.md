@@ -39,14 +39,16 @@ in your IDE’s toolbar or run it directly from the terminal:
 
 ### Startup
 
-Startup prepares character sets and restores saved disks on background
-dispatchers so file I/O and disk parsing do not block Android input handling.
+Startup restores saved disks on a background dispatcher so file I/O and disk
+parsing do not block Android input handling.
 
 ### ABC80 character glyphs
 
 ABC80 display and terminal glyphs share the original `Abc80MonitorCharacterMap`
 8-by-14 pixel definitions, including Swedish characters and cassette graphics.
 The terminal does not require character ROM loading to render these glyphs.
+ABC80CharacterSet is the only terminal character set; legacy national, DEC and
+VT52 character sets and their ROM loading have been removed.
 
 ### ADM-3A keyboard
 
