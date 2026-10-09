@@ -1,9 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-
     <color name="black">#000000</color>
-
-    <color name="vt320_led_green">#FF32CD32</color>
     <color name="abc80">#DFAD75</color>
     <color name="abc80Screen">#57C6F8</color>
 </resources>

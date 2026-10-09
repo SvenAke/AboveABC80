@@ -201,8 +201,7 @@ class Keyboard {
                 keys[row] = (keys[row].toInt() and bit.inv()).toUByte()
                 dumpKey("onKeyDown", codes)
             } else if (codes.isNotEmpty()) {
-                // For non-matrix codes (like hex strings from VT320 XML), 
-                // still invoke the callback
+                // For non-matrix codes, invoke the callback
                 onKeyCodes?.invoke(
                     codes,
                     label,

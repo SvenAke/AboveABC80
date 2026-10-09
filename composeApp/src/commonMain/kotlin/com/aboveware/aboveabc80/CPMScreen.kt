@@ -561,22 +561,7 @@ fun CPMScreen(startWithStorageOpen: Boolean = false) {
                         .padding(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Compose LED
-                    if (TerminalManager.currentTerminalType == TerminalType.VT320) {
-                        val composeLedOn = keyboard.leds["Compose"]?.isOn ?: false
-                        Box(
-                            modifier = Modifier
-                                .padding(horizontal = 4.dp)
-                                .size(10.dp)
-                                .background(
-                                    color = if (composeLedOn) Color(0xFF32CD32) else Color.Black.copy(
-                                        alpha = 0.1f
-                                    ),
-                                    shape = CircleShape
-                                )
-                                .border(1.dp, Color.Black.copy(alpha = 0.2f), CircleShape)
-                        )
-                    }
+
 
                     // Cassette indicator: shown while the tape is moving
                     if (Abc80CassetteStatus.visible &&
@@ -1246,18 +1231,7 @@ private suspend fun loadFont(fontFile: String) {
         // Wait a bit for the parser to finish
         delay(50.milliseconds)
 
-        // Designate DRCS as G0 and invoke GL
-        if (terminal is com.aboveware.aboveabc80.terminal.VT320) {
-            val designator = terminal.graphics.characterSets.drcsFontBuffer.designator()
-            Abc80Log.terminal("CPMScreen: DRCS Designator detected as '$designator'")
-            if (designator.isNotEmpty()) {
-                "\u001B($designator".forEach { terminal.putChar(it) }
-            } else {
-                "\u001B(B".forEach { terminal.putChar(it) }
-            }
-        } else {
-            "\u001B(B".forEach { terminal.putChar(it) }
-        }
+        "\u001B(B".forEach { terminal.putChar(it) }
         terminal.putChar('\u000F') // SI (G0 into GL)
 
         Abc80Log.terminal("CPMScreen: Font $fontFile loaded and designated to G0")

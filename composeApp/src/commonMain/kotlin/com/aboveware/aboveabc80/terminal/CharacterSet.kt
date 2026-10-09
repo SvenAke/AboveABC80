@@ -92,9 +92,7 @@ object CharacterSet {
         val isoLatinAlphabetNr1SupplementCharacterSet =
             ISOLatinAlphabetNr1SupplementCharacterSet(data)
 
-        fun preferredSupplementalCharacterSet() =
-            if (VT320Settings.userPreferredCharacterSet == 0) decSupplementalCharacterSet else
-                isoLatinAlphabetNr1SupplementCharacterSet
+        fun preferredSupplementalCharacterSet() = decSupplementalCharacterSet
 
         val drcsFontBuffer = DRCSFontBuffer(data)
         val vt52CharacterSet = VT52CharacterSet(data52)

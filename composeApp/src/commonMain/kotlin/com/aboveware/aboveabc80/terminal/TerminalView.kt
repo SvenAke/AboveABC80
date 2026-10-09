@@ -26,7 +26,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import com.aboveware.aboveabc80.core.BIOS
-import com.aboveware.aboveabc80.printer.VirtualPrinter
 
 @Composable
 fun TerminalView(
@@ -54,7 +53,7 @@ fun TerminalView(
         )
     )
 
-    val columns = if (terminal is VT320) terminal.columns else 80
+    val columns = 80
     val targetRatio = 4f / 3f
 
     BoxWithConstraints(
@@ -112,53 +111,20 @@ fun TerminalView(
                     )
                 }
                 .pointerInput(terminal) {
-                    detectTapGestures { offset ->
-                        // Request focus when terminal is tapped
+                    detectTapGestures {
                         com.aboveware.aboveabc80.keyboard.Keyboard.instance.requestTerminalFocus()
-
-                        if (terminal is VT320 && terminal.statusLineManager.isVisible()) {
-                            val statusVisible = terminal.statusLineManager.isVisible()
-                            val effectiveHeight =
-                                if (statusVisible) Terminal.DEFAULT_HEIGHT + 1 else Terminal.DEFAULT_HEIGHT
-                            val statusLineYStart =
-                                (Terminal.DEFAULT_HEIGHT.toFloat() / effectiveHeight) * size.height
-
-                            if (offset.y >= statusLineYStart) {
-                                // Clicked on status line. Check if printer status was clicked.
-                                val clickColumn = (offset.x / size.width) * columns
-
-                                val printerStatus =
-                                    if (terminal.setup.isVisible) terminal.setupPrinterStatus else terminal.printerStatus
-                                val printerText = "Printer: ${printerStatus.text}"
-                                val startCol = (columns - printerText.length) / 2
-                                val endCol = startCol + printerText.length
-
-                                if (clickColumn >= startCol && clickColumn <= endCol) {
-                                    VirtualPrinter.instance.isVisible =
-                                        !VirtualPrinter.instance.isVisible
-                                }
-                            }
-                        }
                     }
                 }
         ) {
             Canvas(modifier = Modifier.fillMaxSize()) {
-                val statusVisible =
-                    if (terminal is VT320) terminal.statusLineManager.isVisible() else false
-                val effectiveHeight =
-                    if (statusVisible) Terminal.DEFAULT_HEIGHT + 1 else Terminal.DEFAULT_HEIGHT
+                val effectiveHeight = Terminal.DEFAULT_HEIGHT
 
                 // 1. Draw Flashing Cursor
                 val cx = terminal.cursorX
-                val cy =
-                    if (terminal is VT320 && terminal.activeStatusLine) Terminal.DEFAULT_HEIGHT else terminal.cursorY
-                val setupVisible = if (terminal is VT320) terminal.setup.isVisible else false
+                val cy = terminal.cursorY
                 val cursorVisible = terminal.cursorVisible
 
-                // Allow cursor in setup if it's explicitly placed on the status line
-                val showCursorInSetup = terminal is VT320 && terminal.activeStatusLine
-
-                if (cx < columns && (!setupVisible || showCursorInSetup) && cursorVisible) {
+                if (cx < columns && cursorVisible) {
                     val xBase = (cx * size.width) / columns
                     val xNext = ((cx + 1) * size.width) / columns
                     val yBase = (cy * size.height) / effectiveHeight
@@ -186,195 +152,19 @@ fun TerminalView(
                     )
                 }
 
-                // 2. Iterate and draw characters using the Glyph system
-                val topClip =
-                    if (terminal is VT320) (terminal.topMargin * size.height) / effectiveHeight else 0f
-                val bottomClip =
-                    if (terminal is VT320) ((terminal.bottomMargin + 1) * size.height) / effectiveHeight else (Terminal.DEFAULT_HEIGHT * size.height) / effectiveHeight
-                val scrollOffsetPx =
-                    if (terminal is VT320) (terminal.scrollOffset * size.height) / effectiveHeight else 0f
-
+                // 2. Iterate and draw characters
                 for (y in 0 until Terminal.DEFAULT_HEIGHT) {
                     val rowData = terminal.screen[y]
-                    val inScrollRegion =
-                        terminal is VT320 && y in terminal.topMargin..terminal.bottomMargin
-
-                    if (inScrollRegion) {
-                        drawContext.canvas.save()
-                        drawContext.canvas.clipRect(
-                            androidx.compose.ui.geometry.Rect(
-                                0f,
-                                topClip,
-                                size.width,
-                                bottomClip
-                            )
-                        )
-                        drawRow(
-                            rowData,
-                            y,
-                            columns,
-                            terminal,
-                            blinkVisible,
-                            terminalColor,
-                            scrollOffsetPx,
-                            topClip,
-                            bottomClip,
-                            true,
-                            screenReverse,
-                            terminalBackgroundColor
-                        )
-                        drawContext.canvas.restore()
-                    } else {
-                        drawRow(
-                            rowData,
-                            y,
-                            columns,
-                            terminal,
-                            blinkVisible,
-                            terminalColor,
-                            0f,
-                            0f,
-                            size.height,
-                            false,
-                            screenReverse,
-                            terminalBackgroundColor
-                        )
-                    }
-                }
-
-                // Draw the line that is currently being scrolled out
-                if (terminal is VT320 && terminal.scrollOffset != 0f) {
-                    terminal.scrolledOutLine?.let { rowData ->
-                        val yOut =
-                            if (terminal.scrollOffset > 0) terminal.topMargin - 1 else terminal.bottomMargin + 1
-                        drawContext.canvas.save()
-                        drawContext.canvas.clipRect(
-                            androidx.compose.ui.geometry.Rect(
-                                0f,
-                                topClip,
-                                size.width,
-                                bottomClip
-                            )
-                        )
-                        drawRow(
-                            rowData,
-                            yOut,
-                            columns,
-                            terminal,
-                            blinkVisible,
-                            terminalColor,
-                            scrollOffsetPx,
-                            topClip,
-                            bottomClip,
-                            true,
-                            screenReverse,
-                            terminalBackgroundColor
-                        )
-                        drawContext.canvas.restore()
-                    }
-                }
-
-                // 2.5 Draw Status Line if available
-                if (terminal is VT320 && statusVisible) {
-                    val y = Terminal.DEFAULT_HEIGHT
-                    val yBase = (y * size.height) / (Terminal.DEFAULT_HEIGHT + 1)
-                    val cellHeight = size.height - yBase
-
-                    // Run-length background drawing for status line
-                    var runStartX = 0f
-                    var lastBgColor: Color? = null
-                    val statusRowData = terminal.statusLine
-                    val actualStatusColumns = statusRowData.size
-
-                    for (x in 0..actualStatusColumns) {
-                        val cellBgColor = if (x < actualStatusColumns) {
-                            val cell = statusRowData[x]
-                            val isActuallyInverted = cell.attr.inverse xor screenReverse
-                            if (isActuallyInverted) {
-                                if (cell.attr.bold) terminalColor else terminalColor.copy(alpha = 0.8f)
-                            } else {
-                                if (screenReverse) Color.Black else terminalBackgroundColor
-                            }
-                        } else null // Sentinel to flush last run
-
-                        val currentX = (x * size.width) / columns
-
-                        if (cellBgColor != lastBgColor) {
-                            if (lastBgColor != null && lastBgColor != terminalBackgroundColor) {
-                                drawRect(
-                                    color = lastBgColor,
-                                    topLeft = Offset(runStartX, yBase),
-                                    size = Size(currentX - runStartX + 0.5f, cellHeight + 0.5f)
-                                )
-                            }
-                            runStartX = currentX
-                            lastBgColor = cellBgColor
-                        }
-                    }
-
-                    // Draw characters
-                    for (x in 0 until minOf(actualStatusColumns, columns)) {
-                        val cell = statusRowData[x]
-                        val char = cell.char
-                        val attr = cell.attr
-                        val isActuallyInverted = attr.inverse xor screenReverse
-
-                        if (char == ' ') continue
-                        if (attr.blink && blinkVisible < 0.5f) continue
-
-                        val glyph = terminal.getGlyph(char) ?: continue
-                        val xBase = (x * size.width) / columns
-                        val xNext = ((x + 1) * size.width) / columns
-                        val cellWidth = xNext - xBase
-
-                        val drawColor = if (isActuallyInverted) Color.Black else {
-                            when {
-                                attr.dim -> terminalColor.copy(alpha = 0.4f)
-                                attr.bold -> terminalColor
-                                else -> terminalColor.copy(alpha = 0.8f)
-                            }
-                        }
-                        val currentData = glyph.data80
-                        val gWidth = glyph.glyphWidth80
-                        val gHeight = glyph.height
-
-                        val nominalWidth = terminal.nominalWidth
-                        val nominalHeight = terminal.nominalHeight
-
-                        val dotWidth = cellWidth / nominalWidth
-                        val dotHeight = cellHeight / nominalHeight
-
-                        // Centering (Text font behavior)
-                        val startX = xBase + (cellWidth - gWidth * dotWidth) / 2f
-                        val startY = yBase + (cellHeight - gHeight * dotHeight) / 2f
-
-                        for (gy in 0 until gHeight) {
-                            val bits = currentData[gy]
-                            for (gx in 0 until minOf(bits.size, gWidth)) {
-                                if (bits[gx]) {
-                                    val stretchedWidth = dotWidth * terminal.dotStretch
-                                    drawRect(
-                                        color = drawColor,
-                                        topLeft = Offset(
-                                            startX + gx * dotWidth,
-                                            startY + gy * dotHeight
-                                        ),
-                                        size = Size(stretchedWidth, dotHeight + 0.1f)
-                                    )
-                                    if (attr.bold) {
-                                        drawRect(
-                                            color = drawColor,
-                                            topLeft = Offset(
-                                                startX + gx * dotWidth + (dotWidth * 0.5f),
-                                                startY + gy * dotHeight
-                                            ),
-                                            size = Size(stretchedWidth, dotHeight + 0.1f)
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    drawRow(
+                        rowData,
+                        y,
+                        columns,
+                        terminal,
+                        blinkVisible,
+                        terminalColor,
+                        screenReverse,
+                        terminalBackgroundColor
+                    )
                 }
 
                 // 3. CRT Scan lines Effect
@@ -398,36 +188,17 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawRow(
     terminal: Terminal,
     blinkVisible: Float,
     terminalColor: Color,
-    scrollOffsetPx: Float,
-    topClip: Float,
-    bottomClip: Float,
-    isOffsetApplied: Boolean,
     screenReverse: Boolean,
     terminalBackgroundColor: Color
 ) {
-    val lineAttr = if (terminal is VT320) {
-        if (y in 0 until Terminal.DEFAULT_HEIGHT) terminal.lineAttributes[y] else VT320.LineAttribute.NORMAL
-    } else VT320.LineAttribute.NORMAL
-
-    val isDoubleWidth = lineAttr != VT320.LineAttribute.NORMAL
-    val lineColumns = if (isDoubleWidth) columns / 2 else columns
-
-    // Use higher precision for base coordinates to avoid cumulative rounding errors
-    val effectiveHeight =
-        if (terminal is VT320 && terminal.statusLineManager.isVisible()) Terminal.DEFAULT_HEIGHT + 1 else Terminal.DEFAULT_HEIGHT
+    val effectiveHeight = Terminal.DEFAULT_HEIGHT
     val yBaseNormal = (y * size.height) / effectiveHeight
     val yBaseNext = ((y + 1) * size.height) / effectiveHeight
     val cellHeight = yBaseNext - yBaseNormal
-    val yBaseOffset = if (isOffsetApplied) yBaseNormal + scrollOffsetPx else yBaseNormal
-
-    // Skip drawing if completely outside the clipping area (optimization)
-    if (yBaseOffset + cellHeight < topClip || yBaseOffset > bottomClip) return
 
     // Run-length background drawing
     var runStartX = 0f
     var lastBgColor: Color? = null
-
-    // Defensive check: use the actual size of the data provided
     val actualColumns = rowData.size
 
     for (x in 0..actualColumns) {
@@ -441,13 +212,13 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawRow(
             }
         } else null // Sentinel
 
-        val currentX = (x * size.width) / lineColumns
+        val currentX = (x * size.width) / columns
 
         if (cellBgColor != lastBgColor) {
             if (lastBgColor != null && lastBgColor != terminalBackgroundColor) {
                 drawRect(
                     color = lastBgColor,
-                    topLeft = Offset(runStartX, yBaseOffset),
+                    topLeft = Offset(runStartX, yBaseNormal),
                     size = Size(currentX - runStartX + 0.5f, cellHeight + 0.5f)
                 )
             }
@@ -457,7 +228,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawRow(
     }
 
     // Draw characters
-    for (x in 0 until minOf(actualColumns, lineColumns)) {
+    for (x in 0 until minOf(actualColumns, columns)) {
         val cell = rowData[x]
         val char = cell.char
         val attr = cell.attr
@@ -468,8 +239,8 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawRow(
 
         val glyph = terminal.getGlyph(char) ?: continue
 
-        val xBase = (x * size.width) / lineColumns
-        val xNext = ((x + 1) * size.width) / lineColumns
+        val xBase = (x * size.width) / columns
+        val xNext = ((x + 1) * size.width) / columns
         val cellWidth = xNext - xBase
 
         val drawColor = if (isActuallyInverted) Color.Black else {
@@ -487,27 +258,18 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawRow(
         val nominalWidth = terminal.nominalWidth
         val nominalHeight = terminal.nominalHeight
 
-        val isDoubleHeight =
-            lineAttr == VT320.LineAttribute.DOUBLE_HEIGHT_TOP || lineAttr == VT320.LineAttribute.DOUBLE_HEIGHT_BOTTOM
         val dotWidth = cellWidth / nominalWidth
-        val dotHeight =
-            if (isDoubleHeight) (cellHeight / nominalHeight) * 2 else cellHeight / nominalHeight
+        val dotHeight = cellHeight / nominalHeight
 
         // Centering
         val startX = xBase + (cellWidth - gWidth * dotWidth) / 2f
-        val startY =
-            if (isDoubleHeight) yBaseOffset else yBaseOffset + (cellHeight - gHeight * dotHeight) / 2f
+        val startY = yBaseNormal + (cellHeight - gHeight * dotHeight) / 2f
 
-        val gyStart = if (lineAttr == VT320.LineAttribute.DOUBLE_HEIGHT_BOTTOM) gHeight / 2 else 0
-        val gyEnd = if (lineAttr == VT320.LineAttribute.DOUBLE_HEIGHT_TOP) gHeight / 2 else gHeight
-
-        for (gy in gyStart until gyEnd) {
+        for (gy in 0 until gHeight) {
             val bits = currentData[gy]
-            val drawY = startY + (gy - gyStart) * dotHeight
+            val drawY = startY + gy * dotHeight
             for (gx in 0 until minOf(bits.size, gWidth)) {
                 if (bits[gx]) {
-                    // Dot Stretching: Every lit pixel is stretched.
-                    // This bridges gaps between adjacent pixels and adds weight.
                     val stretchedWidth = dotWidth * terminal.dotStretch
 
                     drawRect(
@@ -516,7 +278,6 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawRow(
                         size = Size(stretchedWidth, dotHeight + 0.1f)
                     )
                     if (attr.bold) {
-                        // For bold, we draw again with a slight offset to increase thickness further
                         drawRect(
                             color = drawColor,
                             topLeft = Offset(startX + gx * dotWidth + (dotWidth * 0.5f), drawY),
@@ -527,10 +288,10 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawRow(
             }
         }
 
-        if (attr.underline && lineAttr != VT320.LineAttribute.DOUBLE_HEIGHT_TOP) {
+        if (attr.underline) {
             drawRect(
                 color = drawColor,
-                topLeft = Offset(xBase, yBaseOffset + cellHeight - dotHeight),
+                topLeft = Offset(xBase, yBaseNormal + cellHeight - dotHeight),
                 size = Size(cellWidth, dotHeight)
             )
         }
