@@ -172,6 +172,10 @@ fun CPMScreen(startWithStorageOpen: Boolean = false) {
     var isFastSpeedMode by remember { mutableStateOf(nativeLib.isFastSpeed()) }
     var speedDialOpen by remember { mutableStateOf(value = false) }
     var speedDialTestOpen by remember { mutableStateOf(value = false) }
+    var showCharacterSet by remember { mutableStateOf(false) }
+    if (showCharacterSet) {
+        CharacterSetDialog(onDismiss = { showCharacterSet = false })
+    }
     var fps by remember { mutableIntStateOf(0) }
     var currentCpuMHz by remember {
         mutableStateOf(if (cpuSpeedSetting == 9) "MAX" else "$cpuSpeedSetting.0 MHz")
@@ -914,7 +918,6 @@ fun CPMScreen(startWithStorageOpen: Boolean = false) {
                                     exit = fadeOut() + shrinkVertically() + slideOutVertically { it / 2 }
                                 ) {
                                     Column(horizontalAlignment = Alignment.End) {
-                                        // Action: write characters 0-255 to the screen
                                         Row(
                                             verticalAlignment = Alignment.CenterVertically,
                                             modifier = Modifier.padding(bottom = 16.dp)
@@ -926,7 +929,7 @@ fun CPMScreen(startWithStorageOpen: Boolean = false) {
                                                 modifier = Modifier.padding(end = 12.dp)
                                             ) {
                                                 Text(
-                                                    "Characters 0-255",
+                                                    "Character set",
                                                     modifier = Modifier.padding(
                                                         horizontal = 8.dp,
                                                         vertical = 4.dp
@@ -937,14 +940,14 @@ fun CPMScreen(startWithStorageOpen: Boolean = false) {
                                             SmallFloatingActionButton(
                                                 onClick = {
                                                     speedDialOpen = false
-                                                    writeAllCharactersToScreen(nativeLib)
+                                                    showCharacterSet = true
                                                 },
                                                 containerColor = MaterialTheme.colorScheme.secondaryContainer,
                                                 contentColor = MaterialTheme.colorScheme.onSecondaryContainer
                                             ) {
                                                 Icon(
                                                     Icons.Default.Science,
-                                                    contentDescription = "Characters 0-255"
+                                                    contentDescription = "Character set"
                                                 )
                                             }
                                         }

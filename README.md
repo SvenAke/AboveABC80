@@ -50,6 +50,10 @@ The terminal does not require character ROM loading to render these glyphs.
 ABC80CharacterSet is the only terminal character set; legacy national, DEC and
 VT52 character sets and their ROM loading have been removed.
 
+The test menu's Character set action opens a separate reference chart rather
+than overwriting emulator memory. It shows codes 32-127 in four groups of 24,
+each with Kod, T (text) and G (graphics) columns using the monitor pixel glyphs.
+
 ### ADM-3A keyboard
 
 The Upper Case key shows the red pressed-key background while held. Each press
