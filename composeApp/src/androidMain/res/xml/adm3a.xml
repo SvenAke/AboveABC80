@@ -62,7 +62,6 @@
             app:keyBackground="@drawable/red_key"
             app:keyLabel="Upper"
             app:secondKeyLabel="Case"
-            app:isLed="true"
             app:keyLedId="upper_case"
             app:ledColor="#FFFF0000" />
         <Key

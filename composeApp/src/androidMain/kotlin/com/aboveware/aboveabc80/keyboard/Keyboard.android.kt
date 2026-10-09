@@ -35,6 +35,15 @@ fun Keyboard.onKeyUp(key: KeyboardViewController.Key) {
 }
 
 private fun Keyboard.handleLabelLogic(key: KeyboardViewController.Key, isDown: Boolean): Boolean {
+    if (key.ledId == "upper_case") {
+        if (isDown) {
+            leds["upper_case"]?.let {
+                it.isOn = !it.isOn
+                Abc80Log.keyboard("Upper Case LED: ${it.isOn}")
+            }
+        }
+        return true
+    }
     val label = key.label?.toString() ?: ""
     val secondLabel = key.secondLabel?.toString() ?: ""
 
@@ -43,16 +52,6 @@ private fun Keyboard.handleLabelLogic(key: KeyboardViewController.Key, isDown: B
     val upperLabel = label.uppercase()
 
     when (upperLabel) {
-        "UPPER" -> {
-            if (isDown) {
-                leds["upper_case"]?.let {
-                    it.isOn = !it.isOn
-                    Abc80Log.keyboard("Upper Case LED: ${it.isOn}")
-                }
-            }
-            return true
-        }
-
         "REPEAT" -> {
             isRepeatActive = isDown
             return true

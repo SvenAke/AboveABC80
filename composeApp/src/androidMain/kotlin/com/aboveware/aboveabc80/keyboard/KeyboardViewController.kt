@@ -992,6 +992,10 @@ class KeyboardViewController(context: Context, xmlLayoutResId: Int, modeId: Int 
     }
 
     fun handleKeyRelease(keyboard: Keyboard, key: Key) {
+        if (key.ledId == "upper_case") {
+            keyboard.onKeyUp(key)
+            return
+        }
         if (key.sticky) {
             key.on = !key.on
         }
@@ -1014,6 +1018,10 @@ class KeyboardViewController(context: Context, xmlLayoutResId: Int, modeId: Int 
      * pressing it.
      */
     fun handleKeyPress(keyboard: Keyboard, key: Key) {
+        if (key.ledId == "upper_case") {
+            keyboard.onKeyDown(key)
+            return
+        }
         keys.filter { it != key && it.sticky && it.on }.forEach {
             keyboard.onKeyDown(
                 it.codes,

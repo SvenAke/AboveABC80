@@ -1,9 +1,15 @@
 package com.aboveware.aboveabc80.keyboard
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.os.SystemClock
+import android.view.MotionEvent
+import android.view.View
 import androidx.compose.ui.graphics.Color
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
 import com.aboveware.aboveabc80.R
 import com.aboveware.aboveabc80.setAndroidContext
 import com.aboveware.aboveabc80.terminal.CharacterSet
@@ -79,23 +85,58 @@ class KeyboardLayoutTest {
 
     @Test
     fun adm3aUpperCaseKeyTogglesItsRedLed() {
-        val layout = KeyboardViewController(context, R.xml.adm3a)
-        val key = layout.keys.single { it.label?.toString() == "Upper" }
-        assertEquals("Case", key.secondLabel?.toString())
-        assertTrue(key.isLed)
-        assertEquals("upper_case", key.ledId)
-        assertEquals(android.graphics.Color.RED, key.ledColor)
-
-        val ledMap = ADM3AKeyboard(MockTerminal()).leds
-        val keyboard = Keyboard().apply { leds = ledMap }
-        keyboard.onKeyDown(key)
-        assertTrue(ledMap.getValue("upper_case").isOn)
-        keyboard.onKeyUp(key)
-        assertTrue(ledMap.getValue("upper_case").isOn)
-        keyboard.onKeyDown(key)
-        assertFalse(ledMap.getValue("upper_case").isOn)
-        keyboard.onKeyUp(key)
-        assertFalse(ledMap.getValue("upper_case").isOn)
+        InstrumentationRegistry.getInstrumentation().runOnMainSync {
+            val terminal = MockTerminal()
+            val ledMap = ADM3AKeyboard(terminal).leds
+            val keyboard = Keyboard().apply {
+                leds = ledMap
+                onCharacter = terminal::onKeyEvent
+            }
+            val view = KeyboardView(context, null).apply {
+                keyboardXmlResId = R.xml.adm3a
+                this.keyboard = keyboard
+                measure(
+                    View.MeasureSpec.makeMeasureSpec(1200, View.MeasureSpec.EXACTLY),
+                    View.MeasureSpec.makeMeasureSpec(500, View.MeasureSpec.EXACTLY)
+                )
+                layout(0, 0, measuredWidth, measuredHeight)
+            }
+            val bitmap = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
+            try {
+                view.draw(Canvas(bitmap))
+                val key = view.keyboardViewController.keys.single { it.ledId == "upper_case" }
+                assertEquals(setOf("Upper", "Case"), setOf(key.label?.toString(), key.secondLabel?.toString()))
+                assertFalse(key.isLed)
+                assertEquals(android.graphics.Color.RED, key.ledColor)
+                val x = key.x + key.width / 2f + view.paddingLeft
+                val y = key.y + key.height / 2f + view.paddingTop
+                fun touch(action: Int) {
+                    val now = SystemClock.uptimeMillis()
+                    val event = MotionEvent.obtain(now, now, action, x, y, 0)
+                    try {
+                        assertTrue(view.onTouchEvent(event))
+                    } finally {
+                        event.recycle()
+                    }
+                }
+                touch(MotionEvent.ACTION_DOWN)
+                assertTrue(key.pressed)
+                assertTrue(android.R.attr.state_pressed in key.currentDrawableState)
+                assertTrue(ledMap.getValue("upper_case").isOn)
+                touch(MotionEvent.ACTION_UP)
+                assertFalse(key.pressed)
+                assertTrue(ledMap.getValue("upper_case").isOn)
+                touch(MotionEvent.ACTION_DOWN)
+                assertTrue(key.pressed)
+                assertFalse(ledMap.getValue("upper_case").isOn)
+                touch(MotionEvent.ACTION_UP)
+                assertFalse(key.pressed)
+                assertFalse(ledMap.getValue("upper_case").isOn)
+                assertTrue(terminal.sentChars.isEmpty(), "Upper Case must not send Escape")
+            } finally {
+                bitmap.recycle()
+            }
+        }
     }
 
     @Test

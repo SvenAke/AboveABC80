@@ -42,6 +42,12 @@ in your IDE’s toolbar or run it directly from the terminal:
 Startup prepares character sets and restores saved disks on background
 dispatchers so file I/O and disk parsing do not block Android input handling.
 
+### ADM-3A keyboard
+
+The Upper Case key shows the red pressed-key background while held. Each press
+toggles its red LED; releasing the key leaves the LED state unchanged. This key
+does not send Escape to the emulator.
+
 ### Cassette cloud downloads
 
 Downloading files from the cloud in the cassette dialog saves all selected files

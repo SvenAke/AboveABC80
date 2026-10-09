@@ -320,7 +320,7 @@ class KeyboardView(
         canvas: Canvas,
         paint: Paint
     ) {
-        if (key.isLed && key.ledId.isNullOrEmpty()) {
+        if (key.isLed) {
             drawLed(key, canvas, paint)
             return
         }
@@ -463,7 +463,7 @@ class KeyboardView(
         if (yOffset != 0f) {
             canvas.translate(0f, -yOffset)
         }
-        if (key.isLed && !key.ledId.isNullOrEmpty()) {
+        if (key.ledId == "upper_case") {
             drawInlineLed(key, canvas, paint)
         }
     }
