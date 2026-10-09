@@ -8,7 +8,6 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.PorterDuff
 import android.graphics.Rect
-import android.graphics.Typeface
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.os.Handler
@@ -300,7 +299,7 @@ class KeyboardView(
         }
         for (key in keys) {
             paint.textAlign = Paint.Align.CENTER
-            paint.typeface = Typeface.DEFAULT_BOLD
+            paint.typeface = mPaint.typeface
             paint.isUnderlineText = false
             val kbdBackground = key.keyBackground ?: keyBackground
             kbdBackground?.let {
@@ -1096,6 +1095,9 @@ class KeyboardView(
             attributes.getFloat(R.styleable.KeyboardView_backgroundDimAmount, 0.5f)
         attributes.recycle()
         mPaint = Paint()
+        mPaint.typeface = requireNotNull(ResourcesCompat.getFont(context, R.font.abc80)) {
+            "Bundled ABC80 font could not be loaded"
+        }
         mPaint.isAntiAlias = true
         mPaint.textSize = keyTextSize.toFloat()
         mPaint.textAlign = Paint.Align.CENTER

@@ -39,7 +39,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.rotate
-import androidx.compose.ui.text.font.FontFamily
+import com.aboveware.aboveabc80.abc80FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.aboveware.aboveabc80.Abc80CassetteStatus
@@ -132,9 +132,9 @@ private fun Cassette(elapsedSeconds: Float, recording: Boolean) {
                     drawCircle(Color(0xFFD32F2F), radius = size.minDimension * 0.18f)
                 }
                 Spacer(Modifier.width(6.dp))
-                Text("BASF", fontSize = 18.sp, fontFamily = FontFamily.Monospace, color = Color.Black)
+                Text("BASF", fontSize = 18.sp, fontFamily = abc80FontFamily(), color = Color.Black)
             }
-            Text("C60", fontSize = 16.sp, fontFamily = FontFamily.Monospace, color = Color(0xFF333333))
+            Text("C60", fontSize = 16.sp, fontFamily = abc80FontFamily(), color = Color(0xFF333333))
         }
 
         Box(

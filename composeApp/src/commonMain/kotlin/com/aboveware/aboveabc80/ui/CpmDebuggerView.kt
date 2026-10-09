@@ -33,7 +33,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontFamily
+import com.aboveware.aboveabc80.abc80FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.aboveware.aboveabc80.core.CpmDebugger
@@ -132,7 +132,7 @@ fun CpmDebuggerView(modifier: Modifier = Modifier) {
                         Text(
                             text = if (line.address != -1) line.address.toHex() else "    ",
                             color = Color.Gray,
-                            fontFamily = FontFamily.Monospace,
+                            fontFamily = abc80FontFamily(),
                             fontSize = 12.sp,
                             modifier = Modifier.width(45.dp)
                         )
@@ -140,7 +140,7 @@ fun CpmDebuggerView(modifier: Modifier = Modifier) {
                         Text(
                             text = line.hex.padEnd(8),
                             color = Color(0xFF00AA00),
-                            fontFamily = FontFamily.Monospace,
+                            fontFamily = abc80FontFamily(),
                             fontSize = 12.sp,
                             modifier = Modifier.width(70.dp)
                         )
@@ -148,7 +148,7 @@ fun CpmDebuggerView(modifier: Modifier = Modifier) {
                         Text(
                             text = line.code,
                             color = if (isCurrentLine) Color.Yellow else Color.White,
-                            fontFamily = FontFamily.Monospace,
+                            fontFamily = abc80FontFamily(),
                             fontSize = 12.sp
                         )
                     }

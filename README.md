@@ -54,6 +54,26 @@ The test menu's Character set action opens a separate reference chart rather
 than overwriting emulator memory. It shows codes 32-127 in four groups of 24,
 each with Kod, T (text) and G (graphics) columns using the monitor pixel glyphs.
 
+The standalone [ABC80 TrueType font](fonts/ABC80.ttf) contains the 96 text glyphs
+from monitor codes 32-127, without graphics-mode mosaics. It is monospaced and
+preserves the 8-by-14 pixel grid as square vector outlines. Swedish letters use
+normal Unicode code points rather than replacing brackets. The currency sign
+at code 36 maps to U+00A4, and the solid text block at code 127 maps to U+2588.
+ASCII symbols replaced by ABC80 letters (such as `@`, brackets and braces) are
+not added as substitute glyphs.
+
+To regenerate it, install Python `fonttools` and run
+`python tools\generate_abc80_font.py`. The generator checks the saved font's
+Unicode map, fixed-width metrics and every pixel outline against the source.
+
+The app bundles this font for Android and desktop, applying it to all Material
+text styles, debugger/archive text, cassette labels and Android keyboard labels.
+It does not depend on a system font installation. Characters absent from the
+original table use platform font fallback; emulator pixels remain unchanged.
+After regeneration, copy the font to both
+`composeApp/src/commonMain/composeResources/font/abc80.ttf` and
+`composeApp/src/androidMain/res/font/abc80.ttf`.
+
 ### ADM-3A keyboard
 
 The Upper Case key shows the red pressed-key background while held. Each press

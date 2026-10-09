@@ -12,16 +12,18 @@ import androidx.compose.ui.Modifier
 
 @Composable
 fun App() {
-    Column(
+    MaterialTheme(typography = abc80Typography()) {
+        Column(
         modifier = Modifier
             .background(MaterialTheme.colorScheme.primaryContainer)
             .systemBarsPadding()
             .fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        // CPM display
-        Box(modifier = Modifier.weight(1f)) {
-            CPMScreen()
+        ) {
+            // CPM display
+            Box(modifier = Modifier.weight(1f)) {
+                CPMScreen()
+            }
         }
     }
 }
