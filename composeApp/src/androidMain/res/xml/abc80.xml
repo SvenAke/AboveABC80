@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Keyboard xmlns:app="http://schemas.android.com/apk/res-auto"
-    app:keyBackground="@drawable/adm3a_key"
+    app:keyBackground="@drawable/abc80_key"
     app:keyHeight="10%p"
     app:keyWidth="7%p">
     <Row app:initialIndent="5%p">
@@ -212,7 +212,7 @@
         <Key
             app:codes="32"
             app:keyAttachTo="88"
-            app:keyCustomBitmap="@drawable/adm3a_key"
+            app:keyCustomBitmap="@drawable/abc80_key"
             app:keyLabel=" "
             app:keyWidth="55%p" />
     </Row>

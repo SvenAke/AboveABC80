@@ -12,7 +12,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.aboveware.aboveabc80.R
 import com.aboveware.aboveabc80.setAndroidContext
-import com.aboveware.aboveabc80.terminal.ADM3AKeyboard
+import com.aboveware.aboveabc80.terminal.ABC80TerminalKeyboard
 import com.aboveware.aboveabc80.terminal.CharacterSet
 import com.aboveware.aboveabc80.terminal.CursorStyle
 import com.aboveware.aboveabc80.terminal.Tabulator
@@ -83,16 +83,16 @@ class KeyboardLayoutTest {
     }
 
     @Test
-    fun adm3aUpperCaseKeyTogglesItsRedLed() {
+    fun abc80UpperCaseKeyTogglesItsRedLed() {
         InstrumentationRegistry.getInstrumentation().runOnMainSync {
             val terminal = MockTerminal()
-            val ledMap = ADM3AKeyboard(terminal).leds
+            val ledMap = ABC80TerminalKeyboard(terminal).leds
             val keyboard = Keyboard().apply {
                 leds = ledMap
                 onCharacter = terminal::onKeyEvent
             }
             val view = KeyboardView(context, null).apply {
-                keyboardXmlResId = R.xml.adm3a
+                keyboardXmlResId = R.xml.abc80
                 this.keyboard = keyboard
                 measure(
                     View.MeasureSpec.makeMeasureSpec(1200, View.MeasureSpec.EXACTLY),

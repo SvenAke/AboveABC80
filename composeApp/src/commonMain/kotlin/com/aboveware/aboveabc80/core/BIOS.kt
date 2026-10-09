@@ -33,7 +33,7 @@ class BIOS {
     fun connect() {
         if (isConnected) return
 
-        // 1. Terminal / Console (ADM3A)
+        // 1. Terminal / Console (ABC80)
         TerminalManager.activeTerminal.connect()
 
         // 2. Intercept BIOS and BDOS calls

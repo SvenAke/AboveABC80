@@ -10,7 +10,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 
 enum class TerminalType {
-    ADM3A
+    ABC80
 }
 
 enum class TerminalColor(val color: Color) {
@@ -27,20 +27,20 @@ object TerminalManager {
     var nationalReplacement: Boolean by mutableStateOf(false)
     var userPreferredCharacterSetIsDECSupplementalGraphic: Boolean by mutableStateOf(true)
     var operatingMode: OperatingMode by mutableStateOf(OperatingMode.ANSI)
-    var currentTerminalType: TerminalType by mutableStateOf(TerminalType.ADM3A)
+    var currentTerminalType: TerminalType by mutableStateOf(TerminalType.ABC80)
     var terminalColor: TerminalColor by mutableStateOf(TerminalColor.BLUE)
     var scanlineIntensity: Float by mutableStateOf(0.15f)
     var autoUppercase: Boolean by mutableStateOf(false)
 
-    private val adm3aInstance by lazy { ADM3A() }
+    private val abc80Instance by lazy { ABC80() }
 
     val commandHistory = CommandHistory()
 
     val activeTerminal: Terminal
-        get() = adm3aInstance
+        get() = abc80Instance
 
     fun resetToDefaults() {
-        currentTerminalType = TerminalType.ADM3A
+        currentTerminalType = TerminalType.ABC80
         terminalColor = TerminalColor.BLUE
         operatingMode = OperatingMode.ANSI
         nationalReplacement = false

@@ -5,7 +5,7 @@ import com.aboveware.aboveabc80.Abc80Log
 import com.aboveware.aboveabc80.keyboard.KeyboardLed
 import androidx.compose.runtime.mutableStateMapOf
 
-class ADM3AKeyboard(private val terminal: Terminal) : TerminalKeyboard {
+class ABC80TerminalKeyboard(private val terminal: Terminal) : TerminalKeyboard {
     override val leds = mutableStateMapOf("upper_case" to KeyboardLed("upper_case"))
 
     override fun setLed(index: Int, on: Boolean) {
@@ -13,7 +13,6 @@ class ADM3AKeyboard(private val terminal: Terminal) : TerminalKeyboard {
     }
 
     override fun updateMappings(mappings: Map<Char, Char>) {
-        // Not used for ADM3A
     }
 
     override fun handleKeyEvent(
@@ -25,10 +24,9 @@ class ADM3AKeyboard(private val terminal: Terminal) : TerminalKeyboard {
         fifthLabel: String?,
         sixthLabel: String?
     ) {
-        Abc80Log.keyboard("ADM3AKeyboard: handleKeyEvent codes='$codes' label='$label'")
+        Abc80Log.keyboard("ABC80TerminalKeyboard: handleKeyEvent codes='$codes' label='$label'")
         if (codes.isNotEmpty() && !codes.contains(",")) {
             codes.toIntOrNull()?.let { ascii ->
-                // HERE IS key (Answer Back) is traditionally CTRL-E (0x05)
                 terminal.onKeyEvent(ascii.toChar())
                 terminal.triggerClick()
             }
@@ -50,14 +48,14 @@ class ADM3AKeyboard(private val terminal: Terminal) : TerminalKeyboard {
         if (isRepeat && !terminal.autoRepeatMode) return true
         val char = when (key) {
             Key.Enter -> '\r'
-            Key.Backspace -> '\u0008' // Ctrl-H (BS)
+            Key.Backspace -> '\u0008'
             Key.Tab -> '\t'
             Key.Escape -> '\u001B'
-            Key.DirectionLeft -> '\u0008'  // ADM-3A: Ctrl-H
-            Key.DirectionDown -> '\u000A'  // ADM-3A: Ctrl-J (LF)
-            Key.DirectionUp -> '\u000B'    // ADM-3A: Ctrl-K (VT)
-            Key.DirectionRight -> '\u000C' // ADM-3A: Ctrl-L (FF)
-            Key.MoveHome -> '\u001E'       // ADM-3A: Home
+            Key.DirectionLeft -> '\u0008'
+            Key.DirectionDown -> '\u000A'
+            Key.DirectionUp -> '\u000B'
+            Key.DirectionRight -> '\u000C'
+            Key.MoveHome -> '\u001E'
             Key.F1, Key.F3 -> {
                 terminal.toggleSetup(); return true
             }

@@ -3,10 +3,10 @@ package com.aboveware.aboveabc80.terminal
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-class ADM3ATest {
+class ABC80TerminalTest {
     @Test
-    fun adm3aAndHitchCursorAddressingMoveWithoutPrintingParameters() {
-        val terminal = ADM3A()
+    fun abc80AndHitchCursorAddressingMoveWithoutPrintingParameters() {
+        val terminal = ABC80()
 
         "\u001B=7 HI".forEach(terminal::putChar)
 
@@ -24,7 +24,7 @@ class ADM3ATest {
 
     @Test
     fun documentedControlCharactersMoveCursorAndClearScreen() {
-        val terminal = ADM3A()
+        val terminal = ABC80()
 
         "ABC".forEach(terminal::putChar)
         terminal.putChar('\u0008')
@@ -51,23 +51,23 @@ class ADM3ATest {
 
     @Test
     fun tabStopsAtLastColumnWithoutWrapping() {
-        val terminal = ADM3A()
+        val terminal = ABC80()
         terminal.putChar('\t')
 
         assertEquals(8, terminal.cursorX)
 
-        terminal.cursorX = ADM3A.WIDTH - 1
+        terminal.cursorX = ABC80.WIDTH - 1
         terminal.cursorY = 4
 
         terminal.putChar('\t')
 
-        assertEquals(ADM3A.WIDTH - 1, terminal.cursorX)
+        assertEquals(ABC80.WIDTH - 1, terminal.cursorX)
         assertEquals(4, terminal.cursorY)
     }
 
     @Test
     fun bellAndAnswerBackAreHandled() {
-        val terminal = ADM3A()
+        val terminal = ABC80()
         var bellCount = 0
         terminal.onBell = { bellCount++ }
 
@@ -75,14 +75,14 @@ class ADM3ATest {
         terminal.putChar('\u0005')
 
         assertEquals(1, bellCount)
-        assertEquals("aboveCMP\r".map(Char::code), buildList {
+        assertEquals("aboveABC80\r".map(Char::code), buildList {
             while (terminal.hasChar()) add(terminal.getChar())
         })
     }
 
     @Test
     fun hitchBedroomStatusDoesNotClearRoomDescription() {
-        val terminal = ADM3A()
+        val terminal = ABC80()
         terminal.cursorY = 4
         "It is pitch black.\r\n\r\n".forEach(terminal::putChar)
         val outputCursorY = terminal.cursorY
@@ -97,20 +97,20 @@ class ADM3ATest {
 
     @Test
     fun lineFeedAtBottomScrollsAndEscapeCanRestartIncompleteAddress() {
-        val terminal = ADM3A()
+        val terminal = ABC80()
         terminal.screen[0][0] = TerminalCell('A')
         terminal.screen[1][0] = TerminalCell('B')
-        terminal.cursorY = ADM3A.HEIGHT - 1
+        terminal.cursorY = ABC80.HEIGHT - 1
 
         terminal.putChar('\n')
 
         assertEquals('B', terminal.screen[0][0].char)
-        assertEquals(' ', terminal.screen[ADM3A.HEIGHT - 1][0].char)
+        assertEquals(' ', terminal.screen[ABC80.HEIGHT - 1][0].char)
 
         "\u001B=\u001BE".forEach(terminal::putChar)
 
         assertEquals('B', terminal.screen[0][0].char)
         assertEquals(0, terminal.cursorX)
-        assertEquals(ADM3A.HEIGHT - 1, terminal.cursorY)
+        assertEquals(ABC80.HEIGHT - 1, terminal.cursorY)
     }
 }

@@ -63,7 +63,7 @@ class KeyboardView(
     val keyboardViewController: KeyboardViewController
         get() = _keyboardViewController!!
 
-    var keyboardXmlResId: Int = R.xml.adm3a
+    var keyboardXmlResId: Int = R.xml.abc80
         set(value) {
             if (field != value || _keyboardViewController == null) {
                 field = value
@@ -1063,7 +1063,7 @@ class KeyboardView(
         isFocusable = true
         isFocusableInTouchMode = true
         mPadding = Rect(0, 0, 0, 0)
-        keyboardXmlResId = R.xml.adm3a
+        keyboardXmlResId = R.xml.abc80
         var attributes = context.obtainStyledAttributes(
             attrs, R.styleable.KeyboardView, defStyleAttr, defStyleRes
         )

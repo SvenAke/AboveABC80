@@ -97,7 +97,7 @@ object CharacterSet {
         val drcsFontBuffer = DRCSFontBuffer(data)
         val vt52CharacterSet = VT52CharacterSet(data52)
         val vt52SpecialGraphics = VT52SpecialGraphics(data52)
-        val adm3aCharacterSet = ADM3ACharacterSet(data2513u, data2513l)
+        val abc80CharacterSet = ABC80CharacterSet(data2513u, data2513l)
 
         fun all() = listOf(
             frenchCanadianCharacterSet,
@@ -117,7 +117,7 @@ object CharacterSet {
             decSupplementalCharacterSet,
             isoLatinAlphabetNr1SupplementCharacterSet,
             drcsFontBuffer,
-            adm3aCharacterSet
+            abc80CharacterSet
         )
     }
 
@@ -1493,7 +1493,7 @@ object CharacterSet {
         }
     }
 
-    class ADM3ACharacterSet(dataU: ByteArray, dataL: ByteArray) : BaseCharacterSet() {
+    class ABC80CharacterSet(dataU: ByteArray, dataL: ByteArray) : BaseCharacterSet() {
         init {
             for (i in 0..127) {
                 if (i < 32) {

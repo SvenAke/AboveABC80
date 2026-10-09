@@ -8,9 +8,9 @@ import androidx.compose.ui.graphics.Color
 import com.aboveware.aboveabc80.Abc80Log
 import com.aboveware.aboveabc80.core.BIOS
 
-private const val adm3aAnswerBack = "aboveCMP\r"
+private const val abc80AnswerBack = "aboveABC80\r"
 
-class ADM3A : Terminal {
+class ABC80 : Terminal {
     companion object {
         const val WIDTH = Terminal.DEFAULT_WIDTH
         const val HEIGHT = Terminal.DEFAULT_HEIGHT
@@ -29,8 +29,8 @@ class ADM3A : Terminal {
     override var autoRepeatMode: Boolean by mutableStateOf(true)
     override var holdScreen: Boolean by mutableStateOf(false)
     override val backgroundColor: Color = Color(0xFF6D9BC3)
-    override val keyboardXmlResId: Int get() = ADM3A_LAYOUT_ID
-    override val keyboard: TerminalKeyboard = ADM3AKeyboard(this)
+    override val keyboardXmlResId: Int get() = ABC80_LAYOUT_ID
+    override val keyboard: TerminalKeyboard = ABC80TerminalKeyboard(this)
     override val tabulator: Tabulator = Tabulator()
     override val conformanceLevel: Int = 0
 
@@ -79,11 +79,11 @@ class ADM3A : Terminal {
     }
 
     override fun toggleSetup() {
-        Abc80Log.terminal("ADM3A: toggleSetup called (not implemented for ADM3A)")
+        Abc80Log.terminal("ABC80: toggleSetup called (not implemented for ABC80)")
     }
 
     override fun getGlyph(c: Char): CharacterSet.Glyph? = if (CharacterSet.isLoaded()) {
-        CharacterSet.characterSets.adm3aCharacterSet.getGlyph(c)
+        CharacterSet.characterSets.abc80CharacterSet.getGlyph(c)
     } else {
         CharacterSet.getGlyph(c)
     }
@@ -156,7 +156,7 @@ class ADM3A : Terminal {
     override fun getChar(): Int = synchronized(lock) {
         if (inputBuffer.isNotEmpty()) {
             val char = inputBuffer.removeAt(0)
-            Abc80Log.keyboard("ADM3A read: ${char.toChar()} (${char.toString(16)})")
+            Abc80Log.keyboard("ABC80 read: ${char.toChar()} (${char.toString(16)})")
             char
         } else {
             0x00
@@ -170,10 +170,10 @@ class ADM3A : Terminal {
         }
         synchronized(lock) {
             if (char.code == 0x05) { // ENQ - Answer Back
-                Abc80Log.keyboard("ADM3A: Answer Back triggered")
-                adm3aAnswerBack.forEach { inputBuffer.add(it.code) }
+                Abc80Log.keyboard("ABC80: Answer Back triggered")
+                abc80AnswerBack.forEach { inputBuffer.add(it.code) }
             } else {
-                Abc80Log.keyboard("ADM3A: onKeyEvent $char")
+                Abc80Log.keyboard("ABC80: onKeyEvent $char")
                 inputBuffer.add(char.code)
             }
         }
