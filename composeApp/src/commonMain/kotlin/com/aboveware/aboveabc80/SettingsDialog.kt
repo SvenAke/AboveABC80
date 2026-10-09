@@ -56,7 +56,6 @@ import com.aboveware.aboveabc80.printer.PrinterManager
 import com.aboveware.aboveabc80.printer.PrinterType
 import com.aboveware.aboveabc80.terminal.TerminalColor
 import com.aboveware.aboveabc80.terminal.TerminalManager
-import com.aboveware.aboveabc80.terminal.TerminalType
 import com.aboveware.aboveabc80.ui.TooltipIconButton
 import kotlin.math.roundToInt
 
@@ -132,41 +131,6 @@ fun SettingsDialog(
                         modifier = Modifier.weight(1f)
                     ) {
                         Text("Load State")
-                    }
-                }
-
-                HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
-
-                // 2. Terminal Emulation
-                Text(
-                    "Terminal Emulation",
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(vertical = 8.dp)
-                )
-
-                Column(modifier = Modifier.selectableGroup()) {
-                    TerminalType.entries.forEach { type ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(48.dp)
-                                .selectable(
-                                    selected = (TerminalManager.currentTerminalType == type),
-                                    onClick = { TerminalManager.currentTerminalType = type },
-                                    role = Role.RadioButton
-                                ),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            RadioButton(
-                                selected = (TerminalManager.currentTerminalType == type),
-                                onClick = null
-                            )
-                            Text(
-                                text = type.name,
-                                style = MaterialTheme.typography.bodyLarge,
-                                modifier = Modifier.padding(start = 16.dp)
-                            )
-                        }
                     }
                 }
 
