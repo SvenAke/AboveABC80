@@ -2,6 +2,7 @@ package com.aboveware.aboveabc80.terminal
 
 import aboveabc80.composeapp.generated.resources.Res
 import com.aboveware.aboveabc80.Abc80Log
+import com.aboveware.aboveabc80.Abc80MonitorCharacterMap
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 
 /**
@@ -97,7 +98,7 @@ object CharacterSet {
         val drcsFontBuffer = DRCSFontBuffer(data)
         val vt52CharacterSet = VT52CharacterSet(data52)
         val vt52SpecialGraphics = VT52SpecialGraphics(data52)
-        val abc80CharacterSet = ABC80CharacterSet(data2513u, data2513l)
+        val abc80CharacterSet = ABC80CharacterSet()
 
         fun all() = listOf(
             frenchCanadianCharacterSet,
@@ -1493,31 +1494,29 @@ object CharacterSet {
         }
     }
 
-    class ABC80CharacterSet(dataU: ByteArray, dataL: ByteArray) : BaseCharacterSet() {
+    @OptIn(ExperimentalUnsignedTypes::class)
+    class GlyphABC80(char: Char, private val characterMap: Abc80MonitorCharacterMap) :
+        Glyph(
+            char, columnRange80 = 0..7, columnRange132 = 0..7,
+            glyphWidth80 = 8, glyphWidth132 = 8, height = 14
+        ) {
+        override fun parse() {
+            if (parsed) return
+            characterMap.forEach(char.code) { bits, row ->
+                characterMap.forEachBit(bits.toInt()) { on, column ->
+                    data80[row][column] = on
+                    data132[row][column] = on
+                }
+            }
+            parsed = true
+        }
+    }
+
+    class ABC80CharacterSet : BaseCharacterSet() {
         init {
-            for (i in 0..127) {
-                if (i < 32) {
-                    chars[i] = Glyph2513(i.toChar(), 0, dataU, 0) // Placeholder
-                    continue
-                }
-
-                val romData: ByteArray
-                val romIndex: Int
-                val yOffset: Int
-
-                if (i in 96..127) {
-                    romData = dataL
-                    // Lower case ROM has a reversed mapping for the first 32 chars
-                    romIndex = 31 - (i and 0x1F)
-                    yOffset = 1
-                } else {
-                    romData = dataU
-                    // Upper case ROM: 0x40-0x5F at 0-31, 0x20-0x3F at 32-63
-                    romIndex = i and 0x3F
-                    yOffset = 0
-                }
-
-                chars[i] = Glyph2513(i.toChar(), romIndex * 8, romData, yOffset)
+            val characterMap = Abc80MonitorCharacterMap()
+            for (i in 0..255) {
+                chars[i] = GlyphABC80(i.toChar(), characterMap)
             }
         }
     }

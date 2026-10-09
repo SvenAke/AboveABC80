@@ -34,9 +34,11 @@ class ABC80 : Terminal {
     override val tabulator: Tabulator = Tabulator()
     override val conformanceLevel: Int = 0
 
-    override val nominalWidth: Int = 7
-    override val nominalHeight: Int = 9
-    override val dotStretch: Float = 2.0f
+    override val nominalWidth: Int = 8
+    override val nominalHeight: Int = 14
+    override val dotStretch: Float = 1.0f
+
+    private val characterSet = CharacterSet.ABC80CharacterSet()
 
     override var onBell: (() -> Unit)? = null
     override var onKeyClick: (() -> Unit)? = null
@@ -82,11 +84,7 @@ class ABC80 : Terminal {
         Abc80Log.terminal("ABC80: toggleSetup called (not implemented for ABC80)")
     }
 
-    override fun getGlyph(c: Char): CharacterSet.Glyph? = if (CharacterSet.isLoaded()) {
-        CharacterSet.characterSets.abc80CharacterSet.getGlyph(c)
-    } else {
-        CharacterSet.getGlyph(c)
-    }
+    override fun getGlyph(c: Char): CharacterSet.Glyph? = characterSet.getGlyph(c)
 
     override fun getScreenState(): ByteArray {
         val buffer = ByteArray(WIDTH * HEIGHT * 3 + 4)
