@@ -67,7 +67,7 @@ To regenerate it, install Python `fonttools` and run
 Unicode map, fixed-width metrics and every pixel outline against the source.
 
 The app bundles this font for Android and desktop, applying it to all Material
-text styles, debugger/archive text, cassette labels and Android keyboard labels.
+text styles, debugger/archive text and cassette labels.
 It does not depend on a system font installation. Characters absent from the
 original table use platform font fallback; emulator pixels remain unchanged.
 After regeneration, copy the font to both
@@ -80,12 +80,26 @@ The Upper Case key shows the red pressed-key background while held. Each press
 toggles its red LED; releasing the key leaves the LED state unchanged. This key
 does not send Escape to the emulator.
 
+Single-character keyboard legends are sized from their visible glyph bounds
+and centered on the upper key surface. Two-character keys use stacked rows;
+multi-letter function labels retain their existing sizing.
+Android key legends use the platform's light sans-serif font to resemble the
+original printed keycaps, rather than the ABC80 pixel font used elsewhere.
+Letter legends are reduced by 10%; RETURN, CTRL, SHIFT and Upper Case labels
+are bold. The minus/underscore key uses the number-4 key's font size.
+Parenthesis legends are 15% smaller without changing the digits on their keys.
+Comma/semicolon and period/colon legends retain their original glyph-bound
+sizing. Semicolon and colon are drawn separately above comma and period,
+with a gap of 8% of key height between their visible bounds.
+
 Keyboard input uses the ABC80 manual's four code columns: unshifted, Shift,
 Ctrl and Shift+Ctrl. Unshifted letters are lowercase; Shift (or Upper Case)
 selects uppercase. The special Shift+Ctrl codes for O, P, K, N and M and NUL
 are preserved. E uses corrected Shift/Ctrl codes 0x45/0x05 rather than the
 manual's apparent F-code typo. Both onscreen and host keyboards use the same
 table. Ctrl+V sends 0x16 to ABC80; use Shift+Insert to paste, preserving case.
+The top-row `<` key intentionally differs from the manual: Shift sends `>`
+(0x3E), matching its keycap; Ctrl and Shift+Ctrl still send 0x7F.
 
 ### Cassette cloud downloads
 

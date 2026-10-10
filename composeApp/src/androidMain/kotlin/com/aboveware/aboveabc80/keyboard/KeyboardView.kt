@@ -8,6 +8,7 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.PorterDuff
 import android.graphics.Rect
+import android.graphics.Typeface
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.os.Handler
@@ -300,6 +301,10 @@ class KeyboardView(
         for (key in keys) {
             paint.textAlign = Paint.Align.CENTER
             paint.typeface = mPaint.typeface
+            paint.isFakeBoldText = key.ledId == "upper_case" || listOfNotNull(
+                key.label, key.secondLabel, key.thirdLabel,
+                key.fourthLabel, key.fifthLabel, key.sixthLabel
+            ).any { it.toString().uppercase() in setOf("RETURN", "CTRL", "SHIFT") }
             paint.isUnderlineText = false
             val kbdBackground = key.keyBackground ?: keyBackground
             kbdBackground?.let {
@@ -334,6 +339,18 @@ class KeyboardView(
         }
 
         val effectiveFontSize = if (height > 0) height / 30f * 1.4f else 28f
+
+        val characterLabels = listOfNotNull(
+            key.secondLabel, key.thirdLabel, key.label,
+            key.fourthLabel, key.fifthLabel, key.sixthLabel
+        ).filter { it.isNotBlank() }
+        if (characterLabels.isNotEmpty() &&
+            characterLabels.all { it.length == 1 } &&
+            key.icon == null && key.secondKeyIcon == null && key.fourthKeyIcon == null
+        ) {
+            drawCharacterLabels(characterLabels, key, canvas, paint)
+            return
+        }
 
         // Special case: Standalone Icon (e.g. Backspace, Arrows)
         // If there are no meaningful text labels, center the icon perfectly on the key.
@@ -584,6 +601,75 @@ class KeyboardView(
         val middleSrc = Rect(sideSrcWidth, 0, bw - sideSrcWidth, bh)
         val middleDest = Rect(sideDestWidth, 0, key.width - sideDestWidth, key.height)
         canvas.drawBitmap(bitmap, middleSrc, middleDest, null)
+    }
+
+    private fun drawCharacterLabels(
+        labels: List<CharSequence>,
+        key: KeyboardViewController.Key,
+        canvas: Canvas,
+        paint: Paint
+    ) {
+        val surfaceTop = key.height * 0.06f
+        val surfaceHeight = key.height * 0.58f
+        val rowHeight = surfaceHeight / labels.size
+        val bounds = Rect()
+        paint.color = Color.BLACK
+        paint.textAlign = Paint.Align.LEFT
+        paint.textScaleX = 1f
+        paint.isUnderlineText = false
+        paint.textSize = 100f
+        val number = key.codes.removePrefix("abc80:").toIntOrNull()
+        val separatePunctuation = key.codes == "abc80:63" || key.codes == "abc80:64"
+        val referenceKey = if (key.codes.startsWith("abc80:") &&
+            (number in 1..11 || number == 13 || number == 65)
+        ) {
+            keyboardViewController.keys.firstOrNull { it.codes == "abc80:4" }
+        } else null
+        val sizingLabels = if (referenceKey != null) {
+            listOfNotNull(referenceKey.label, referenceKey.secondLabel)
+                .filter { it.isNotBlank() }
+        } else labels
+        val measurements = sizingLabels.map { label ->
+            paint.getTextBounds(label.toString(), 0, label.length, bounds)
+            Rect(bounds)
+        }
+        val maxWidth = measurements.maxOf { it.width() }.coerceAtLeast(1)
+        val maxHeight = measurements.maxOf { it.height() }.coerceAtLeast(1)
+        paint.textSize = 100f * min(
+            (referenceKey?.width ?: key.width) * 0.55f / maxWidth,
+            (if (referenceKey != null) referenceKey.height * 0.58f / sizingLabels.size else rowHeight) *
+                0.78f / maxHeight
+        )
+        if (labels.all { it.length == 1 && it[0].isLetter() }) {
+            paint.textSize *= 0.9f
+        }
+        if (separatePunctuation) {
+            val orderedLabels = if (key.codes == "abc80:63") listOf(";", ",") else listOf(":", ".")
+            val glyphBounds = orderedLabels.map { label ->
+                paint.getTextBounds(label, 0, label.length, bounds)
+                Rect(bounds)
+            }
+            val gap = key.height * 0.08f
+            val groupHeight = glyphBounds.sumOf { it.height() } + gap
+            var top = surfaceTop + (surfaceHeight - groupHeight) / 2f
+            orderedLabels.forEachIndexed { index, label ->
+                val glyph = glyphBounds[index]
+                val x = (key.width - glyph.width()) / 2f - glyph.left
+                canvas.drawText(label, x, top - glyph.top, paint)
+                top += glyph.height() + gap
+            }
+            return
+        }
+        val baseTextSize = paint.textSize
+        labels.forEachIndexed { index, label ->
+            val text = label.toString()
+            paint.textSize = if (text == "(" || text == ")") baseTextSize * 0.85f else baseTextSize
+            paint.getTextBounds(text, 0, text.length, bounds)
+            val x = (key.width - bounds.width()) / 2f - bounds.left
+            val y = surfaceTop + index * rowHeight +
+                (rowHeight - bounds.height()) / 2f - bounds.top
+            canvas.drawText(text, x, y, paint)
+        }
     }
 
     private fun computeRequiredVerticalUnits(key: KeyboardViewController.Key): Float {
@@ -1095,9 +1181,7 @@ class KeyboardView(
             attributes.getFloat(R.styleable.KeyboardView_backgroundDimAmount, 0.5f)
         attributes.recycle()
         mPaint = Paint()
-        mPaint.typeface = requireNotNull(ResourcesCompat.getFont(context, R.font.abc80)) {
-            "Bundled ABC80 font could not be loaded"
-        }
+        mPaint.typeface = Typeface.create("sans-serif-light", Typeface.NORMAL)
         mPaint.isAntiAlias = true
         mPaint.textSize = keyTextSize.toFloat()
         mPaint.textAlign = Paint.Align.CENTER

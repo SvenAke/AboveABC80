@@ -39,7 +39,7 @@ class ABC80KeyboardTest {
             10 30 3D 30 3D
             11 2B 3F 2B 3F
             12 60 40 00 00
-            13 3C 7F 7F 7F
+            13 3C 3E 7F 7F
             20 71 51 11 11
             21 77 57 17 17
             22 65 45 05 05
@@ -94,6 +94,9 @@ class ABC80KeyboardTest {
 
     @Test
     fun physicalKeysUseTheFourHardwareModes() {
+        assertEquals(0x3C, abc80KeyCode(Key.Unknown, '<', false))
+        assertEquals(0x3E, abc80KeyCode(Key.Unknown, '>', true))
+        assertEquals(0x7F, abc80KeyCode(Key.Unknown, '>', true, true))
         assertEquals(0x61, abc80KeyCode(Key.A, 'a', false))
         assertEquals(0x41, abc80KeyCode(Key.A, 'A', true))
         assertEquals(0x01, abc80KeyCode(Key.A, '\u0001', false, true))
