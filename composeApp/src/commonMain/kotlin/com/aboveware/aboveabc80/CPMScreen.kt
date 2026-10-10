@@ -1260,8 +1260,8 @@ private fun handleTerminalKeyEvent(
         }
     }
 
-    // Check for paste shortcut (Ctrl+V or Shift+Insert)
-    if (type == KeyEventType.KeyDown && ((isCtrl && key == Key.V) || (isShift && key == Key.Insert))) {
+    // Ctrl+V belongs to the ABC80 keyboard; use Shift+Insert for paste.
+    if (type == KeyEventType.KeyDown && isShift && key == Key.Insert) {
         clipboardManager.getText()?.text?.let { text ->
             val activeTerminal = TerminalManager.activeTerminal
             val sanitized = text.replace("\r\n", "\r").replace("\n", "\r")
@@ -1276,8 +1276,8 @@ private fun handleTerminalKeyEvent(
     }
 
     if (!activeTerminal.isSetupVisible) {
-        val mapped = abc80KeyCode(key, charValue, isShift)
-        val code = if (isCtrl && mapped != null) mapped and 0x1f else mapped
+        val upperCase = activeTerminal.keyboard.leds["upper_case"]?.isOn == true
+        val code = abc80KeyCode(key, charValue, isShift || upperCase, isCtrl)
         if (code != null) {
             if (type == KeyEventType.KeyDown) {
                 pressedKeys[key] = code

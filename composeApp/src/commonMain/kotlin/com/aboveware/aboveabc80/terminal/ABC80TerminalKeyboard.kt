@@ -2,10 +2,13 @@ package com.aboveware.aboveabc80.terminal
 
 import androidx.compose.ui.input.key.Key
 import com.aboveware.aboveabc80.Abc80Log
+import com.aboveware.aboveabc80.abc80TableCode
 import com.aboveware.aboveabc80.keyboard.KeyboardLed
 import androidx.compose.runtime.mutableStateMapOf
 
 class ABC80TerminalKeyboard(private val terminal: Terminal) : TerminalKeyboard {
+    private var shift = false
+    private var control = false
     override val leds = mutableStateMapOf("upper_case" to KeyboardLed("upper_case"))
 
     override fun setLed(index: Int, on: Boolean) {
@@ -25,6 +28,22 @@ class ABC80TerminalKeyboard(private val terminal: Terminal) : TerminalKeyboard {
         sixthLabel: String?
     ) {
         Abc80Log.keyboard("ABC80TerminalKeyboard: handleKeyEvent codes='$codes' label='$label'")
+        when (codes) {
+            "0,0" -> { shift = true; return }
+            "7,1" -> { control = true; return }
+        }
+        if (codes.startsWith("abc80:")) {
+            val number = codes.removePrefix("abc80:").toIntOrNull()
+            val code = number?.let {
+                abc80TableCode(it, shift || leds.getValue("upper_case").isOn, control)
+            }
+            if (code == null) {
+                Abc80Log.wtf("Unknown ABC80 keyboard key: $codes")
+                return
+            }
+            terminal.onKeyEvent(code.toChar())
+            return
+        }
         if (codes.isNotEmpty() && !codes.contains(",")) {
             codes.toIntOrNull()?.let { ascii ->
                 terminal.onKeyEvent(ascii.toChar())
@@ -34,6 +53,10 @@ class ABC80TerminalKeyboard(private val terminal: Terminal) : TerminalKeyboard {
     }
 
     override fun handleKeyRelease(codes: String) {
+        when (codes) {
+            "0,0" -> shift = false
+            "7,1" -> control = false
+        }
     }
 
     override fun handlePhysicalKeyEvent(
@@ -72,8 +95,7 @@ class ABC80TerminalKeyboard(private val terminal: Terminal) : TerminalKeyboard {
     }
 
     override fun transformChar(c: Char, isShiftActive: Boolean): Char {
-        val useShift = if (c.isLetter()) isShiftActive xor true else isShiftActive
-        return if (useShift) c.uppercaseChar() else c.lowercaseChar()
+        return if (isShiftActive || leds.getValue("upper_case").isOn) c.uppercaseChar() else c.lowercaseChar()
     }
 
     override fun stopRepeating() {

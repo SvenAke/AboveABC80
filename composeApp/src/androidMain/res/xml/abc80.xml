@@ -5,54 +5,54 @@
     app:keyWidth="7%p">
     <Row app:initialIndent="5%p">
         <Key
-            app:codes="49"
+            app:codes="abc80:1"
             app:keyLabel="!"
             app:secondKeyLabel="1" />
         <Key
-            app:codes="50"
+            app:codes="abc80:2"
             app:keyLabel="&quot;"
             app:secondKeyLabel="2" />
         <Key
-            app:codes="51"
+            app:codes="abc80:3"
             app:keyLabel="#"
             app:secondKeyLabel="3" />
         <Key
-            app:codes="52"
+            app:codes="abc80:4"
             app:keyLabel="¤"
             app:secondKeyLabel="4" />
         <Key
-            app:codes="53"
+            app:codes="abc80:5"
             app:keyLabel="%"
             app:secondKeyLabel="5" />
         <Key
-            app:codes="54"
+            app:codes="abc80:6"
             app:keyLabel="&amp;"
             app:secondKeyLabel="6" />
         <Key
-            app:codes="55"
+            app:codes="abc80:7"
             app:keyLabel="/"
             app:secondKeyLabel="7" />
         <Key
-            app:codes="56"
+            app:codes="abc80:8"
             app:keyLabel="("
             app:secondKeyLabel="8" />
         <Key
-            app:codes="57"
+            app:codes="abc80:9"
             app:keyLabel=")"
             app:secondKeyLabel="9" />
         <Key
-            app:codes="48"
+            app:codes="abc80:10"
             app:keyLabel="="
             app:secondKeyLabel="0" />
         <Key
-            app:codes="58"
+            app:codes="abc80:11"
             app:keyLabel="\?"
             app:secondKeyLabel="+" />
         <Key
-            app:codes="45"
+            app:codes="abc80:12"
             app:keyLabel="É"/>
         <Key
-            app:codes="45"
+            app:codes="abc80:13"
             app:keyLabel="&gt;"
             app:secondKeyLabel="&lt;" />
     </Row>
@@ -65,43 +65,43 @@
             app:keyLedId="upper_case"
             app:ledColor="#FFFF0000" />
         <Key
-            app:codes="81"
+            app:codes="abc80:20"
             app:keyLabel="Q" />
         <Key
-            app:codes="87"
+            app:codes="abc80:21"
             app:keyLabel="W" />
         <Key
-            app:codes="69"
+            app:codes="abc80:22"
             app:keyLabel="E" />
         <Key
-            app:codes="82"
+            app:codes="abc80:23"
             app:keyLabel="R" />
         <Key
-            app:codes="84"
+            app:codes="abc80:24"
             app:keyLabel="T" />
         <Key
-            app:codes="89"
+            app:codes="abc80:25"
             app:keyLabel="Y" />
         <Key
-            app:codes="85"
+            app:codes="abc80:26"
             app:keyLabel="U" />
         <Key
-            app:codes="73"
+            app:codes="abc80:27"
             app:keyLabel="I" />
         <Key
-            app:codes="79"
+            app:codes="abc80:28"
             app:keyLabel="O" />
         <Key
-            app:codes="80"
+            app:codes="abc80:29"
             app:keyLabel="P" />
         <Key
-            app:codes="10"
+            app:codes="abc80:30"
             app:keyLabel="Å" />
         <Key
-            app:codes="5"
+            app:codes="abc80:31"
             app:keyLabel="Ü" />
         <Key
-            app:codes="13"
+            app:codes="abc80:32"
             app:keyCustomBitmap="@drawable/red_key"
             app:keyLabel="RETURN"
             app:keyWidth="10.7%p" />
@@ -113,44 +113,44 @@
             app:keyBackground="@drawable/red_key"
             app:keyLabel="CTRL" />
         <Key
-            app:codes="65"
+            app:codes="abc80:38"
             app:keyLabel="A" />
         <Key
-            app:codes="83"
+            app:codes="abc80:39"
             app:keyLabel="S" />
         <Key
-            app:codes="68"
+            app:codes="abc80:40"
             app:keyLabel="D" />
         <Key
-            app:codes="70"
+            app:codes="abc80:41"
             app:keyLabel="F" />
         <Key
-            app:codes="71"
+            app:codes="abc80:42"
             app:keyLabel="G" />
         <Key
-            app:codes="72"
+            app:codes="abc80:43"
             app:sixthKeyLabel="H" />
         <Key
-            app:codes="74"
+            app:codes="abc80:44"
             app:sixthKeyLabel="J" />
         <Key
-            app:codes="75"
+            app:codes="abc80:45"
             app:sixthKeyLabel="K" />
         <Key
-            app:codes="76"
+            app:codes="abc80:46"
             app:sixthKeyLabel="L" />
         <Key
-            app:codes="59"
+            app:codes="abc80:47"
             app:sixthKeyLabel="Ö" />
         <Key
-            app:codes="93"
+            app:codes="abc80:48"
             app:sixthKeyLabel="Ä" />
         <Key
-            app:codes="93"
+            app:codes="abc80:49"
             app:keyLabel="*"
             app:secondKeyLabel="'" />
         <Key
-            app:codes="127"
+            app:codes="abc80:50"
             app:keyBackground="@drawable/red_key"
             app:keyIcon="@drawable/arrow_left"/>
     </Row>
@@ -163,38 +163,38 @@
             app:keyLabel="SHIFT"
             app:keyWidth="10.7%p" />
         <Key
-            app:codes="90"
+            app:codes="abc80:56"
             app:keyLabel="Z" />
         <Key
-            app:codes="88"
+            app:codes="abc80:57"
             app:keyLabel="X" />
         <Key
-            app:codes="67"
+            app:codes="abc80:58"
             app:keyLabel="C" />
         <Key
-            app:codes="86"
+            app:codes="abc80:59"
             app:keyLabel="V" />
         <Key
-            app:codes="66"
+            app:codes="abc80:60"
             app:keyLabel="B" />
         <Key
-            app:codes="78"
+            app:codes="abc80:61"
             app:keyLabel="N" />
         <Key
-            app:codes="77"
+            app:codes="abc80:62"
             app:keyLabel="M" />
         <Key
-            app:codes="44"
+            app:codes="abc80:63"
             app:keyLabel=";"
             app:secondKeyLabel="," />
         <Key
-            app:codes="46"
+            app:codes="abc80:64"
             app:keyLabel=":"
             app:secondKeyLabel="." />
         <Key
-            app:codes="47"
-            app:keyLabel="-"
-            app:secondKeyLabel="_" />
+            app:codes="abc80:65"
+            app:keyLabel="_"
+            app:secondKeyLabel="-" />
         <Key
             app:codes="0,0"
             app:isSticky="true"
@@ -203,15 +203,14 @@
             app:keyLabel="SHIFT"
             app:keyWidth="10.7%p" />
         <Key
-            app:codes="-1"
-            app:isSticky="true"
+            app:codes="abc80:67"
             app:keyBackground="@drawable/red_key"
             app:keyIcon="@drawable/arrow_right"/>
     </Row>
     <Row>
         <Key
-            app:codes="32"
-            app:keyAttachTo="88"
+            app:codes="abc80:74"
+            app:keyAttachTo="abc80:57"
             app:keyCustomBitmap="@drawable/abc80_key"
             app:keyLabel=" "
             app:keyWidth="55%p" />

@@ -80,6 +80,13 @@ The Upper Case key shows the red pressed-key background while held. Each press
 toggles its red LED; releasing the key leaves the LED state unchanged. This key
 does not send Escape to the emulator.
 
+Keyboard input uses the ABC80 manual's four code columns: unshifted, Shift,
+Ctrl and Shift+Ctrl. Unshifted letters are lowercase; Shift (or Upper Case)
+selects uppercase. The special Shift+Ctrl codes for O, P, K, N and M and NUL
+are preserved. E uses corrected Shift/Ctrl codes 0x45/0x05 rather than the
+manual's apparent F-code typo. Both onscreen and host keyboards use the same
+table. Ctrl+V sends 0x16 to ABC80; use Shift+Insert to paste, preserving case.
+
 ### Cassette cloud downloads
 
 Downloading files from the cloud in the cassette dialog saves all selected files

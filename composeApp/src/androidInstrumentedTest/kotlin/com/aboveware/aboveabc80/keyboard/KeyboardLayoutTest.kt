@@ -11,6 +11,7 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.aboveware.aboveabc80.R
+import com.aboveware.aboveabc80.abc80KeyTable
 import com.aboveware.aboveabc80.setAndroidContext
 import com.aboveware.aboveabc80.terminal.ABC80TerminalKeyboard
 import com.aboveware.aboveabc80.terminal.CharacterSet
@@ -80,6 +81,40 @@ class KeyboardLayoutTest {
         override fun getGlyph(c: Char): CharacterSet.Glyph? = null
         override fun getScreenState(): ByteArray = byteArrayOf()
         override fun setScreenState(data: ByteArray) {}
+    }
+
+    @Test
+    fun abc80LayoutDeliversAllFourCodeColumns() {
+        val terminal = MockTerminal()
+        val terminalKeyboard = ABC80TerminalKeyboard(terminal)
+        val keyboard = Keyboard().apply {
+            onKeyCodes = terminalKeyboard::handleKeyEvent
+            onKeyUpCodes = terminalKeyboard::handleKeyRelease
+        }
+        val layout = KeyboardViewController(context, R.xml.abc80)
+        val shift = layout.keys.first { it.codes == "0,0" }
+        val control = layout.keys.single { it.codes == "7,1" }
+        val keys = layout.keys.filter { it.codes.startsWith("abc80:") }
+        assertEquals(abc80KeyTable.keys - 66, keys.map { it.codes.substringAfter(":").toInt() }.toSet())
+        for (key in keys) {
+            val codes = abc80KeyTable.getValue(key.codes.substringAfter(":").toInt())
+            for ((isShift, isControl, expected) in listOf(
+                Triple(false, false, codes.unshifted),
+                Triple(true, false, codes.shifted),
+                Triple(false, true, codes.controlled),
+                Triple(true, true, codes.shiftControlled)
+            )) {
+                if (isShift) layout.handleKeyPress(keyboard, shift)
+                if (isControl) layout.handleKeyPress(keyboard, control)
+                val previous = terminal.sentChars.size
+                layout.handleKeyPress(keyboard, key)
+                assertEquals(previous + 1, terminal.sentChars.size)
+                assertEquals(expected, terminal.sentChars.last().code, "key=${key.codes}")
+                layout.handleKeyRelease(keyboard, key)
+                keyboard.onKeyUp(shift.codes)
+                keyboard.onKeyUp(control.codes)
+            }
+        }
     }
 
     @Test
