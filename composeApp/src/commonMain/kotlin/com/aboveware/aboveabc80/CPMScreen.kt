@@ -10,7 +10,7 @@
  */
 package com.aboveware.aboveabc80
 
-import aboveabc80.composeapp.generated.resources.Res
+import aboveabc80.composeapp.generated.resources.*
 import aboveabc80.composeapp.generated.resources.cassette_title
 import aboveabc80.composeapp.generated.resources.cpu_label
 import aboveabc80.composeapp.generated.resources.fps_label
@@ -541,7 +541,11 @@ fun CPMScreen(startWithStorageOpen: Boolean = false) {
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp)
                         ) {
                             Text(
-                                text = if (isFastSpeedMode) "FAST " else stringResource(Res.string.cpu_label),
+                                text = if (isFastSpeedMode) {
+                                    stringResource(Res.string.menu_fast_mode)
+                                } else {
+                                    stringResource(Res.string.cpu_label)
+                                },
                                 color = Color.Red.copy(alpha = 0.7f),
                                 fontWeight = FontWeight.Bold,
                                 style = MaterialTheme.typography.labelSmall,
@@ -620,7 +624,7 @@ fun CPMScreen(startWithStorageOpen: Boolean = false) {
 
                                 Icon(
                                     imageVector = Icons.Default.Save,
-                                    contentDescription = "Disks",
+                                    contentDescription = stringResource(Res.string.menu_disks_accessibility),
                                     tint = if (isBlinking) Color.Red else Color.Black.copy(alpha = 0.7f),
                                     modifier = Modifier.size(16.dp)
                                 )
@@ -740,7 +744,7 @@ fun CPMScreen(startWithStorageOpen: Boolean = false) {
                                         modifier = Modifier.padding(end = 12.dp)
                                     ) {
                                         Text(
-                                            "Restart",
+                                            stringResource(Res.string.menu_restart),
                                             modifier = Modifier.padding(
                                                 horizontal = 8.dp,
                                                 vertical = 4.dp
@@ -759,7 +763,7 @@ fun CPMScreen(startWithStorageOpen: Boolean = false) {
                                     ) {
                                         Icon(
                                             Icons.Default.Replay,
-                                            contentDescription = "Restart"
+                                            contentDescription = stringResource(Res.string.menu_restart)
                                         )
                                     }
                                 }
@@ -776,7 +780,7 @@ fun CPMScreen(startWithStorageOpen: Boolean = false) {
                                         modifier = Modifier.padding(end = 12.dp)
                                     ) {
                                         Text(
-                                            "Settings",
+                                            stringResource(Res.string.menu_settings),
                                             modifier = Modifier.padding(
                                                 horizontal = 8.dp,
                                                 vertical = 4.dp
@@ -794,7 +798,7 @@ fun CPMScreen(startWithStorageOpen: Boolean = false) {
                                     ) {
                                         Icon(
                                             Icons.Default.Settings,
-                                            contentDescription = "Settings"
+                                            contentDescription = stringResource(Res.string.menu_settings)
                                         )
                                     }
                                 }
@@ -811,7 +815,7 @@ fun CPMScreen(startWithStorageOpen: Boolean = false) {
                                         modifier = Modifier.padding(end = 12.dp)
                                     ) {
                                         Text(
-                                            "Paste",
+                                            stringResource(Res.string.menu_paste),
                                             modifier = Modifier.padding(
                                                 horizontal = 8.dp,
                                                 vertical = 4.dp
@@ -840,7 +844,7 @@ fun CPMScreen(startWithStorageOpen: Boolean = false) {
                                     ) {
                                         Icon(
                                             Icons.Default.ContentPaste,
-                                            contentDescription = "Paste to Terminal"
+                                            contentDescription = stringResource(Res.string.menu_paste_terminal)
                                         )
                                     }
                                 }
@@ -857,7 +861,7 @@ fun CPMScreen(startWithStorageOpen: Boolean = false) {
                                         modifier = Modifier.padding(end = 12.dp)
                                     ) {
                                         Text(
-                                            "Floppies...",
+                                            stringResource(Res.string.menu_disks),
                                             modifier = Modifier.padding(
                                                 horizontal = 8.dp,
                                                 vertical = 4.dp
@@ -877,7 +881,7 @@ fun CPMScreen(startWithStorageOpen: Boolean = false) {
 
 
                                             Icons.Default.Storage,
-                                            contentDescription = "Disk Manager"
+                                            contentDescription = stringResource(Res.string.disk_manager_title)
                                         )
                                     }
                                 }
@@ -929,7 +933,7 @@ fun CPMScreen(startWithStorageOpen: Boolean = false) {
                                                 modifier = Modifier.padding(end = 12.dp)
                                             ) {
                                                 Text(
-                                                    "Character set",
+                                                    stringResource(Res.string.menu_character_set),
                                                     modifier = Modifier.padding(
                                                         horizontal = 8.dp,
                                                         vertical = 4.dp
@@ -947,7 +951,7 @@ fun CPMScreen(startWithStorageOpen: Boolean = false) {
                                             ) {
                                                 Icon(
                                                     Icons.Default.Science,
-                                                    contentDescription = "Character set"
+                                                    contentDescription = stringResource(Res.string.menu_character_set)
                                                 )
                                             }
                                         }
@@ -963,7 +967,7 @@ fun CPMScreen(startWithStorageOpen: Boolean = false) {
                                                 modifier = Modifier.padding(end = 12.dp)
                                             ) {
                                                 Text(
-                                                    "Debugger",
+                                                    stringResource(Res.string.menu_debugger),
                                                     modifier = Modifier.padding(
                                                         horizontal = 8.dp,
                                                         vertical = 4.dp
@@ -981,7 +985,7 @@ fun CPMScreen(startWithStorageOpen: Boolean = false) {
                                             ) {
                                                 Icon(
                                                     Icons.Default.BugReport,
-                                                    contentDescription = "Debugger"
+                                                    contentDescription = stringResource(Res.string.menu_debugger)
                                                 )
                                             }
                                         }
@@ -1001,7 +1005,7 @@ fun CPMScreen(startWithStorageOpen: Boolean = false) {
                                             modifier = Modifier.padding(end = 12.dp)
                                         ) {
                                             Text(
-                                                "Test",
+                                                stringResource(Res.string.menu_test),
                                                 modifier = Modifier.padding(
                                                     horizontal = 8.dp,
                                                     vertical = 4.dp
@@ -1018,7 +1022,7 @@ fun CPMScreen(startWithStorageOpen: Boolean = false) {
                                         ) {
                                             Icon(
                                                 if (speedDialTestOpen) Icons.Default.ExpandMore else Icons.Default.Science,
-                                                contentDescription = "Test"
+                                                contentDescription = stringResource(Res.string.menu_test)
                                             )
                                         }
                                     }
@@ -1110,7 +1114,7 @@ fun CPMScreen(startWithStorageOpen: Boolean = false) {
     if (showTapeStorageDialog) {
         LocalFileDialog(
             folder = "puncher",
-            title = "Load Paper Tape",
+            title = stringResource(Res.string.load_paper_tape),
             onDismiss = {
                 showTapeStorageDialog = false
                 TapeController.instance.isWaitingForTape = false // Stop blocking if cancelled
@@ -1150,14 +1154,14 @@ fun FontSelectionDialog(onDismiss: () -> Unit, onFontSelected: (String) -> Unit)
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Select Font") },
+        title = { Text(stringResource(Res.string.font_select_title)) },
         text = {
             Column {
                 TextButton(
                     onClick = { onFontSelected("DEFAULT") },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Standard ASCII")
+                    Text(stringResource(Res.string.font_standard_ascii))
                 }
                 HorizontalDivider()
                 fonts.forEach { font ->
@@ -1171,7 +1175,7 @@ fun FontSelectionDialog(onDismiss: () -> Unit, onFontSelected: (String) -> Unit)
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) { Text(stringResource(Res.string.ui_cancel)) }
         }
     )
 }

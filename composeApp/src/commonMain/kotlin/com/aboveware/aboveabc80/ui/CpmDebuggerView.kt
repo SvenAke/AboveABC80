@@ -1,5 +1,6 @@
 package com.aboveware.aboveabc80.ui
 
+import aboveabc80.composeapp.generated.resources.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -38,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.aboveware.aboveabc80.core.CpmDebugger
 import com.aboveware.aboveabc80.toHex
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun CpmDebuggerView(modifier: Modifier = Modifier) {
@@ -72,7 +74,10 @@ fun CpmDebuggerView(modifier: Modifier = Modifier) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "CP/M Debugger (PC: ${debugger.currentPc.toHex()})",
+                    text = stringResource(
+                        Res.string.debugger_title,
+                        debugger.currentPc.toHex()
+                    ),
                     style = MaterialTheme.typography.titleSmall,
                     modifier = Modifier.weight(1f)
                 )
@@ -80,7 +85,13 @@ fun CpmDebuggerView(modifier: Modifier = Modifier) {
                 IconButton(onClick = { debugger.togglePause() }) {
                     Icon(
                         imageVector = if (debugger.isPaused) Icons.Default.PlayArrow else Icons.Default.Pause,
-                        contentDescription = "Pause/Resume",
+                        contentDescription = stringResource(
+                            if (debugger.isPaused) {
+                                Res.string.debugger_resume
+                            } else {
+                                Res.string.debugger_pause
+                            }
+                        ),
                     )
                 }
 
@@ -90,7 +101,7 @@ fun CpmDebuggerView(modifier: Modifier = Modifier) {
                 ) {
                     Icon(
                         imageVector = Icons.Default.SkipNext,
-                        contentDescription = "Step"
+                        contentDescription = stringResource(Res.string.debugger_step)
                     )
                 }
             }

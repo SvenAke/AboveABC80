@@ -1,6 +1,6 @@
 package com.aboveware.aboveabc80.ui
 
-import aboveabc80.composeapp.generated.resources.Res
+import aboveabc80.composeapp.generated.resources.*
 import aboveabc80.composeapp.generated.resources.disk_list_contents
 import aboveabc80.composeapp.generated.resources.disk_export_pc
 import aboveabc80.composeapp.generated.resources.disk_import_cloud
@@ -84,6 +84,7 @@ fun DiskManagerDialog(
     val exportPcLabel = stringResource(Res.string.disk_export_pc)
     val importCloudLabel = stringResource(Res.string.disk_import_cloud)
     val deleteLabel = stringResource(Res.string.disk_delete)
+    val copyFailedMessage = stringResource(Res.string.disk_copy_failed)
     var selectedDriveIndex by remember { mutableStateOf<Int?>(null) }
     var showNewDiskDialog by remember { mutableStateOf(false) }
     var showCloudImportDialog by remember { mutableStateOf(false) }
@@ -143,8 +144,8 @@ fun DiskManagerDialog(
             title = { Text(diskName.substringBeforeLast(".")) },
             text = {
                 when {
-                    files == null -> Text("Unrecognized disk image")
-                    files.isEmpty() -> Text("No files")
+                    files == null -> Text(stringResource(Res.string.disk_unrecognized_image))
+                    files.isEmpty() -> Text(stringResource(Res.string.disk_no_files))
                     else -> LazyColumn(modifier = Modifier.sizeIn(maxHeight = 400.dp)) {
                         items(files) { (name, size) ->
                             ListItem(
@@ -155,13 +156,17 @@ fun DiskManagerDialog(
                     }
                 }
             },
-            confirmButton = { TextButton(onClick = { listing = null }) { Text("Close") } }
+            confirmButton = {
+                TextButton(onClick = { listing = null }) {
+                    Text(stringResource(Res.string.ui_close))
+                }
+            }
         )
     }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Disk Manager") },
+        title = { Text(stringResource(Res.string.disk_manager_title)) },
         text = {
             Box(modifier = Modifier.sizeIn(minHeight = 300.dp, maxHeight = 500.dp).fillMaxWidth()) {
                 if (selectedDriveIndex == null) {
@@ -176,7 +181,7 @@ fun DiskManagerDialog(
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Text(
                                             text = mounted?.name?.substringBeforeLast(".")
-                                                ?: "None",
+                                                ?: stringResource(Res.string.storage_no_disk),
                                             style = MaterialTheme.typography.bodyMedium,
                                             fontWeight = FontWeight.Bold,
                                             color = if (mounted != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
@@ -249,7 +254,7 @@ fun DiskManagerDialog(
 
                     Column {
                         Text(
-                            text = "Select Disk for Drive $driveLetter",
+                            text = stringResource(Res.string.disk_select_for_drive, driveLetter),
                             style = MaterialTheme.typography.titleMedium,
                             modifier = Modifier.padding(bottom = 8.dp)
                         )
@@ -259,7 +264,7 @@ fun DiskManagerDialog(
                                 ListItem(
                                     headlineContent = {
                                         Text(
-                                            "New disk...",
+                                            stringResource(Res.string.disk_new),
                                             color = MaterialTheme.colorScheme.primary
                                         )
                                     },
@@ -293,7 +298,10 @@ fun DiskManagerDialog(
                                     supportingContent = if (isMountedElsewhere) {
                                         {
                                             Text(
-                                                "Mounted on ${('A' + mountedOnIndex)}",
+                                                stringResource(
+                                                    Res.string.disk_mounted_on,
+                                                    ('A' + mountedOnIndex).toString()
+                                                ),
                                                 color = MaterialTheme.colorScheme.error
                                             )
                                         }
@@ -349,7 +357,9 @@ fun DiskManagerDialog(
 
                             item {
                                 ListItem(
-                                    headlineContent = { Text("Unmount") },
+                                    headlineContent = {
+                                        Text(stringResource(Res.string.disk_unmount))
+                                    },
                                     modifier = Modifier.clickable {
                                         controller.clearDrive(driveIndex)
                                         setPersistedString("drive_$driveIndex", "")
@@ -369,13 +379,13 @@ fun DiskManagerDialog(
             ) {
                 if (selectedDriveIndex != null) {
                     TextButton(onClick = { selectedDriveIndex = null }) {
-                        Text("Back")
+                        Text(stringResource(Res.string.ui_back))
                     }
                 } else {
                     Spacer(modifier = Modifier.width(1.dp))
                 }
                 TextButton(onClick = onDismiss) {
-                    Text("Close")
+                    Text(stringResource(Res.string.ui_close))
                 }
             }
         }
@@ -417,7 +427,8 @@ fun DiskManagerDialog(
             }
             Abc80Log.terminal("Successfully injected $fullName into drive ${'A' + driveIndex}")
         } else {
-            errorMessage = "Failed to copy $fullName. The disk may be full."
+            Abc80Log.wtf("Failed to copy $fullName. The disk may be full.")
+            errorMessage = copyFailedMessage
         }
     }
 
@@ -543,7 +554,7 @@ fun DiskManagerDialog(
             onDismissRequest = { errorMessage = null },
             title = {
                 Text(
-                    "Error",
+                    stringResource(Res.string.ui_error),
                     fontWeight = FontWeight.Bold
                 )
             },
@@ -551,7 +562,7 @@ fun DiskManagerDialog(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         imageVector = Icons.Default.Error,
-                        contentDescription = "Error",
+                        contentDescription = stringResource(Res.string.ui_error),
                         tint = MaterialTheme.colorScheme.error
                     )
                     Spacer(modifier = Modifier.width(8.dp))
@@ -560,7 +571,7 @@ fun DiskManagerDialog(
             },
             confirmButton = {
                 TextButton(onClick = { errorMessage = null }) {
-                    Text("OK")
+                    Text(stringResource(Res.string.ui_ok))
                 }
             }
         )
@@ -569,8 +580,15 @@ fun DiskManagerDialog(
     exportPending?.let { pending ->
         AlertDialog(
             onDismissRequest = { exportPending = null },
-            title = { Text("Export Folder Already Exists") },
-            text = { Text("The folder '${pending.floppyName}' already exists in the target directory. What would you like to do?") },
+            title = { Text(stringResource(Res.string.disk_export_exists_title)) },
+            text = {
+                Text(
+                    stringResource(
+                        Res.string.disk_export_exists_message,
+                        pending.floppyName
+                    )
+                )
+            },
             confirmButton = {
                 Button(
                     onClick = {
@@ -578,7 +596,7 @@ fun DiskManagerDialog(
                         exportPending = null
                     }
                 ) {
-                    Text("Delete Old & Export")
+                    Text(stringResource(Res.string.disk_export_delete_old))
                 }
             },
             dismissButton = {
@@ -588,7 +606,7 @@ fun DiskManagerDialog(
                         exportPending = null
                     }
                 ) {
-                    Text("Overwrite/Merge")
+                    Text(stringResource(Res.string.disk_export_merge))
                 }
             }
         )
@@ -626,11 +644,14 @@ fun NewDiskDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("New Disk") },
+        title = { Text(stringResource(Res.string.disk_new_title)) },
         text = {
             Column {
-                Text("Disk type:", style = MaterialTheme.typography.labelSmall)
-                listOf(true to "System disk (160 kB)", false to "Empty disk").forEach { (isSystem, label) ->
+                Text(stringResource(Res.string.storage_disk_type), style = MaterialTheme.typography.labelSmall)
+                listOf(
+                    true to stringResource(Res.string.storage_system_disk),
+                    false to stringResource(Res.string.storage_empty_disk)
+                ).forEach { (isSystem, label) ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -642,7 +663,9 @@ fun NewDiskDialog(
                         Text(label, modifier = Modifier.padding(start = 8.dp))
                     }
                 }
-                if (!systemDisk) Text("Format:", style = MaterialTheme.typography.labelSmall)
+                if (!systemDisk) {
+                    Text(stringResource(Res.string.storage_format), style = MaterialTheme.typography.labelSmall)
+                }
                 if (!systemDisk) templates.forEach { (template, label) ->
                     Row(
                         modifier = Modifier
@@ -670,7 +693,7 @@ fun NewDiskDialog(
                         val filtered = input.uppercase().filter { it in 'A'..'Z' }.take(8)
                         newName = filtered
                     },
-                    label = { Text("Name (max 8 chars A-Z)") },
+                    label = { Text(stringResource(Res.string.disk_name_label)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -690,12 +713,12 @@ fun NewDiskDialog(
                 },
                 enabled = newName.isNotBlank()
             ) {
-                Text("Create")
+                Text(stringResource(Res.string.ui_create))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(Res.string.ui_cancel))
             }
         }
     )
@@ -703,8 +726,8 @@ fun NewDiskDialog(
     showOverwriteConfirmation?.let { name ->
         AlertDialog(
             onDismissRequest = { showOverwriteConfirmation = null },
-            title = { Text("File Already Exists") },
-            text = { Text("The disk image '$name' already exists. What would you like to do?") },
+            title = { Text(stringResource(Res.string.disk_exists_title)) },
+            text = { Text(stringResource(Res.string.disk_exists_message, name)) },
             confirmButton = {
                 Button(
                     onClick = {
@@ -713,12 +736,12 @@ fun NewDiskDialog(
                     }
                 ) {
                     // Overwrite is basically "Replace" for a file
-                    Text("Overwrite")
+                    Text(stringResource(Res.string.ui_overwrite))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showOverwriteConfirmation = null }) {
-                    Text("Cancel")
+                    Text(stringResource(Res.string.ui_cancel))
                 }
             }
         )

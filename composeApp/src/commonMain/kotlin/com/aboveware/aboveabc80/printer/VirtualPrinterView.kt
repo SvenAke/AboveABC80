@@ -3,6 +3,7 @@
  */
 package com.aboveware.aboveabc80.printer
 
+import aboveabc80.composeapp.generated.resources.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -37,6 +38,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import org.jetbrains.compose.resources.stringResource
 import com.aboveware.aboveabc80.Abc80Log
 
 @Composable
@@ -80,16 +82,28 @@ fun VirtualPrinterView(modifier: Modifier = Modifier) {
                         onClick = { printPrinterBuffer(printer.lines.toList()) },
                         modifier = Modifier.size(32.dp)
                     ) {
-                        Icon(Icons.Default.Print, "Print", tint = Color.White)
+                        Icon(
+                            Icons.Default.Print,
+                            stringResource(Res.string.virtual_printer_print),
+                            tint = Color.White
+                        )
                     }
                     IconButton(onClick = { printer.formFeed() }, modifier = Modifier.size(32.dp)) {
-                        Icon(Icons.Default.Delete, "Form Feed", tint = Color.White)
+                        Icon(
+                            Icons.Default.Delete,
+                            stringResource(Res.string.virtual_printer_form_feed),
+                            tint = Color.White
+                        )
                     }
                     IconButton(
                         onClick = { printer.isVisible = false },
                         modifier = Modifier.size(32.dp)
                     ) {
-                        Icon(Icons.Default.Close, "Hide", tint = Color.White)
+                        Icon(
+                            Icons.Default.Close,
+                            stringResource(Res.string.virtual_printer_hide),
+                            tint = Color.White
+                        )
                     }
                 }
             }

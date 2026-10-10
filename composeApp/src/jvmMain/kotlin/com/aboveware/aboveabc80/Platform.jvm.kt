@@ -153,7 +153,7 @@ actual fun pickFolder(): String? {
     val lastFolder = getPersistedString("last_export_folder", System.getProperty("user.home"))
     val chooser = JFileChooser(lastFolder).apply {
         fileSelectionMode = JFileChooser.DIRECTORIES_ONLY
-        dialogTitle = "Select folder to export floppy files"
+        dialogTitle = "Välj mapp för att exportera diskettfiler"
     }
 
     return if (chooser.showSaveDialog(null) == JFileChooser.APPROVE_OPTION) {

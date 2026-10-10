@@ -37,13 +37,13 @@ object Abc80CassetteStatus {
     fun startReading(filename: String) {
         if (activity == Activity.Reading) return
         activity = Activity.Reading
-        show("Loading $filename...")
+        show("Läser in $filename...")
     }
 
     fun startWriting(filename: String) {
         if (activity == Activity.Writing) return
         activity = Activity.Writing
-        show("Saving $filename...")
+        show("Sparar $filename...")
     }
 
     fun show(text: String, indeterminate: Boolean = true, progress: Int = 0, max: Int = 0) {

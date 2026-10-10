@@ -1,5 +1,6 @@
 package com.aboveware.aboveabc80
 
+import aboveabc80.composeapp.generated.resources.*
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -24,11 +25,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import java.io.File
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun LocalFileDialog(
     folder: String,
-    title: String = "Local Files",
+    title: String? = null,
     onDismiss: () -> Unit,
     onFileOpened: ((String, File) -> Unit)? = null,
     onFileSelected: (String, ByteArray) -> Unit
@@ -39,12 +41,12 @@ fun LocalFileDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(title) },
+        title = { Text(title ?: stringResource(Res.string.local_files_title)) },
         text = {
             Box(modifier = Modifier.sizeIn(minHeight = 200.dp, maxHeight = 400.dp).fillMaxWidth()) {
                 if (files.isEmpty()) {
                     Text(
-                        "No files found in '$folder'.",
+                        stringResource(Res.string.local_files_empty, folder),
                         modifier = Modifier.align(Alignment.Center)
                     )
                 } else {
@@ -73,7 +75,10 @@ fun LocalFileDialog(
                                                 compareByDescending { extractTimestamp(it) })
                                         }
                                     }) {
-                                        Icon(Icons.Default.Delete, contentDescription = "Delete")
+                                        Icon(
+                                            Icons.Default.Delete,
+                                            contentDescription = stringResource(Res.string.local_files_delete)
+                                        )
                                     }
                                 },
                                 modifier = Modifier.clickable {
@@ -94,7 +99,7 @@ fun LocalFileDialog(
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text("Close")
+                Text(stringResource(Res.string.ui_close))
             }
         }
     )

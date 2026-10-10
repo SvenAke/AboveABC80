@@ -87,7 +87,7 @@ class Abc80CassetteTape {
             if (program.hasNext())
                 NativeLib.getObject().pio.B.cassette = program.next()
             if (foundProgram && (program.progress() % 256) == 0) {
-                val message = "Loading ${program.filename.toAndroid()}..."
+                val message = "Läser in ${program.filename.toAndroid()}..."
                 progress(message, program.progress(), program.size())
             }
         }
@@ -116,10 +116,10 @@ class Abc80CassetteTape {
                     eightPointThree == program.filename
             val message = if (foundProgram) {
                 program.filename = eightPointThree
-                "Loading $eightPointThree..."
+                "Läser in $eightPointThree..."
             }
             else
-                "Winding (found $eightPointThree)"
+                "Spolar (hittade $eightPointThree)"
             progress(message, !foundProgram, program.size())
             if (!foundProgram) {
                 // Pause the emulator thread so no cassette bits or ROM timeouts advance.
@@ -131,7 +131,7 @@ class Abc80CassetteTape {
             }
         }
         if(program.endOfTape)
-            progress("Winding", true, 0)
+            progress("Spolar", true, 0)
         stateMachine.interrupt()
     }
 

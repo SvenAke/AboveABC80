@@ -295,7 +295,7 @@ class KeyboardView(
         if (keys.isEmpty() && isInEditMode) {
             paint.color = Color.RED
             paint.textSize = 40f
-            drawText("NO KEYS LOADED - XML: $keyboardXmlResId", 50f, 100f, paint)
+            drawText("TANGENTBORD SAKNAS - XML: $keyboardXmlResId", 50f, 100f, paint)
             return
         }
         for (key in keys) {

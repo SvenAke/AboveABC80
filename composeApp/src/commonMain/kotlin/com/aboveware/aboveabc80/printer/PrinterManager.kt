@@ -15,8 +15,9 @@ enum class PrinterType(val displayName: String) {
     DIABLO_630("Diablo 630")
 }
 
-enum class InternationalCharset {
-    USA, FRANCE, GERMANY, UK, DENMARK, SWEDEN, ITALY, SPAIN
+enum class InternationalCharset(val displayName: String) {
+    USA("USA"), FRANCE("Frankrike"), GERMANY("Tyskland"), UK("Storbritannien"),
+    DENMARK("Danmark"), SWEDEN("Sverige"), ITALY("Italien"), SPAIN("Spanien")
 }
 
 object PrinterManager {
@@ -55,20 +56,20 @@ class Mx80Settings {
     val sw2 = List(4) { i -> DipSwitch(2, i + 1, getSw2Description(i + 1)) }
 
     private fun getSw1Description(n: Int) = when (n) {
-        1, 2, 3 -> "Char Set $n"
-        4 -> "Line Spacing (ON:1/8\", OFF:1/6\")"
-        5 -> "Slashed Zero"
-        6 -> "Internal CG"
-        7 -> "Page Length (ON:12\", OFF:11\")"
-        8 -> "Default Italic"
+        1, 2, 3 -> "Teckenuppsättning $n"
+        4 -> "Radavstånd (PÅ:1/8\", AV:1/6\")"
+        5 -> "Överstruken nolla"
+        6 -> "Intern teckengenerator"
+        7 -> "Sidlängd (PÅ:12\", AV:11\")"
+        8 -> "Kursiv stil som standard"
         else -> ""
     }
 
     private fun getSw2Description(n: Int) = when (n) {
-        1 -> "Auto Line Feed (ON: LF, OFF: CR)"
-        2 -> "Bell Enabled"
-        3 -> "Paper Out Sensor"
-        4 -> "8-bit Data"
+        1 -> "Automatisk radmatning (PÅ: LF, AV: CR)"
+        2 -> "Ljudsignal aktiverad"
+        3 -> "Slut-på-papper-sensor"
+        4 -> "8-bitars data"
         else -> ""
     }
 
@@ -110,20 +111,20 @@ class Mx80Settings {
     fun getCurrentExplanation(bank: Int, num: Int): String {
         return when (bank) {
             1 -> when (num) {
-                1, 2, 3 -> "Character Set: ${getInternationalCharset().name}"
-                4 -> "Line Spacing: ${if (isSw1On(4)) "1/8 inch" else "1/6 inch"}"
-                5 -> "Zero Character: ${if (isSw1On(5)) "Slashed (Ø)" else "Normal (0)"}"
-                6 -> "Character Generator: ${if (isSw1On(6)) "Internal" else "External/ROM"}"
-                7 -> "Page Length: ${if (isSw1On(7)) "12 inches" else "11 inches"}"
-                8 -> "Italic Mode: ${if (isSw1On(8)) "Enabled" else "Disabled"}"
+                1, 2, 3 -> "Teckenuppsättning: ${getInternationalCharset().displayName}"
+                4 -> "Radavstånd: ${if (isSw1On(4)) "1/8 tum" else "1/6 tum"}"
+                5 -> "Nolltecken: ${if (isSw1On(5)) "Överstruken (Ø)" else "Normal (0)"}"
+                6 -> "Teckengenerator: ${if (isSw1On(6)) "Intern" else "Extern/ROM"}"
+                7 -> "Sidlängd: ${if (isSw1On(7)) "12 tum" else "11 tum"}"
+                8 -> "Kursivt läge: ${if (isSw1On(8)) "Aktiverat" else "Inaktiverat"}"
                 else -> ""
             }
 
             2 -> when (num) {
-                1 -> "Auto Line Feed: ${if (isSw2On(1)) "Enabled (CR+LF)" else "Disabled (CR only)"}"
-                2 -> "Buzzer (Bell): ${if (isSw2On(2)) "Enabled" else "Disabled"}"
-                3 -> "Paper Out Sensor: ${if (isSw2On(3)) "Active" else "Inactive"}"
-                4 -> "Data Length: ${if (isSw2On(4)) "8-bit" else "7-bit"}"
+                1 -> "Automatisk radmatning: ${if (isSw2On(1)) "Aktiverad (CR+LF)" else "Inaktiverad (endast CR)"}"
+                2 -> "Ljudsignal: ${if (isSw2On(2)) "Aktiverad" else "Inaktiverad"}"
+                3 -> "Slut-på-papper-sensor: ${if (isSw2On(3)) "Aktiv" else "Inaktiv"}"
+                4 -> "Datalängd: ${if (isSw2On(4)) "8-bit" else "7-bit"}"
                 else -> ""
             }
 
@@ -142,12 +143,12 @@ class Diablo630Settings {
     } // Use bank 3 to differentiate persistence
 
     private fun getSwDescription(n: Int) = when (n) {
-        1 -> "Auto Line Feed"
-        2 -> "Paper Out Sensor"
-        3 -> "Bidirectional Print"
-        4 -> "Form Length (ON:12\", OFF:11\")"
-        5, 6 -> "Baud Rate"
-        7, 8 -> "Parity"
+        1 -> "Automatisk radmatning"
+        2 -> "Slut-på-papper-sensor"
+        3 -> "Dubbelriktad utskrift"
+        4 -> "Formulärlängd (PÅ:12\", AV:11\")"
+        5, 6 -> "Baudhastighet"
+        7, 8 -> "Paritet"
         else -> ""
     }
 
@@ -155,11 +156,11 @@ class Diablo630Settings {
 
     fun getCurrentExplanation(num: Int): String {
         return when (num) {
-            1 -> "Auto Line Feed: ${if (isSwOn(1)) "Enabled (CR+LF)" else "Disabled (CR only)"}"
-            2 -> "Paper Out Sensor: ${if (isSwOn(2)) "Active" else "Inactive"}"
-            3 -> "Bidirectional Print: ${if (isSwOn(3)) "Enabled" else "Disabled"}"
-            4 -> "Form Length: ${if (isSwOn(4)) "12 inches" else "11 inches"}"
-            else -> "Switch $num changed"
+            1 -> "Automatisk radmatning: ${if (isSwOn(1)) "Aktiverad (CR+LF)" else "Inaktiverad (endast CR)"}"
+            2 -> "Slut-på-papper-sensor: ${if (isSwOn(2)) "Aktiv" else "Inaktiv"}"
+            3 -> "Dubbelriktad utskrift: ${if (isSwOn(3)) "Aktiverad" else "Inaktiverad"}"
+            4 -> "Formulärlängd: ${if (isSwOn(4)) "12 tum" else "11 tum"}"
+            else -> "Omkopplare $num har ändrats"
         }
     }
 

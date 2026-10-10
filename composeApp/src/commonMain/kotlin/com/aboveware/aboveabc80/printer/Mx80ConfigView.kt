@@ -1,5 +1,6 @@
 package com.aboveware.aboveabc80.printer
 
+import aboveabc80.composeapp.generated.resources.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -27,6 +28,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun Mx80ConfigView() {
@@ -36,8 +38,12 @@ fun Mx80ConfigView() {
     if (explainedSwitch != null) {
         AlertDialog(
             onDismissRequest = { explainedSwitch = null },
-            confirmButton = { TextButton(onClick = { explainedSwitch = null }) { Text("OK") } },
-            title = { Text("Configuration Changed") },
+            confirmButton = {
+                TextButton(onClick = { explainedSwitch = null }) {
+                    Text(stringResource(Res.string.ui_ok))
+                }
+            },
+            title = { Text(stringResource(Res.string.printer_configuration_changed)) },
             text = {
                 Text(
                     settings.getCurrentExplanation(explainedSwitch!!.bank, explainedSwitch!!.num),
@@ -68,7 +74,7 @@ fun Mx80ConfigView() {
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            "Explanations:",
+            stringResource(Res.string.printer_explanations),
             color = Color.LightGray,
             fontSize = 12.sp,
             fontWeight = FontWeight.Bold
@@ -144,6 +150,10 @@ fun DipSwitchUnit(sw: DipSwitch, onSwitchClicked: (DipSwitch) -> Unit) {
             )
         }
 
-        Text(if (sw.isOn) "ON" else "OFF", color = Color.LightGray, fontSize = 8.sp)
+        Text(
+            stringResource(if (sw.isOn) Res.string.printer_on else Res.string.printer_off),
+            color = Color.LightGray,
+            fontSize = 8.sp
+        )
     }
 }

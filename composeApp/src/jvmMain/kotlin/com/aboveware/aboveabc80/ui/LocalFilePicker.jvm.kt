@@ -15,7 +15,7 @@ actual fun LocalFilePicker(
 ) {
     if (show) {
         LaunchedEffect(Unit) {
-            val fileDialog = FileDialog(null as Frame?, "Select File to Upload", FileDialog.LOAD)
+            val fileDialog = FileDialog(null as Frame?, "Välj fil att importera", FileDialog.LOAD)
             fileDialog.isVisible = true
 
             val directory = fileDialog.directory

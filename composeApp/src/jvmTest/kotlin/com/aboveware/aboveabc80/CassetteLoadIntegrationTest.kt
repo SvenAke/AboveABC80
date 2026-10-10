@@ -75,7 +75,7 @@ class CassetteLoadIntegrationTest {
             var foundNameDuration: Long? = null
             while (searchStarted.elapsedNow().inWholeMilliseconds < 30000) {
                 val status = Abc80CassetteStatus.text
-                if (status == "Winding (found OTHER.BAS)") {
+                if (status == "Spolar (hittade OTHER.BAS)") {
                     if (foundNameSince == null) foundNameSince = TimeSource.Monotonic.markNow()
                 } else if (foundNameSince != null && foundNameDuration == null) {
                     foundNameDuration = foundNameSince.elapsedNow().inWholeMilliseconds

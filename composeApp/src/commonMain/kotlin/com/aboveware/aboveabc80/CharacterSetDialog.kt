@@ -1,5 +1,7 @@
 package com.aboveware.aboveabc80
 
+import aboveabc80.composeapp.generated.resources.*
+import org.jetbrains.compose.resources.stringResource
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.aspectRatio
@@ -23,11 +25,12 @@ internal fun characterChartCode(group: Int, row: Int): Int {
 @Composable
 fun CharacterSetDialog(onDismiss: () -> Unit) {
     val map = remember { Abc80MonitorCharacterMap() }
+    val blankLabel = stringResource(Res.string.character_set_blank)
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("ABC80 character set") },
+        title = { Text(stringResource(Res.string.character_set_title)) },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Close") }
+            TextButton(onClick = onDismiss) { Text(stringResource(Res.string.ui_close)) }
         },
         text = {
             Canvas(
@@ -64,7 +67,7 @@ fun CharacterSetDialog(onDismiss: () -> Unit) {
                         val code = characterChartCode(group, row)
                         label(code.toString().padStart(3), 0.5f, row + 1, group)
                         if (code == 32) {
-                            label("Blank", 4.5f, row + 1, group)
+                            label(blankLabel, 4.5f, row + 1, group)
                         } else {
                             glyph(code, 5f, row + 1, group)
                         }

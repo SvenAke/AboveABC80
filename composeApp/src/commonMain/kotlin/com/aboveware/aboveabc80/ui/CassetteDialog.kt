@@ -79,6 +79,7 @@ fun CassetteDialog(onDismiss: () -> Unit) {
     var preview by remember { mutableStateOf<Pair<String, String>?>(null) }
     var previewLoading by remember { mutableStateOf(false) }
     val importFailed = stringResource(Res.string.cassette_import_failed)
+    val previewFailed = stringResource(Res.string.cassette_preview_failed)
     val exportedFormat = stringResource(Res.string.cassette_exported)
     val saveFailedFormat = stringResource(Res.string.cassette_save_failed)
 
@@ -109,7 +110,7 @@ fun CassetteDialog(onDismiss: () -> Unit) {
                 throw e
             } catch (e: Exception) {
                 Abc80Log.wtf("Could not import cassette $name: ${e.message}")
-                message = "$importFailed: ${e.message}"
+                message = "$name: $importFailed"
             } finally {
                 loading = false
             }
@@ -198,7 +199,7 @@ fun CassetteDialog(onDismiss: () -> Unit) {
                                                             throw e
                                                         } catch (e: Exception) {
                                                             Abc80Log.wtf("Could not preview ${info.displayName}: ${e.message}")
-                                                            message = "${info.displayName}: ${e.message}"
+                                                            message = "${info.displayName}: $previewFailed"
                                                         } finally {
                                                             previewLoading = false
                                                         }

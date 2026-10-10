@@ -1,6 +1,6 @@
 package com.aboveware.aboveabc80
 
-import aboveabc80.composeapp.generated.resources.Res
+import aboveabc80.composeapp.generated.resources.*
 import aboveabc80.composeapp.generated.resources.tkn80_start
 import aboveabc80.composeapp.generated.resources.tkn80_restart
 import aboveabc80.composeapp.generated.resources.sound_volume
@@ -81,12 +81,15 @@ fun SettingsDialog(
             onDismissRequest = { showMx80Config = false },
             confirmButton = {
                 TextButton(onClick = { showMx80Config = false }) {
-                    Text("Close", color = Color.White)
+                    Text(stringResource(Res.string.ui_close), color = Color.White)
                 }
             },
             title = {
                 Text(
-                    "${PrinterManager.currentPrinterType.displayName} Configuration",
+                    stringResource(
+                        Res.string.settings_printer_configuration,
+                        PrinterManager.currentPrinterType.displayName
+                    ),
                     color = Color.White
                 )
             },
@@ -103,7 +106,7 @@ fun SettingsDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Settings") },
+        title = { Text(stringResource(Res.string.settings_title)) },
         text = {
             Column(
                 modifier = Modifier
@@ -112,7 +115,7 @@ fun SettingsDialog(
             ) {
                 // 1. Snapshot Management
                 Text(
-                    "System Snapshots",
+                    stringResource(Res.string.settings_system_snapshots),
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
@@ -124,13 +127,13 @@ fun SettingsDialog(
                         onClick = { StateManager.saveSnapshot("default") },
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text("Save State")
+                        Text(stringResource(Res.string.settings_save_state))
                     }
                     OutlinedButton(
                         onClick = { StateManager.loadSnapshot("default") },
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text("Load State")
+                        Text(stringResource(Res.string.settings_load_state))
                     }
                 }
 
@@ -138,7 +141,7 @@ fun SettingsDialog(
 
                 // 2. Terminal Color
                 Text(
-                    "Terminal Color",
+                    stringResource(Res.string.settings_terminal_color),
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
@@ -161,8 +164,14 @@ fun SettingsDialog(
                                 onClick = null
                             )
                             Text(
-                                text = colorType.name.lowercase()
-                                    .replaceFirstChar { it.uppercase() },
+                                text = stringResource(
+                                    when (colorType) {
+                                        TerminalColor.GREEN -> Res.string.settings_color_green
+                                        TerminalColor.AMBER -> Res.string.settings_color_amber
+                                        TerminalColor.WHITE -> Res.string.settings_color_white
+                                        TerminalColor.BLUE -> Res.string.settings_color_blue
+                                    }
+                                ),
                                 style = MaterialTheme.typography.bodyLarge,
                                 modifier = Modifier.padding(start = 16.dp)
                             )
@@ -174,7 +183,7 @@ fun SettingsDialog(
 
                 // 3. Printer Selection
                 Text(
-                    "Printer",
+                    stringResource(Res.string.settings_printer),
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.padding(vertical = 8.dp)
                 )
@@ -205,7 +214,7 @@ fun SettingsDialog(
                                 IconButton(onClick = { showMx80Config = true }) {
                                     Icon(
                                         Icons.Default.Build,
-                                        contentDescription = "Configure Printer"
+                                        contentDescription = stringResource(Res.string.settings_configure_printer)
                                     )
                                 }
                             }
@@ -260,7 +269,7 @@ fun SettingsDialog(
 
                 // 3. Scanline Intensity
                 Text(
-                    "CRT Scanline Intensity",
+                    stringResource(Res.string.settings_crt_scanline_intensity),
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
@@ -286,7 +295,7 @@ fun SettingsDialog(
                 Text(stringResource(Res.string.tkn80_restart), style = MaterialTheme.typography.bodySmall)
 
                 Text(
-                    "CPU Speed",
+                    stringResource(Res.string.settings_cpu_speed),
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
@@ -302,7 +311,11 @@ fun SettingsDialog(
                         modifier = Modifier.weight(1f)
                     )
                     Text(
-                        if (cpuSpeedSetting == 9) "MAX" else "$cpuSpeedSetting MHz",
+                        if (cpuSpeedSetting == 9) {
+                            stringResource(Res.string.settings_cpu_max)
+                        } else {
+                            "$cpuSpeedSetting MHz"
+                        },
                         modifier = Modifier.padding(start = 12.dp)
                     )
                 }
@@ -324,7 +337,7 @@ fun SettingsDialog(
                         onCheckedChange = onCpuAndFpsVisibilityChange
                     )
                     Text(
-                        text = "Show CPU and FPS",
+                        text = stringResource(Res.string.settings_show_cpu_fps),
                         style = MaterialTheme.typography.bodyLarge,
                         modifier = Modifier.padding(start = 16.dp)
                     )
@@ -344,7 +357,7 @@ fun SettingsDialog(
                         onCheckedChange = { TerminalManager.autoUppercase = it }
                     )
                     Text(
-                        text = "Auto Uppercase",
+                        text = stringResource(Res.string.settings_auto_uppercase),
                         style = MaterialTheme.typography.bodyLarge,
                         modifier = Modifier.padding(start = 16.dp)
                     )
@@ -356,13 +369,13 @@ fun SettingsDialog(
                     onClick = { showClearConfirmation = true },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Clear saved settings")
+                    Text(stringResource(Res.string.settings_clear_saved))
                 }
             }
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text("Close")
+                Text(stringResource(Res.string.ui_close))
             }
         }
     )
@@ -370,9 +383,9 @@ fun SettingsDialog(
     if (showClearConfirmation) {
         AlertDialog(
             onDismissRequest = { showClearConfirmation = false },
-            title = { Text("Clear saved settings?") },
+            title = { Text(stringResource(Res.string.settings_clear_saved_title)) },
             text = {
-                Text("This removes all saved application settings on this device. Disk images are not affected.")
+                Text(stringResource(Res.string.settings_clear_saved_message))
             },
             confirmButton = {
                 TextButton(
@@ -384,12 +397,12 @@ fun SettingsDialog(
                         onDismiss()
                     }
                 ) {
-                    Text("Clear")
+                    Text(stringResource(Res.string.settings_clear))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showClearConfirmation = false }) {
-                    Text("Cancel")
+                    Text(stringResource(Res.string.ui_cancel))
                 }
             }
         )

@@ -1,5 +1,6 @@
 package com.aboveware.aboveabc80.printer
 
+import aboveabc80.composeapp.generated.resources.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -23,6 +24,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun Diablo630ConfigView() {
@@ -32,8 +34,12 @@ fun Diablo630ConfigView() {
     if (explainedSwitch != null) {
         AlertDialog(
             onDismissRequest = { explainedSwitch = null },
-            confirmButton = { TextButton(onClick = { explainedSwitch = null }) { Text("OK") } },
-            title = { Text("Configuration Changed") },
+            confirmButton = {
+                TextButton(onClick = { explainedSwitch = null }) {
+                    Text(stringResource(Res.string.ui_ok))
+                }
+            },
+            title = { Text(stringResource(Res.string.printer_configuration_changed)) },
             text = {
                 Text(
                     settings.getCurrentExplanation(explainedSwitch!!.num),
@@ -56,13 +62,16 @@ fun Diablo630ConfigView() {
             .padding(16.dp)
     ) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-            DipSwitchBankView("BACK PANEL", settings.sw1) { explainedSwitch = it }
+            DipSwitchBankView(
+                stringResource(Res.string.printer_back_panel),
+                settings.sw1
+            ) { explainedSwitch = it }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            "Explanations:",
+            stringResource(Res.string.printer_explanations),
             color = Color.LightGray,
             fontSize = 12.sp,
             fontWeight = FontWeight.Bold

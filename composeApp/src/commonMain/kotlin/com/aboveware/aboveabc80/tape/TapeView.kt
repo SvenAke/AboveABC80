@@ -1,5 +1,6 @@
 package com.aboveware.aboveabc80.tape
 
+import aboveabc80.composeapp.generated.resources.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -43,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import com.aboveware.aboveabc80.Abc80Log
 import com.aboveware.aboveabc80.getCurrentTimestamp
 import com.aboveware.aboveabc80.saveLocalFile
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun TapeView(modifier: Modifier = Modifier) {
@@ -77,7 +79,13 @@ fun TapeView(modifier: Modifier = Modifier) {
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    if (tape.isPunching) "PAPER TAPE PUNCH" else "PAPER TAPE READER",
+                    stringResource(
+                        if (tape.isPunching) {
+                            Res.string.tape_punch_title
+                        } else {
+                            Res.string.tape_reader_title
+                        }
+                    ),
                     color = Color.White,
                     style = MaterialTheme.typography.labelSmall
                 )
@@ -88,7 +96,7 @@ fun TapeView(modifier: Modifier = Modifier) {
                         }, modifier = Modifier.size(24.dp)) {
                             Icon(
                                 Icons.Default.Download,
-                                "Download",
+                                stringResource(Res.string.tape_download),
                                 tint = Color.White,
                                 modifier = Modifier.size(16.dp)
                             )
@@ -97,7 +105,7 @@ fun TapeView(modifier: Modifier = Modifier) {
                     IconButton(onClick = { tape.clear() }, modifier = Modifier.size(24.dp)) {
                         Icon(
                             Icons.Default.Delete,
-                            "Clear",
+                            stringResource(Res.string.tape_clear),
                             tint = Color.White,
                             modifier = Modifier.size(16.dp)
                         )
@@ -108,7 +116,7 @@ fun TapeView(modifier: Modifier = Modifier) {
                     ) {
                         Icon(
                             Icons.Default.Close,
-                            "Hide",
+                            stringResource(Res.string.tape_hide),
                             tint = Color.White,
                             modifier = Modifier.size(16.dp)
                         )
@@ -153,12 +161,12 @@ fun TapeView(modifier: Modifier = Modifier) {
     if (showSaveDialog) {
         AlertDialog(
             onDismissRequest = { showSaveDialog = false },
-            title = { Text("Save Paper Tape") },
+            title = { Text(stringResource(Res.string.tape_save_title)) },
             text = {
                 OutlinedTextField(
                     value = saveFilename,
                     onValueChange = { saveFilename = it },
-                    label = { Text("Filename Prefix") },
+                    label = { Text(stringResource(Res.string.tape_filename_prefix)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -177,12 +185,12 @@ fun TapeView(modifier: Modifier = Modifier) {
                     }
                     showSaveDialog = false
                 }) {
-                    Text("Save")
+                    Text(stringResource(Res.string.ui_save))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showSaveDialog = false }) {
-                    Text("Cancel")
+                    Text(stringResource(Res.string.ui_cancel))
                 }
             }
         )

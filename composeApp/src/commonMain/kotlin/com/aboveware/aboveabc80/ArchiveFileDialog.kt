@@ -1,5 +1,6 @@
 package com.aboveware.aboveabc80
 
+import aboveabc80.composeapp.generated.resources.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -55,6 +56,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableIntStateOf
 import com.aboveware.aboveabc80.core.DiskController
 import com.aboveware.aboveabc80.core.Floppy
+import org.jetbrains.compose.resources.stringResource
 
 private fun ByteArray.toCpmPreviewText(): AnnotatedString {
     data class InlinePart(
@@ -416,7 +418,7 @@ fun ArchiveFileDialog(
         onDismissRequest = { dismiss(null) },
         title = {
             Column {
-                Text("Select files to download")
+                Text(stringResource(Res.string.archive_select_files))
                 Text(
                     text = archiveName,
                     style = MaterialTheme.typography.labelMedium,
@@ -467,14 +469,17 @@ fun ArchiveFileDialog(
                         }
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Clear active floppy before download")
+                    Text(stringResource(Res.string.archive_clear_floppy))
                 }
                 if (selectedIndices.isNotEmpty() && targetFloppy != null) {
                     Text(
                         text = if (selectionFits) {
-                            "Remaining after download: ${formatSize(remainingSpace)}"
+                            stringResource(
+                                Res.string.archive_remaining_space,
+                                formatSize(remainingSpace)
+                            )
                         } else {
-                            "Files will not fit on the selected floppy"
+                            stringResource(Res.string.archive_files_do_not_fit)
                         },
                         color = if (selectionFits) {
                             MaterialTheme.colorScheme.onSurfaceVariant
@@ -489,7 +494,7 @@ fun ArchiveFileDialog(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     TextButton(onClick = { dismiss(null) }) {
-                        Text("Back")
+                        Text(stringResource(Res.string.ui_back))
                     }
                     Row {
                         TextButton(
@@ -498,7 +503,7 @@ fun ArchiveFileDialog(
                                 selectedIndices = files.indices.toSet()
                             }
                         ) {
-                            Text("Select all")
+                            Text(stringResource(Res.string.ui_select_all))
                         }
 
                         TextButton(
@@ -508,7 +513,11 @@ fun ArchiveFileDialog(
                             }
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text("Download (${selectedIndices.size})")
+                                Text(
+                                    stringResource(
+                                        Res.string.ui_download
+                                    ) + " (${selectedIndices.size})"
+                                )
                                 val totalSize = selectedIndices.sumOf { files[it].content.size.toLong() }
                                 Text(
                                     text = formatSize(totalSize),
@@ -611,7 +620,7 @@ fun ArchiveFileSelector(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Description,
-                                contentDescription = "Open document"
+                                contentDescription = stringResource(Res.string.archive_open_document)
                             )
                         }
                     }
@@ -815,7 +824,7 @@ fun ArchiveFileTextPreviewContent(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
                     modifier = Modifier.weight(1f),
-                    placeholder = { Text("Find in file") },
+                    placeholder = { Text(stringResource(Res.string.archive_find_in_file)) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                     keyboardActions = KeyboardActions(onSearch = { goToNextMatch() })
@@ -829,7 +838,7 @@ fun ArchiveFileTextPreviewContent(
                     onClick = { goToNextMatch() },
                     enabled = matches.isNotEmpty()
                 ) {
-                    Text("Next")
+                    Text(stringResource(Res.string.archive_next_match))
                 }
             }
 
@@ -858,7 +867,7 @@ fun ArchiveFileTextPreviewContent(
                 horizontalArrangement = Arrangement.End
             ) {
                 TextButton(onClick = onClose) {
-                    Text("Close")
+                    Text(stringResource(Res.string.ui_close))
                 }
             }
         }

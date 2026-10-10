@@ -9,6 +9,12 @@
     <string name="disk_export_pc">Exportera filer till datorn</string>
     <string name="disk_import_cloud">Importera från molnet</string>
     <string name="disk_delete">Ta bort diskett</string>
+    <string name="download">Hämta</string>
+    <string name="download_files">Hämta filer</string>
+    <string name="menu">Meny</string>
+    <string name="zx_spectrum_screen">CP/M-skärm</string>
+    <string name="cpu_label">CPU:</string>
+    <string name="fps_label">FPS:</string>
     <string name="cassette_title">Kassett</string>
     <string name="cassette_empty">Bandet är tomt</string>
     <string name="cassette_rewind">Spola tillbaka</string>
@@ -29,4 +35,8 @@
     <string name="cassette_end_of_tape">Bandet är slut</string>
     <string name="cassette_not_found">Programmet %1$s hittades inte. Spola tillbaka och sök från början?</string>
     <string name="cassette_restart_search">Sök från början</string>
-    <string name="cassette_cancel">Avbryt</string></resources>
+    <string name="cassette_cancel">Avbryt</string>
+    <string name="menu_fast_mode">SNABB</string>
+    <string name="font_select_title">Välj teckensnitt</string>
+    <string name="font_standard_ascii">Standard-ASCII</string>
+</resources>

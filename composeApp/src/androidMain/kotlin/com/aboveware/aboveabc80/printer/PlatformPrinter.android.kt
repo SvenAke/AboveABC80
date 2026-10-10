@@ -23,7 +23,7 @@ actual fun printPrinterBuffer(lines: List<IntArray>) {
 
     val printManager = context.getSystemService(Context.PRINT_SERVICE) as? PrintManager
     printManager?.let {
-        val jobName = "AboveABC80 Printer Output"
+        val jobName = "AboveABC80-utskrift"
         it.print(jobName, ZXPrintAdapter(lines), PrintAttributes.Builder().build())
     }
 }
@@ -129,7 +129,7 @@ class ZXPrintAdapter(private val lines: List<IntArray>) : PrintDocumentAdapter()
             if (fd != null) {
                 pdfDocument.writeTo(FileOutputStream(fd))
             } else {
-                callback.onWriteFailed("File descriptor is null")
+                callback.onWriteFailed("Kunde inte öppna filen för utskrift")
                 return
             }
         } catch (e: IOException) {

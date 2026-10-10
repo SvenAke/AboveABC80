@@ -1,6 +1,6 @@
 package com.aboveware.aboveabc80
 
-import aboveabc80.composeapp.generated.resources.Res
+import aboveabc80.composeapp.generated.resources.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -63,6 +63,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.aboveware.aboveabc80.core.DiskController
 import com.aboveware.aboveabc80.core.Floppy
+import com.aboveware.aboveabc80.Abc80Log
 import com.aboveware.aboveabc80.core.unzipFile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.CancellationException
@@ -70,6 +71,7 @@ import java.io.File
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.ExperimentalResourceApi
+import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -97,6 +99,12 @@ fun StorageFileDialog(
     var downloadedBytes by remember { mutableStateOf(0L) }
     var clearDestinationBeforeDownload by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    val fileLoadFailedMessage = stringResource(Res.string.storage_file_load_failed)
+    val fileOpenFailedMessage = stringResource(Res.string.storage_file_open_failed)
+    val pdfOpenFailedMessage = stringResource(Res.string.storage_pdf_open_failed)
+    val compressedPreviewMessage = stringResource(Res.string.storage_compressed_preview)
+    val fileDownloadFailedMessage = stringResource(Res.string.storage_file_download_failed)
+    val filesLoadFailedMessage = stringResource(Res.string.storage_load_failed)
 
     var selectedCloudFiles by remember { mutableStateOf<List<Pair<String, ByteArray>>>(emptyList()) }
     var selectedNodes by remember(nodes) { mutableStateOf<Set<StorageNode>>(emptySet()) }
@@ -185,7 +193,7 @@ fun StorageFileDialog(
             try {
                 val data = fileCache[node.fullName] ?: provider.downloadFile(node.fullName)
                 if (data == null) {
-                    errorMessage = "Could not load ${node.name}."
+                    errorMessage = fileLoadFailedMessage
                 } else {
                     if (!fileCache.containsKey(node.fullName)) {
                         fileCache = fileCache + (node.fullName to data)
@@ -199,7 +207,8 @@ fun StorageFileDialog(
                     archivePreview = node.name to files
                 }
             } catch (e: Exception) {
-                errorMessage = "Could not open ${node.name}: ${e.message}"
+                Abc80Log.wtf("Could not open archive ${node.name}: ${e.message}")
+                errorMessage = fileOpenFailedMessage
             } finally {
                 isDownloading = false
             }
@@ -215,7 +224,8 @@ fun StorageFileDialog(
             isLoading = false
             errorMessage = null
         } catch (e: Exception) {
-            errorMessage = e.message ?: "Failed to load files"
+            Abc80Log.wtf("Could not load storage files at $currentPrefix: ${e.message}")
+            errorMessage = filesLoadFailedMessage
             isLoading = false
         }
     }
@@ -256,7 +266,15 @@ fun StorageFileDialog(
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(if (selectedCloudFiles.isNotEmpty()) "Save to Diskette" else "Cloud Files")
+                    Text(
+                        stringResource(
+                            if (selectedCloudFiles.isNotEmpty()) {
+                                Res.string.storage_save_to_diskette
+                            } else {
+                                Res.string.storage_cloud_files
+                            }
+                        )
+                    )
                     if (pathStack.size > 1 && selectedCloudFiles.isEmpty()) {
                         Text(
                             text = "/" + pathStack.last().removePrefix("cpm/"),
@@ -295,7 +313,7 @@ fun StorageFileDialog(
 
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                "Save $displayNames to:",
+                                stringResource(Res.string.storage_save_files_to, displayNames),
                                 style = MaterialTheme.typography.titleSmall
                             )
                             Spacer(modifier = Modifier.width(8.dp))
@@ -527,7 +545,7 @@ fun StorageFileDialog(
                                             ) {
                                                 Icon(
                                                     imageVector = Icons.Default.Image,
-                                                    contentDescription = "Preview image"
+                                                    contentDescription = stringResource(Res.string.storage_preview_image)
                                                 )
                                             }
                                         }
@@ -573,7 +591,7 @@ fun StorageFileDialog(
                                                                         }
                                                                     if (!opened) {
                                                                         errorMessage =
-                                                                            "Could not open ${node.name}. Make sure a PDF viewer is installed."
+                                                                            "${node.name}: $pdfOpenFailedMessage"
                                                                     }
                                                                 } else {
                                                                     val content =
@@ -581,7 +599,7 @@ fun StorageFileDialog(
                                                                             downloadedData[0] == 0x76.toByte() &&
                                                                             downloadedData[1] == 0xFF.toByte()
                                                                         ) {
-                                                                            "Compressed (Squeezed) file detected. \nManual decompression required in emulator."
+                                                                            compressedPreviewMessage
                                                                         } else {
                                                                             downloadedData.decodeToString()
                                                                         }
@@ -590,9 +608,12 @@ fun StorageFileDialog(
                                                                             content
                                                                         )
                                                                 }
+                                                            } catch (e: kotlinx.coroutines.CancellationException) {
+                                                                throw e
                                                             } catch (e: Exception) {
+                                                                Abc80Log.wtf("Could not open ${node.name}: ${e.message}")
                                                                 errorMessage =
-                                                                    "Could not open ${node.name}: ${e.message}"
+                                                                    "${node.name}: $fileOpenFailedMessage"
                                                             } finally {
                                                                 isDownloading = false
                                                             }
@@ -602,7 +623,7 @@ fun StorageFileDialog(
                                             ) {
                                                 Icon(
                                                     imageVector = Icons.Default.Description,
-                                                    contentDescription = "Open document"
+                                                    contentDescription = stringResource(Res.string.archive_open_document)
                                                 )
                                             }
                                         }
@@ -614,7 +635,7 @@ fun StorageFileDialog(
                                             ) {
                                                 Icon(
                                                     imageVector = Icons.Default.FolderOpen,
-                                                    contentDescription = "Open archive"
+                                                    contentDescription = stringResource(Res.string.storage_open_archive)
                                                 )
                                             }
                                         }
@@ -637,7 +658,7 @@ fun StorageFileDialog(
                         if (filteredNodes.isEmpty() && pathStack.size == 1) {
                             item {
                                 Text(
-                                    "No matching files found.",
+                                    stringResource(Res.string.storage_no_matching_files),
                                     modifier = Modifier.padding(16.dp)
                                 )
                             }
@@ -672,9 +693,17 @@ fun StorageFileDialog(
                                 Spacer(modifier = Modifier.height(12.dp))
                                 Text(
                                     text = if (downloadingFileName.isNotEmpty()) {
-                                        "Downloading $downloadingFileName…" +
-                                            if (destinationFolder != null) " (${formatSize(downloadedBytes)})" else ""
-                                    } else "Downloading…",
+                                        stringResource(
+                                            Res.string.storage_downloading,
+                                            downloadingFileName
+                                        ) + if (destinationFolder != null) {
+                                            " (${formatSize(downloadedBytes)})"
+                                        } else {
+                                            ""
+                                        }
+                                    } else {
+                                        stringResource(Res.string.storage_download_progress)
+                                    },
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.Medium,
                                     color = MaterialTheme.colorScheme.onSurface,
@@ -693,7 +722,7 @@ fun StorageFileDialog(
                     selectedCloudFiles = emptyList()
                     clearDestinationBeforeDownload = false
                 }) {
-                    Text("Back")
+                    Text(stringResource(Res.string.ui_back))
                 }
             } else {
                 Column(modifier = Modifier.fillMaxWidth()) {
@@ -715,7 +744,7 @@ fun StorageFileDialog(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "Clear active floppy before download",
+                                text = stringResource(Res.string.archive_clear_floppy),
                                 style = MaterialTheme.typography.bodySmall
                             )
                         }
@@ -725,7 +754,7 @@ fun StorageFileDialog(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         TextButton(onClick = onDismiss, enabled = !isDownloading) {
-                            Text("Close")
+                            Text(stringResource(Res.string.ui_close))
                         }
 
                         Row {
@@ -740,7 +769,15 @@ fun StorageFileDialog(
                                     }
                                 }
                             ) {
-                                Text(if (selectedNodes.size == fileNodes.size && fileNodes.isNotEmpty()) "Deselect all" else "Select all")
+                                Text(
+                                    stringResource(
+                                        if (selectedNodes.size == fileNodes.size && fileNodes.isNotEmpty()) {
+                                            Res.string.ui_deselect_all
+                                        } else {
+                                            Res.string.ui_select_all
+                                        }
+                                    )
+                                )
                             }
 
                             TextButton(
@@ -775,7 +812,7 @@ fun StorageFileDialog(
                                                     results.add(node.name to data)
                                                 } else {
                                                     allOk = false
-                                                    errorMessage = "Could not download ${node.name}"
+                                                    errorMessage = fileDownloadFailedMessage
                                                     break
                                                 }
                                             }
@@ -783,7 +820,8 @@ fun StorageFileDialog(
                                             throw e
                                         } catch (e: Exception) {
                                             allOk = false
-                                            errorMessage = "Could not download $downloadingFileName: ${e.message}"
+                                            Abc80Log.wtf("Could not download $downloadingFileName: ${e.message}")
+                                            errorMessage = fileDownloadFailedMessage
                                         } finally {
                                             isDownloading = false
                                         }
@@ -798,7 +836,10 @@ fun StorageFileDialog(
                                 }
                             ) {
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text(if (selectedNodes.size > 1) "Download (${selectedNodes.size})" else "Download")
+                                    Text(
+                                        stringResource(Res.string.ui_download) +
+                                            if (selectedNodes.size > 1) " (${selectedNodes.size})" else ""
+                                    )
                                     if (selectedNodes.isNotEmpty()) {
                                         val totalSize = selectedNodes.sumOf { it.size }
                                         val currentFloppy = if (destinationFolder != null) null else controller.getFloppy(
@@ -907,7 +948,7 @@ fun StorageFileDialog(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.ChevronLeft,
-                                contentDescription = "Previous image"
+                                contentDescription = stringResource(Res.string.storage_previous_image)
                             )
                         }
 
@@ -935,14 +976,14 @@ fun StorageFileDialog(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.ChevronRight,
-                                contentDescription = "Next image"
+                                contentDescription = stringResource(Res.string.storage_next_image)
                             )
                         }
                     }
                 },
                 confirmButton = {
                     TextButton(onClick = { activeImageIndex = null }) {
-                        Text("Close")
+                        Text(stringResource(Res.string.ui_close))
                     }
                 }
             )
@@ -1000,11 +1041,14 @@ fun NewDisketteDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("New Diskette") },
+        title = { Text(stringResource(Res.string.storage_new_diskette)) },
         text = {
             Column {
-                Text("Disk type:", style = MaterialTheme.typography.labelSmall)
-                listOf(true to "System disk (160 kB)", false to "Empty disk").forEach { (isSystem, label) ->
+                Text(stringResource(Res.string.storage_disk_type), style = MaterialTheme.typography.labelSmall)
+                listOf(
+                    true to stringResource(Res.string.storage_system_disk),
+                    false to stringResource(Res.string.storage_empty_disk)
+                ).forEach { (isSystem, label) ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -1016,7 +1060,9 @@ fun NewDisketteDialog(
                         Text(label, modifier = Modifier.padding(start = 8.dp))
                     }
                 }
-                if (!systemDisk) Text("Format:", style = MaterialTheme.typography.labelSmall)
+                if (!systemDisk) {
+                    Text(stringResource(Res.string.storage_format), style = MaterialTheme.typography.labelSmall)
+                }
                 if (!systemDisk) templates.forEach { (template, label) ->
                     Row(
                         modifier = Modifier
@@ -1044,7 +1090,7 @@ fun NewDisketteDialog(
                             input.uppercase().filter { it in 'A'..'Z' || it in '0'..'9' }.take(8)
                         newName = filtered
                     },
-                    label = { Text("Name (max 8 chars A-Z, 0-9)") },
+                    label = { Text(stringResource(Res.string.storage_disk_name)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -1064,12 +1110,12 @@ fun NewDisketteDialog(
                 },
                 enabled = newName.isNotBlank()
             ) {
-                Text("Create")
+                Text(stringResource(Res.string.ui_create))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(Res.string.ui_cancel))
             }
         }
     )
@@ -1077,8 +1123,10 @@ fun NewDisketteDialog(
     showOverwriteConfirmation?.let { name ->
         AlertDialog(
             onDismissRequest = { showOverwriteConfirmation = null },
-            title = { Text("File Already Exists") },
-            text = { Text("The disk image '$name' already exists. What would you like to do?") },
+            title = { Text(stringResource(Res.string.storage_file_exists_title)) },
+            text = {
+                Text(stringResource(Res.string.storage_file_exists_message, name))
+            },
             confirmButton = {
                 Button(
                     onClick = {
@@ -1086,12 +1134,12 @@ fun NewDisketteDialog(
                         showOverwriteConfirmation = null
                     }
                 ) {
-                    Text("Overwrite")
+                    Text(stringResource(Res.string.ui_overwrite))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showOverwriteConfirmation = null }) {
-                    Text("Cancel")
+                    Text(stringResource(Res.string.ui_cancel))
                 }
             }
         )
