@@ -5,6 +5,7 @@ import com.aboveware.aboveabc80.core.DiskController
 import java.nio.file.Files
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
+import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import kotlin.test.Test
@@ -94,6 +95,88 @@ class FloppyLoadIntegrationTest {
                 val output = rows.joinToString("\n")
                 assertFalse(output.contains("ERR") || output.contains("RST"), output)
                 assertTrue(rows.count { it.trim() == "ABC80" } > before, output)
+            }
+            val prompts = AtomicInteger()
+            val promptWatcher = object : NativeLib.MemoryReadWatcher {
+                override fun onRead(address: Int): Boolean {
+                    prompts.incrementAndGet()
+                    return false
+                }
+            }
+            lib.addMemoryReadWatcher(0x00db, promptWatcher)
+            try {
+                fun command(text: String) {
+                    val before = prompts.get()
+                    "$text\r".forEach { lib.sendKey(it.code) }
+                    val started = TimeSource.Monotonic.markNow()
+                    while (prompts.get() == before && started.elapsedNow().inWholeMilliseconds < 12000) {
+                        Thread.sleep(10)
+                    }
+                    val output = decodeABC80Screen(lib.getMemory(), false).joinToString("\n")
+                    assertTrue(prompts.get() > before, "$text did not finish:\n$output")
+                    assertFalse(output.contains("ERR"), "$text:\n$output")
+                }
+                for (format in listOf("fd2", "abc830", "fd4d")) {
+                    assertTrue(lib.bus.floppy.mount(1, Abc80FloppyLayout(format, 1).create(), "$format.DSK"))
+                    command("NEW")
+                    command("10 PRINT 42")
+                    command("SAVE DR1:EMPTY.BAS")
+                    command("NEW")
+                    command("LOAD DR1:EMPTY.BAS")
+                    command("LIST")
+                    assertTrue(decodeABC80Screen(lib.getMemory(), false).any { it.contains("10 PRINT 42") }, format)
+                    val saved = home.resolve(".aboveabc80/dr/1.dsk").readBytes()
+                    assertTrue(requireNotNull(Abc80FloppyLayout.list(saved)).any { it.first == "EMPTY.BAS" },
+                        "$format must also expose saved files to the dialog")
+                    assertTrue(saveLocalDisk("CLOUD.DSK", saved))
+                    assertEquals("CLOUD.DSK", controller.loadFromLocal(1, "CLOUD.DSK"))
+                    val beforeImport = lib.getMemory()
+                    fun word(address: Int) = (beforeImport[address].toInt() and 255) or
+                        ((beforeImport[address + 1].toInt() and 255) shl 8)
+                    val programStart = word(0xFE1C)
+                    val programEnd = word(0xFE1E)
+                    Abc80CloudDiskImport.save(1, listOf(
+                        "CLOUD.BAS" to "10 PRINT \"MOLN\"\n20 PRINT 123\n".encodeToByteArray(),
+                        "NOTES.TXT" to "Anteckningar\nAndra raden\n".encodeToByteArray(),
+                        "TOKEN.BAC" to CloudDiskImportTest.readRecords(saved, "EMPTY.BAS"),
+                        "CODE.ABS" to byteArrayOf(0, 1, 0, 0x90.toByte(), 0x6F, 0, 0xFF.toByte(),
+                            0xC9.toByte(), 0xC9.toByte(), 0, 0, 0, 0x90.toByte(), 0x6F, 0, 0xFF.toByte())
+                    ))
+                    assertContentEquals(
+                        beforeImport.copyOfRange(programStart, programEnd),
+                        lib.getMemory().copyOfRange(programStart, programEnd),
+                        "Import must preserve the program in RAM"
+                    )
+                    assertContentEquals(loadLocalDisk("CLOUD.DSK"), lib.bus.floppy.snapshot(1))
+                    command("NEW")
+                    command("LOAD DR1:CLOUD.BAS")
+                    command("LIST")
+                    assertTrue(decodeABC80Screen(lib.getMemory(), false).any { it.contains("20 PRINT 123") }, format)
+                    command("NEW")
+                    command("LOAD DR1:TOKEN.BAC")
+                    command("LIST")
+                    assertTrue(decodeABC80Screen(lib.getMemory(), false).any { it.contains("10 PRINT 42") }, format)
+                    command("OPEN \"DR1:NOTES.TXT\" AS FILE 1")
+                    command("INPUT #1,A$")
+                    command("PRINT A$")
+                    assertTrue(decodeABC80Screen(lib.getMemory(), false).any { it.contains("Anteckningar") }, format)
+                    command("CLOSE 1")
+                    val importedImage = lib.bus.floppy.snapshot(1)
+                    assertEquals(0xC9.toByte(),
+                        CloudDiskImportTest.readRecords(importedImage, "CODE.ABS")[7], format)
+                    command("SAVE DR1:AGAIN.BAC")
+                    command("NEW")
+                    command("LOAD DR1:AGAIN.BAC")
+                    command("LIST")
+                    assertTrue(decodeABC80Screen(lib.getMemory(), false).any { it.contains("10 PRINT 42") }, format)
+                    assertEquals(1, controller.currentDriveIndex)
+                    command("NEW")
+                    command("LOAD DR1:EMPTY.BAS")
+                    command("LIST")
+                    assertTrue(decodeABC80Screen(lib.getMemory(), false).any { it.contains("10 PRINT 42") }, format)
+                }
+            } finally {
+                lib.removeMemoryReadWatcher(0x00db, promptWatcher)
             }
         } finally {
             native?.freeze()

@@ -136,6 +136,7 @@
     <string name="disk_mount_failed">Kunde inte montera disketten i ABC80. Kontrollera avbildens format och storlek i loggen.</string>
     <string name="disk_unrecognized_image">Diskavbilden känns inte igen</string>
     <string name="disk_no_files">Inga filer</string>
+    <string name="disk_listing_failed">Kunde inte läsa diskettens katalog. Kontrollera att avbilden är formaterad för ABC80.</string>
     <string name="disk_unmount">Avmontera</string>
     <string name="disk_select_for_drive">Välj diskett till enhet %1$s</string>
     <string name="disk_new">Ny diskett…</string>

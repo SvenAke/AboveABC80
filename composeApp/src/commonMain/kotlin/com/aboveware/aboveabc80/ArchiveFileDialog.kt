@@ -392,23 +392,23 @@ fun ArchiveFileDialog(
     var clearDestination by remember(files, targetDriveIndex) { mutableStateOf(clearBeforeDownload) }
     val controller = remember { DiskController.instance }
     val targetFloppy = controller.getFloppy(targetDriveIndex ?: controller.currentDriveIndex)
-    val simulatedFloppy = targetFloppy?.let {
-        Floppy.createFromData(it.getRawData().copyOf()).apply {
-            if (clearDestination) clearFiles()
-        }
-    }
     var selectionFits = true
-    if (simulatedFloppy != null) {
-        for (index in selectedIndices.sorted()) {
-            val file = files[index]
-            val (name, extension) = file.name.splitFilename()
-            if (!simulatedFloppy.injectFile(name, extension, file.content)) {
-                selectionFits = false
-                break
+    var remainingSpace = 0L
+    var selectionError: String? = null
+    if (targetFloppy != null) {
+        try {
+            val image = NativeLib.getObject().bus.floppy.snapshot(targetDriveIndex ?: controller.currentDriveIndex)
+            val records = selectedIndices.sorted().map { index ->
+                val file = files[index]
+                file.name to Abc80CloudDiskImport.prepare(file.name, file.content)
             }
+            val simulated = Abc80FloppyLayout.importFiles(image, records, clearDestination)
+            remainingSpace = Abc80FloppyLayout.freeSpace(simulated)
+        } catch (e: IllegalArgumentException) {
+            selectionFits = false
+            selectionError = e.message
         }
     }
-    val remainingSpace = simulatedFloppy?.getFreeSpace() ?: 0L
 
     fun dismiss(result: List<ArchivedFile>?) {
         onResult(result)
@@ -479,7 +479,7 @@ fun ArchiveFileDialog(
                                 formatSize(remainingSpace)
                             )
                         } else {
-                            stringResource(Res.string.archive_files_do_not_fit)
+                            selectionError ?: stringResource(Res.string.archive_files_do_not_fit)
                         },
                         color = if (selectionFits) {
                             MaterialTheme.colorScheme.onSurfaceVariant

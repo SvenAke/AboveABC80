@@ -46,6 +46,35 @@ class Abc80FloppyLayout(formatName: String, val drive: Int) {
     companion object {
         private val imageFormats = listOf("fd2", "abc830", "fd4d", "abc832")
 
+        fun freeSpace(image: ByteArray): Long {
+            val layout = imageFormats.map { Abc80FloppyLayout(it, 0) }
+                .firstOrNull { it.format?.sectorFormat?.size == image.size }
+                ?: throw IllegalArgumentException("Diskavbildens storlek stöds inte")
+            val diskFormat = requireNotNull(layout.format)
+            val bitmap = layout.physicalSector(diskFormat.systemSector) * 256
+            val clusters = diskFormat.sectorFormat.sectors shr diskFormat.clusterShift
+            val free = (0 until clusters).count {
+                (image[bitmap + it / 8].toInt() and (0x80 shr (it % 8))) == 0
+            }
+            return free.toLong() * (1 shl diskFormat.clusterShift) * 253
+        }
+
+        fun importFiles(
+            image: ByteArray,
+            files: List<Pair<String, ByteArray>>,
+            clear: Boolean = false
+        ): ByteArray {
+            val layout = imageFormats.map { Abc80FloppyLayout(it, 0) }
+                .firstOrNull { it.format?.sectorFormat?.size == image.size }
+                ?: throw IllegalArgumentException("Diskavbildens storlek stöds inte")
+            require(layout.format!!.clusterShift == 0) {
+                "Molnimport stöder disketter på 80, 160 och 320 kB"
+            }
+            val result = if (clear) layout.create() else image.copyOf()
+            files.forEach { (name, records) -> layout.writeRecords(result, name, records) }
+            return result
+        }
+
         /** Lists "NAME.EXT" and size in bytes for each file on a raw disk image, or null if the size matches no known format. */
         fun list(image: ByteArray): List<Pair<String, Int>>? {
             val layout = imageFormats.map { Abc80FloppyLayout(it, 0) }
@@ -119,11 +148,118 @@ class Abc80FloppyLayout(formatName: String, val drive: Int) {
         var offset =
             ((physicalFileNumber.shl(3) + physicalSectorNumber.shr(5)) * secPerCluster +
                     physicalSectorNumber.and(31))
-        val interleaveFactory = 7
-        val interleaveMask = 15
-        offset = offset.and(interleaveMask.inv()).or((offset * interleaveFactory).and(interleaveMask))
+        offset = physicalSector(offset)
         offset = offset.shl(8)
         return offset
+    }
+
+    private fun physicalSector(logicalSector: Int): Int =
+        (logicalSector and 15.inv()) or ((logicalSector * 7) and 15)
+
+    private fun writeRecords(image: ByteArray, filename: String, records: ByteArray) {
+        require(records.isNotEmpty() && records.size % 253 == 0) { "Ogiltiga ABC80-filposter" }
+        val diskFormat = requireNotNull(format)
+        val name = Abc80CloudDiskImport.encodeText(
+            filename.substringAfterLast('/').substringAfterLast('\\').uppercase()
+        ).decodeToString()
+        val base = name.substringBeforeLast('.', name)
+        val extension = name.substringAfterLast('.', "")
+        require(base.length in 1..8 && extension.length in 1..3 &&
+            (base + extension).all { it in '!'..'~' && it !in ":/\\." }) {
+            "Ogiltigt ABC80-filnamn: $filename (högst 8+3 tecken)"
+        }
+        val diskName = (base.padEnd(8) + extension.padEnd(3)).encodeToByteArray()
+        val bitmap = physicalSector(diskFormat.systemSector) * 256
+        require(image[bitmap + 255].toInt() == 0 &&
+            (0 until diskFormat.numberOfDirectorySectors).all {
+                (image[bitmap + 239 + it].toInt() and 255) in 1..16
+            }) { "Disketten är inte korrekt formaterad för ABC80" }
+        var selectedEntry = -1
+        var selectedDirectory = -1
+        var freeEntry = -1
+        var freeDirectory = -1
+        for (directory in 0 until diskFormat.numberOfDirectorySectors) {
+            val sector = physicalSector(diskFormat.directorySectors.a + directory) * 256
+            for (slot in 1..15) {
+                val entry = sector + slot * 16
+                val used = (image[entry].toInt() and 255) !in listOf(0, 255)
+                if (!used && freeEntry < 0) {
+                    freeEntry = entry
+                    freeDirectory = directory
+                }
+                if (used && image.copyOfRange(entry + 4, entry + 15).contentEquals(diskName)) {
+                    selectedEntry = entry
+                    selectedDirectory = directory
+                }
+            }
+        }
+        val replacing = selectedEntry >= 0
+        if (!replacing) {
+            selectedEntry = freeEntry
+            selectedDirectory = freeDirectory
+        }
+        require(selectedEntry >= 0) { "Diskettens katalog är full" }
+        fun mark(sector: Int, used: Boolean) {
+            require(sector in 0 until diskFormat.sectorFormat.sectors) { "Ogiltig klusterpekare" }
+            val at = bitmap + sector / 8
+            val mask = 0x80 shr (sector % 8)
+            image[at] = if (used) (image[at].toInt() or mask).toByte()
+                else (image[at].toInt() and mask.inv()).toByte()
+        }
+        if (replacing) {
+            val headerSector = (image[selectedEntry].toInt() and 255) * 8 +
+                ((image[selectedEntry + 1].toInt() and 255) shr 5)
+            val header = physicalSector(headerSector) * 256
+            for (at in 4 until 240 step 2) {
+                if (image[header + at] == 0xFF.toByte()) break
+                val start = (image[header + at].toInt() and 255) * 8 +
+                    ((image[header + at + 1].toInt() and 255) shr 5)
+                val count = (image[header + at + 1].toInt() and 31) + 1
+                repeat(count) { mark(start + it, false) }
+            }
+        }
+        val count = records.size / 253
+        val sectors = (0 until diskFormat.sectorFormat.sectors).filter {
+            (image[bitmap + it / 8].toInt() and (0x80 shr (it % 8))) == 0
+        }.take(count + 1)
+        require(sectors.size == count + 1) { "Disketten är full" }
+        val runs = mutableListOf<Pair<Int, Int>>()
+        sectors.forEach { sector ->
+            val last = runs.lastOrNull()
+            if (last != null && last.first + last.second == sector && last.second < 32) {
+                runs[runs.lastIndex] = last.first to last.second + 1
+            } else runs.add(sector to 1)
+        }
+        require(runs.size <= 118) { "Disketten är för fragmenterad" }
+        val identifier = ((selectedEntry % 256) or selectedDirectory).toByte()
+        sectors.forEachIndexed { index, sector ->
+            mark(sector, true)
+            val at = physicalSector(sector) * 256
+            image.fill(0, at, at + 256)
+            image[at] = identifier
+            image[at + 1] = index.toByte()
+            image[at + 2] = (index shr 8).toByte()
+            if (index > 0) records.copyInto(image, at + 3, (index - 1) * 253, index * 253)
+        }
+        val header = physicalSector(sectors.first()) * 256
+        image.fill(0xFF.toByte(), header + 3, header + 240)
+        runs.forEachIndexed { index, (start, length) ->
+            image[header + 4 + index * 2] = (start / 8).toByte()
+            image[header + 5 + index * 2] = (((start % 8) shl 5) or (length - 1)).toByte()
+        }
+        image[selectedEntry] = (sectors.first() / 8).toByte()
+        image[selectedEntry + 1] = ((sectors.first() % 8) shl 5).toByte()
+        image[selectedEntry + 2] = 0
+        image[selectedEntry + 3] = 0
+        diskName.copyInto(image, selectedEntry + 4)
+        image[selectedEntry + 15] = 0xFF.toByte()
+        if (!replacing) image[bitmap + 239 + selectedDirectory]++
+        if (diskFormat.directorySectors.b != 0) {
+            val main = physicalSector(diskFormat.directorySectors.a + selectedDirectory) * 256
+            image.copyInto(image, physicalSector(diskFormat.directorySectors.b + selectedDirectory) * 256,
+                main, main + 256)
+        }
+        image.copyInto(image, physicalSector(diskFormat.systemSector + 1) * 256, bitmap, bitmap + 256)
     }
 
     private fun block(address: Int) {
@@ -137,6 +273,19 @@ class Abc80FloppyLayout(formatName: String, val drive: Int) {
         Abc80Log.floppy("CLOSE")
         randomAccessFile?.close()
         randomAccessFile = null
+    }
+
+    fun readImage(): ByteArray {
+        val file = checkNotNull(randomAccessFile) { "Disketten är inte öppen" }
+        val position = file.filePointer
+        return try {
+            ByteArray(size()).also {
+                file.seek(0)
+                file.readFully(it)
+            }
+        } finally {
+            file.seek(position)
+        }
     }
 
     private fun volumeName(): String {
@@ -186,9 +335,9 @@ class Abc80FloppyLayout(formatName: String, val drive: Int) {
     private fun dir(bytes: ByteArray): MutableList<String> {
         val usedDirectorySectors = usedDirectorySectors(bytes)
         val filenames = mutableListOf<String>()
-        for (sectorNumber in 16 until 16 + format!!.numberOfDirectorySectors) {
-            if (!usedDirectorySectors[sectorNumber - 16]) continue
-            val sectorStartOffset = sectorNumber.shl(8) + (sectorNumber - 16) * 0x600
+        for (directoryIndex in 0 until format!!.numberOfDirectorySectors) {
+            if (!usedDirectorySectors[directoryIndex]) continue
+            val sectorStartOffset = physicalSector(format.directorySectors.a + directoryIndex) * 256
             for (index in 16 until 256 step 16) {
                 val offset = sectorStartOffset + index
                 if (bytes[offset].toInt() == 0x00 || bytes[offset].toInt() == -1) continue
@@ -213,6 +362,9 @@ class Abc80FloppyLayout(formatName: String, val drive: Int) {
     }
 
     private fun getFileSize(bytes: ByteArray, oo: Int): Int {
+        require(oo >= 0 && oo <= bytes.size - 256) {
+            "Invalid ABC80 file header sector: $oo (image size ${bytes.size})"
+        }
         var sum = 0
         for (k in 4..240 step 2) {
             if (bytes[oo + k].toUByte().toInt() == 255) break
@@ -223,8 +375,10 @@ class Abc80FloppyLayout(formatName: String, val drive: Int) {
 
     private fun usedDirectorySectors(bytes: ByteArray): MutableList<Boolean> {
         val userDirectorySectors = mutableListOf<Boolean>()
-        for (index in 0..7) {
-            userDirectorySectors.add(bytes[format!!.usedDirectorySectorsIndex + index].toUByte().toInt() > 1)
+        val diskFormat = requireNotNull(format)
+        val bitmapIndex = physicalSector(diskFormat.systemSector) * 256
+        for (index in 0 until diskFormat.numberOfDirectorySectors) {
+            userDirectorySectors.add(bytes[bitmapIndex + 239 + index].toUByte().toInt() > 1)
         }
         return userDirectorySectors
     }
@@ -318,7 +472,7 @@ class Abc80FloppyLayout(formatName: String, val drive: Int) {
             image.fill(0x00, bitmapIndex, bitmapIndex + 256)
 
             /* Mark nonexistent clusters busy */
-            for (index in sectorFormat.sectors.shr(clusterShift)..239 * 8) {
+            for (index in sectorFormat.sectors.shr(clusterShift) until 239 * 8) {
                 val i = bitmapIndex + index.shr(3)
                 image[i] = image[i].or(0x80.shr(index.and(0x07)).toByte())
             }
@@ -344,7 +498,7 @@ class Abc80FloppyLayout(formatName: String, val drive: Int) {
 
             // Create MFD directory sectors
             val directorySectorIndex = directorySectors.a.shl(8)
-            for (index in 0..numberOfDirectorySectors) {
+            for (index in 0 until numberOfDirectorySectors) {
                 val fromIndex = directorySectorIndex + index * 256
                 image.fill(0x00, fromIndex, fromIndex + 16)
                 image.fill(0xff.toByte(), fromIndex + 16, fromIndex + 256)
@@ -356,12 +510,18 @@ class Abc80FloppyLayout(formatName: String, val drive: Int) {
                 val size = numberOfDirectorySectors.shl(8)
                 image.copyInto(image, toIndex, fromIndex, fromIndex + size)
             }
-            // todo We need to copy the allocated directory bitmap from 0x600 to 0xa00
-            // I don't know way but the c-program (abcwrite.c) does create the map at 0x600
-            // but the driver code looks at 0xa00.
-            image.copyInto(image, bitmapIndex + 0x400, bitmapIndex, bitmapIndex + 256)
         }
-        return image
+        // The controller applies 7:1 interleave to every logical sector address.
+        val physicalImage = ByteArray(image.size)
+        for (logicalSector in 0 until image.size / 256) {
+            image.copyInto(
+                physicalImage,
+                physicalSector(logicalSector) * 256,
+                logicalSector * 256,
+                (logicalSector + 1) * 256
+            )
+        }
+        return physicalImage
     }
 
 }

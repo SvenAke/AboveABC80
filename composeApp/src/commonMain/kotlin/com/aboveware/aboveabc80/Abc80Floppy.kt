@@ -1,5 +1,6 @@
 package com.aboveware.aboveabc80
 
+import com.aboveware.aboveabc80.core.DiskController
 @ExperimentalUnsignedTypes
 @OptIn(ExperimentalUnsignedTypes::class, ExperimentalStdlibApi::class)
 class Abc80Floppy : Abc80Bus.BusInterface {
@@ -96,6 +97,7 @@ class Abc80Floppy : Abc80Bus.BusInterface {
     }
 
     val disks = DiskDrive()
+    private val mountedNames = mutableMapOf<Int, String>()
 
     private val disk
         get() = disks[drive.toInt()]
@@ -146,6 +148,7 @@ class Abc80Floppy : Abc80Bus.BusInterface {
         val loaded = layout.load(java.io.ByteArrayInputStream(image), name)
         cancelTransfer(drive)
         if (loaded) {
+            mountedNames[drive] = name
             Abc80Log.diskett("ABC80 DR$drive: mounted $name, format=$format, size=${image.size}")
         } else {
             Abc80Log.wtf("ABC80 DR$drive: failed to mount $name")
@@ -159,6 +162,7 @@ class Abc80Floppy : Abc80Bus.BusInterface {
         disks[drive].eject()
         disks[drive] = Abc80FloppyLayout("abc830", drive).open()
         cancelTransfer(drive)
+        mountedNames.remove(drive)
     }
 
     private fun cancelTransfer(drive: Int) {
@@ -167,6 +171,25 @@ class Abc80Floppy : Abc80Bus.BusInterface {
             route.clear()
         }
     }
+
+    private fun selectDrive(value: Int) {
+        drive = (value and 7).toUByte()
+        if (drive.toInt() < DiskController.MAX_DRIVES) {
+            DiskController.instance.currentDriveIndex = drive.toInt()
+        }
+    }
+
+    @Synchronized
+    fun updateImage(drive: Int, name: String, update: (ByteArray) -> ByteArray) {
+        check(mountedNames[drive] == name) { "Disketten på DR$drive: har bytts. Försök igen." }
+        require(disks[drive].isValid()) { "Disketten på DR$drive: är inte läsbar" }
+        val image = update(disks[drive].readImage())
+        check(saveLocalDisk(name, image)) { "Kunde inte spara disketten $name" }
+        check(mount(drive, image, name)) { "Kunde inte montera den uppdaterade disketten $name" }
+    }
+
+    @Synchronized
+    fun snapshot(drive: Int): ByteArray = disks[drive].readImage()
 
     fun run() {}
 
@@ -194,7 +217,7 @@ class Abc80Floppy : Abc80Bus.BusInterface {
                         if (route.size == 4) {
                             if (route[0].and(0x0C) == 0x0C) {
                                 stateMachine.state = StateMachine.State.WRITING
-                                drive = route[1].and(0x07).toUByte()
+                                selectDrive(route[1])
                                 disk.open(route[2], route[3])
                                 disk.write(data)
                             }
@@ -243,7 +266,7 @@ class Abc80Floppy : Abc80Bus.BusInterface {
                         if (route.size == 4) {
                             if (route[0].and(0x01) == 0x01) {
                                 stateMachine.state = StateMachine.State.READING
-                                drive = route[1].and(0x07).toUByte()
+                                selectDrive(route[1])
                                 if (progressOperation.isNotEmpty()) {
                                     progressDrive = "DR$drive: "
                                     progress(text = progressText)

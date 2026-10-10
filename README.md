@@ -48,6 +48,31 @@ mounted only after the ABC80 controller accepts it; the log records its DR
 number, format and byte size. Raw ABC80 images must be 81920, 163840, 327680 or
 655360 bytes. The bundled system disk contains `COPY.ABS` (not `COPY.BAS`).
 
+New empty disks are formatted in the controller's physical 7:1 sector order,
+including allocation maps and empty main/backup directories. The creation
+dialog offers 80, 160 and 320 kB formats, verified with BASIC SAVE/LOAD using
+the bundled DOS ROM. The 640 kB directory layout needs different DOS support
+and is not offered for newly created disks. Disks created by older versions
+with incorrect metadata must be recreated; existing images are not reformatted
+automatically.
+
+### Cloud files on ABC80 disks
+
+Cloud downloads of `.bas`, `.bac`, `.abs` and `.txt` are saved to the active
+ABC80 disk (or the drive whose cloud-import button was selected). Both direct
+downloads and files selected from archives use the ABC80 directory, allocation
+bitmap and 253-byte data records, not the CP/M filesystem. BAS/TXT files accept
+UTF-8 or Latin-1 text, convert Swedish characters to ABC80 codes, and use CR
+line endings; lines are limited to 160 characters and never split across records.
+BAC and ABS records retain their binary contents and are validated before import.
+
+Imports support the 80, 160 and 320 kB disk formats. Existing files are preserved
+unless the explicit clear-disk option is selected; a matching filename is
+replaced. A batch is prepared on a copy and rejected without changing the disk
+if its format, a filename, or available space is invalid. The mounted working
+image and the saved disk image are both updated. Unlike the old downloader,
+importing a BAS file does not clear or overwrite the program in emulator RAM.
+
 ### UI language
 
 All app-owned interface text is Swedish. Compose strings in both the default

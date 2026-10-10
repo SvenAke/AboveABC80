@@ -38,6 +38,7 @@ class DiskController {
 
     fun getFloppy(index: Int): Floppy? = if (index in 0 until MAX_DRIVES) drives[index] else null
 
+    @Volatile
     var currentDriveIndex = 0
         set(value) {
             val validIndex = value.coerceIn(0 until MAX_DRIVES)

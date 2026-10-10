@@ -128,55 +128,35 @@ fun StorageFileDialog(
         data: ByteArray,
         shouldClearFirst: Boolean = false
     ) {
-        val bytes = loadLocalDisk(diskName) ?: return
-        val floppy = Floppy.createFromData(bytes)
-        if (shouldClearFirst) {
-            floppy.format()
-        }
-
-        val name = fileName.substringAfterLast("/").substringBeforeLast(".")
-        val ext = if (fileName.contains(".")) fileName.substringAfterLast(".").take(3) else "BIN"
-
-        if (floppy.injectFile(name, ext, data)) {
-            var finalDiskName = diskName
-            if (diskName.lowercase().endsWith(".imd")) {
-                finalDiskName = diskName.substringBeforeLast(".") + ".DSK"
+        val drive = controller.mountedDisks.entries.firstOrNull { it.value.name == diskName }?.key
+            ?: (targetDriveIndex ?: controller.currentDriveIndex).also {
+                check(controller.loadFromLocal(it, diskName) != null) { "Kunde inte montera $diskName" }
             }
-
-            saveLocalDisk(finalDiskName, floppy.getRawData())
-
-            // If this disk is currently mounted, reload it in the controller
-            val controller = DiskController.instance
-            controller.mountedDisks.forEach { (index, mounted) ->
-                if (mounted.source == DiskController.Source.LOCAL && (mounted.name == diskName || mounted.name == finalDiskName)) {
-                    controller.loadFromLocal(index, finalDiskName)
-                }
-            }
-            Abc80Log.terminal("Successfully injected $fileName into $finalDiskName")
-        } else {
-            Abc80Log.wtf("Failed to inject $fileName into $diskName (disk full?)")
-        }
+        Abc80CloudDiskImport.save(drive, listOf(fileName to data), shouldClearFirst)
     }
 
     fun handleFilesSelection(files: List<Pair<String, ByteArray>>) {
-        if (clearDestinationBeforeDownload) {
-            val driveIdx = targetDriveIndex ?: controller.currentDriveIndex
-            val mounted = controller.mountedDisks[driveIdx]
-            if (mounted != null && mounted.source == DiskController.Source.LOCAL) {
-                val bytes = loadLocalDisk(mounted.name)
-                if (bytes != null) {
-                    val floppy = Floppy.createFromData(bytes)
-                    floppy.format()
-                    saveLocalDisk(mounted.name, floppy.getRawData())
-                    controller.loadFromLocal(driveIdx, mounted.name)
-                }
-            }
-        }
         if (onFilesSelected != null) {
             onFilesSelected.invoke(files, clearDestinationBeforeDownload)
             onDismiss()
         } else {
-            selectedCloudFiles = files
+            val drive = targetDriveIndex ?: controller.currentDriveIndex
+            scope.launch {
+                isDownloading = true
+                try {
+                    withContext(Dispatchers.IO) {
+                        Abc80CloudDiskImport.save(drive, files, clearDestinationBeforeDownload)
+                    }
+                    onDismiss()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Abc80Log.wtf("Cloud import to DR$drive failed: ${e.message}")
+                    errorMessage = e.message ?: fileDownloadFailedMessage
+                } finally {
+                    isDownloading = false
+                }
+            }
         }
     }
 
@@ -842,25 +822,10 @@ fun StorageFileDialog(
                                     )
                                     if (selectedNodes.isNotEmpty()) {
                                         val totalSize = selectedNodes.sumOf { it.size }
-                                        val currentFloppy = if (destinationFolder != null) null else controller.getFloppy(
-                                            targetDriveIndex ?: controller.currentDriveIndex
-                                        )
-                                        val freeSpace =
-                                            if (clearDestinationBeforeDownload && currentFloppy != null) {
-                                                val copy = Floppy.createFromData(
-                                                    currentFloppy.getRawData().copyOf()
-                                                )
-                                                copy.format()
-                                                copy.getFreeSpace()
-                                            } else {
-                                                currentFloppy?.getFreeSpace() ?: 0L
-                                            }
-                                        val fits = currentFloppy == null || totalSize <= freeSpace
-
                                         Text(
                                             text = formatSize(totalSize),
                                             style = MaterialTheme.typography.labelSmall,
-                                            color = if (fits) MaterialTheme.colorScheme.primary else Color.Red
+                                            color = MaterialTheme.colorScheme.primary
                                         )
                                     }
                                 }
@@ -1015,7 +980,7 @@ fun NewDisketteDialog(
     onDismiss: () -> Unit,
     onCreated: (String) -> Unit
 ) {
-    val templates = listOf("fd2" to "ABC80 80 kB (SSSD)", "abc830" to "ABC80 160 kB (SSDD)", "fd4d" to "ABC80 320 kB (DSDD)", "abc832" to "ABC80 640 kB (DSQD)")
+    val templates = listOf("fd2" to "ABC80 80 kB (SSSD)", "abc830" to "ABC80 160 kB (SSDD)", "fd4d" to "ABC80 320 kB (DSDD)")
     var selectedTemplate by remember { mutableStateOf(templates[0].first) }
     var systemDisk by remember { mutableStateOf(true) }
     var newName by remember { mutableStateOf("") }

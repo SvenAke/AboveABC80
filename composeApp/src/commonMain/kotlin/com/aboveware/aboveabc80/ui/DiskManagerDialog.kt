@@ -1,6 +1,7 @@
 package com.aboveware.aboveabc80.ui
 
 import aboveabc80.composeapp.generated.resources.*
+import com.aboveware.aboveabc80.Abc80CloudDiskImport
 import aboveabc80.composeapp.generated.resources.disk_list_contents
 import aboveabc80.composeapp.generated.resources.disk_export_pc
 import aboveabc80.composeapp.generated.resources.disk_import_cloud
@@ -67,9 +68,11 @@ import com.aboveware.aboveabc80.listLocalDisks
 import com.aboveware.aboveabc80.pickFolder
 import com.aboveware.aboveabc80.saveLocalDisk
 import com.aboveware.aboveabc80.setPersistedString
-import com.aboveware.aboveabc80.splitFilename
 import com.aboveware.aboveabc80.writeFileToFolder
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.stringResource
 
@@ -86,6 +89,7 @@ fun DiskManagerDialog(
     val deleteLabel = stringResource(Res.string.disk_delete)
     val copyFailedMessage = stringResource(Res.string.disk_copy_failed)
     val mountFailedMessage = stringResource(Res.string.disk_mount_failed)
+    val listingFailedMessage = stringResource(Res.string.disk_listing_failed)
     var selectedDriveIndex by remember { mutableStateOf<Int?>(null) }
     var showNewDiskDialog by remember { mutableStateOf(false) }
     var showCloudImportDialog by remember { mutableStateOf(false) }
@@ -199,7 +203,12 @@ fun DiskManagerDialog(
                                                                 null
                                                             }
                                                         }
-                                                        listing = mounted.name to image?.let { Abc80FloppyLayout.list(it) }
+                                                        try {
+                                                            listing = mounted.name to image?.let { Abc80FloppyLayout.list(it) }
+                                                        } catch (e: IllegalArgumentException) {
+                                                            Abc80Log.wtf("Invalid ABC80 directory in ${mounted.name}: ${e.message}")
+                                                            errorMessage = "${mounted.name}: $listingFailedMessage"
+                                                        }
                                                     }
                                                 }) {
                                                     Icon(
@@ -231,6 +240,7 @@ fun DiskManagerDialog(
 
                                                 TooltipIconButton(label = importCloudLabel, onClick = {
                                                     targetImportDriveIndex = index
+                                                    controller.currentDriveIndex = index
                                                     showCloudImportDialog = true
                                                 }) {
                                                     Icon(
@@ -413,35 +423,22 @@ fun DiskManagerDialog(
             }
         )
     }
-    fun save2Diskette(
-        floppy: Floppy,
-        fileName: String,
-        fileExt: String,
-        data: ByteArray,
-        driveIndex: Int,
-        fullName: String
-    ) {
-        if (floppy.injectFile(fileName, fileExt, data)) {
-            // Re-save to local storage if it was a local disk
-            controller.mountedDisks[driveIndex]?.let { mounted ->
-                if (mounted.source == DiskController.Source.LOCAL) {
-                    saveLocalDisk(mounted.name, floppy.getRawData())
+    fun saveCloudFiles(driveIndex: Int, files: List<Pair<String, ByteArray>>) {
+        if (files.isEmpty()) return
+        val clear = clearCloudImportTarget && !cloudImportTargetCleared
+        if (clear) cloudImportTargetCleared = true
+        scope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    Abc80CloudDiskImport.save(driveIndex, files, clear)
                 }
-            }
-            Abc80Log.terminal("Successfully injected $fullName into drive ${'A' + driveIndex}")
-        } else {
-            Abc80Log.wtf("Failed to copy $fullName. The disk may be full.")
-            errorMessage = copyFailedMessage
-        }
-    }
-
-    fun clearCloudImportTargetIfRequested(floppy: Floppy, driveIndex: Int) {
-        if (!clearCloudImportTarget || cloudImportTargetCleared) return
-        floppy.clearFiles()
-        cloudImportTargetCleared = true
-        controller.mountedDisks[driveIndex]?.let { mounted ->
-            if (mounted.source == DiskController.Source.LOCAL) {
-                saveLocalDisk(mounted.name, floppy.getRawData())
+                cloudImportTargetCleared = true
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                if (clear) cloudImportTargetCleared = false
+                Abc80Log.wtf("Cloud import to DR$driveIndex failed: ${e.message}")
+                errorMessage = e.message ?: copyFailedMessage
             }
         }
     }
@@ -456,22 +453,7 @@ fun DiskManagerDialog(
             onResult = { files ->
                 if (files != null) {
                     targetImportDriveIndex?.let { driveIndex ->
-                        val floppy = controller.getFloppy(driveIndex)
-                        floppy?.apply {
-                            clearCloudImportTargetIfRequested(this, driveIndex)
-                            files.forEach { file ->
-                                file.name.splitFilename().let {
-                                    save2Diskette(
-                                        floppy,
-                                        it.first,
-                                        it.second,
-                                        file.content,
-                                        driveIndex,
-                                        file.name
-                                    )
-                                }
-                            }
-                        }
+                        saveCloudFiles(driveIndex, files.map { it.name to it.content })
                     }
                     targetImportDriveIndex = null
                 } else {
@@ -528,21 +510,11 @@ fun DiskManagerDialog(
                             }
                             // Also inject normal files if any were selected along with the archive
                             if (normalFiles.isNotEmpty()) {
-                                clearCloudImportTargetIfRequested(floppy, driveIndex)
-                            }
-                            normalFiles.forEach { (fullName, data) ->
-                                val fileName = fullName.substringAfterLast("/").substringBeforeLast(".")
-                                val ext = fullName.substringAfterLast(".").take(3)
-                                save2Diskette(floppy, fileName, ext, data, driveIndex, fullName)
+                                saveCloudFiles(driveIndex, normalFiles)
                             }
                         } else {
                             // Only normal files
-                            clearCloudImportTargetIfRequested(floppy, driveIndex)
-                            selectedFiles.forEach { (fullName, data) ->
-                                val fileName = fullName.substringAfterLast("/").substringBeforeLast(".")
-                                val ext = fullName.substringAfterLast(".").take(3)
-                                save2Diskette(floppy, fileName, ext, data, driveIndex, fullName)
-                            }
+                            saveCloudFiles(driveIndex, selectedFiles)
                             targetImportDriveIndex = null
                         }
                     }
