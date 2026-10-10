@@ -58,6 +58,15 @@ automatically.
 
 ### Cloud files on ABC80 disks
 
+Cloud and archive dialogs offer text previews for filenames accepted by
+`String.isText()`. Preview actions use the same eye icon as cassette previews;
+cloud image previews also use this icon. Previewing does not import files to
+the disk.
+HTML/HTM previews render as web pages: desktop uses the default browser,
+Android uses an internal WebView with scripts, local-file access and network
+loads disabled. Only the downloaded HTML file is supplied; linked assets are
+not downloaded by the app.
+
 Cloud downloads of `.bas`, `.bac`, `.abs` and `.txt` are saved to the active
 ABC80 disk (or the drive whose cloud-import button was selected). Both direct
 downloads and files selected from archives use the ABC80 directory, allocation

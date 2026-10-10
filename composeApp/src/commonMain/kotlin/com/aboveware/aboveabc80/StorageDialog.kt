@@ -24,10 +24,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.FolderOpen
-import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -103,6 +102,7 @@ fun StorageFileDialog(
     val fileOpenFailedMessage = stringResource(Res.string.storage_file_open_failed)
     val pdfOpenFailedMessage = stringResource(Res.string.storage_pdf_open_failed)
     val compressedPreviewMessage = stringResource(Res.string.storage_compressed_preview)
+    val htmlPreviewFailedMessage = stringResource(Res.string.html_preview_failed)
     val fileDownloadFailedMessage = stringResource(Res.string.storage_file_download_failed)
     val filesLoadFailedMessage = stringResource(Res.string.storage_load_failed)
 
@@ -466,7 +466,7 @@ fun StorageFileDialog(
                         items(filteredNodes) { node ->
                             val thumbnail = thumbnails[node.fullName]
                             val displayName = node.name
-                            val isTextFile = !node.isDirectory && node.name.isText()
+                            val isTextFile = !node.isDirectory && (node.name.isText() || node.name.isHtml())
                             val isArchiveFile = !node.isDirectory && isArchiveFile(node.name)
                             val isImageFile = !node.isDirectory && isImageFile(node.name)
                             val isSelected = node in selectedNodes
@@ -524,7 +524,7 @@ fun StorageFileDialog(
                                                 enabled = !isDownloading
                                             ) {
                                                 Icon(
-                                                    imageVector = Icons.Default.Image,
+                                                    imageVector = Icons.Default.Visibility,
                                                     contentDescription = stringResource(Res.string.storage_preview_image)
                                                 )
                                             }
@@ -539,12 +539,12 @@ fun StorageFileDialog(
                                                             ignoreCase = true
                                                         )
                                                     val cachedData = fileCache[node.fullName]
-                                                    if (cachedData != null && !isPdf) {
+                                                    if (cachedData != null && !isPdf && !node.name.isHtml()) {
                                                         val content = if (cachedData.size >= 2 &&
                                                             cachedData[0] == 0x76.toByte() &&
                                                             cachedData[1] == 0xFF.toByte()
                                                         ) {
-                                                            "Compressed (Squeezed) file detected. \nManual decompression required in emulator."
+                                                            compressedPreviewMessage
                                                         } else {
                                                             cachedData.decodeToString()
                                                         }
@@ -556,12 +556,21 @@ fun StorageFileDialog(
                                                             isDownloading = true
                                                             try {
                                                                 val downloadedData = cachedData
-                                                                    ?: provider.downloadFile(node.fullName)
+                                                                    ?: withContext(Dispatchers.IO) {
+                                                                        provider.downloadFile(node.fullName)
+                                                                    }
                                                                     ?: error("Download returned no data")
                                                                 fileCache =
                                                                     fileCache + (node.fullName to downloadedData)
 
-                                                                if (isPdf) {
+                                                                if (node.name.isHtml()) {
+                                                                    val opened = withContext(Dispatchers.IO) {
+                                                                        openHtmlPreview(node.name, downloadedData)
+                                                                    }
+                                                                    if (!opened) {
+                                                                        errorMessage = "${node.name}: $htmlPreviewFailedMessage"
+                                                                    }
+                                                                } else if (isPdf) {
                                                                     val opened =
                                                                         withContext(Dispatchers.IO) {
                                                                             openPdfPreview(
@@ -599,11 +608,12 @@ fun StorageFileDialog(
                                                             }
                                                         }
                                                     }
-                                                }
+                                                },
+                                                enabled = !isDownloading
                                             ) {
                                                 Icon(
-                                                    imageVector = Icons.Default.Description,
-                                                    contentDescription = stringResource(Res.string.archive_open_document)
+                                                    imageVector = Icons.Default.Visibility,
+                                                    contentDescription = stringResource(Res.string.ui_preview)
                                                 )
                                             }
                                         }

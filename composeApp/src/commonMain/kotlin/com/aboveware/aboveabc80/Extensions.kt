@@ -117,16 +117,13 @@ fun String.splitFilename(): Pair<String, String> {
     return Pair(name, ext)
 }
 
+fun String.isHtml() = substringAfterLast('.', "").lowercase() in setOf("html", "htm")
+
 fun String.isText() =
     when (substringAfterLast('.', "").lowercase()) {
-        "BAS",
+        "txt",
         "bas" -> true
-
-        else -> when (substringBeforeLast('.', "").lowercase()) {
-            "catalog" -> true
-            else -> false
-        }
-
+        else -> false
     }
 
 fun formatSize(size: Long): String {

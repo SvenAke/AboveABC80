@@ -159,6 +159,25 @@ actual fun openPdfPreview(name: String, data: ByteArray): Boolean {
     }
 }
 
+actual fun openHtmlPreview(name: String, data: ByteArray): Boolean {
+    return try {
+        val context = checkNotNull(androidContext) { "Android-kontext saknas" }
+        val directory = File(context.cacheDir, "html-previews")
+        check(directory.isDirectory || directory.mkdirs()) { "Kunde inte skapa förhandsvisningsmappen" }
+        val file = File.createTempFile("preview-", ".html", directory)
+        file.writeBytes(data)
+        context.startActivity(Intent(context, HtmlPreviewActivity::class.java).apply {
+            putExtra("path", file.absolutePath)
+            putExtra("name", name)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        })
+        true
+    } catch (e: Exception) {
+        Abc80Log.wtf("Could not preview HTML $name: ${e.message}")
+        false
+    }
+}
+
 actual fun pickFolder(): String? = null
 actual fun createFolder(parentPath: String, name: String): String? = null
 actual fun writeFileToFolder(folderPath: String, name: String, data: ByteArray): Boolean = false

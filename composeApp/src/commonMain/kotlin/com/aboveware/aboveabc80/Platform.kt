@@ -31,6 +31,7 @@ expect fun listLocalFiles(folder: String): List<String>
 expect fun deleteLocalFile(folder: String, name: String): Boolean
 expect fun getCurrentTimestamp(): String
 expect fun openPdfPreview(name: String, data: ByteArray): Boolean
+expect fun openHtmlPreview(name: String, data: ByteArray): Boolean
 expect fun pickFolder(): String?
 expect fun createFolder(parentPath: String, name: String): String?
 expect fun writeFileToFolder(folderPath: String, name: String, data: ByteArray): Boolean

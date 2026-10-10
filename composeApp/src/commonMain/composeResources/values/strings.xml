@@ -39,6 +39,8 @@
     <string name="cassette_cancel">Avbryt</string>
 
     <string name="ui_close">Stäng</string>
+    <string name="ui_preview">Förhandsvisa</string>
+    <string name="html_preview_failed">Kunde inte förhandsvisa HTML-filen. Kontrollera att en webbläsare är tillgänglig.</string>
     <string name="ui_cancel">Avbryt</string>
     <string name="ui_back">Tillbaka</string>
     <string name="ui_create">Skapa</string>

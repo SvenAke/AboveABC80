@@ -23,6 +23,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -38,7 +42,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
@@ -389,6 +393,9 @@ fun ArchiveFileDialog(
 ) {
     var selectedIndices by remember(files) { mutableStateOf<Set<Int>>(emptySet()) }
     var textPreview by remember { mutableStateOf<Pair<String, AnnotatedString>?>(null) }
+    var htmlPreviewError by remember { mutableStateOf<String?>(null) }
+    val previewScope = rememberCoroutineScope()
+    val htmlPreviewFailedMessage = stringResource(Res.string.html_preview_failed)
     var clearDestination by remember(files, targetDriveIndex) { mutableStateOf(clearBeforeDownload) }
     val controller = remember { DiskController.instance }
     val targetFloppy = controller.getFloppy(targetDriveIndex ?: controller.currentDriveIndex)
@@ -432,20 +439,28 @@ fun ArchiveFileDialog(
                 selectedIndices = selectedIndices,
                 onSelectionChanged = { selectedIndices = it },
                 onPreviewText = { file ->
-                    val isZzz = file.name.substringAfterLast('.', "")
-                        .equals("zzz", ignoreCase = true)
-                    val previewBytes = if (isZzz) {
-                        val nativeLib = NativeLib.getObject()
-                        nativeLib.decompressSqueezed(file.content) ?: run {
-                            Abc80Log.wtf("Could not decompress ${file.name}.")
-                            file.content
+                    if (file.name.isHtml()) {
+                        previewScope.launch {
+                            if (!withContext(Dispatchers.IO) { openHtmlPreview(file.name, file.content) }) {
+                                htmlPreviewError = "${file.name}: $htmlPreviewFailedMessage"
+                            }
                         }
                     } else {
-                        file.content
-                    }
+                        val isZzz = file.name.substringAfterLast('.', "")
+                            .equals("zzz", ignoreCase = true)
+                        val previewBytes = if (isZzz) {
+                            val nativeLib = NativeLib.getObject()
+                            nativeLib.decompressSqueezed(file.content) ?: run {
+                                Abc80Log.wtf("Could not decompress ${file.name}.")
+                                file.content
+                            }
+                        } else {
+                            file.content
+                        }
 
-                    val content = previewBytes.toCpmPreviewText()
-                    textPreview = file.name to content
+                        val content = previewBytes.toCpmPreviewText()
+                        textPreview = file.name to content
+                    }
                 }
             )
         },
@@ -537,6 +552,18 @@ fun ArchiveFileDialog(
         dismissButton = {}
     )
 
+    htmlPreviewError?.let { message ->
+        AlertDialog(
+            onDismissRequest = { htmlPreviewError = null },
+            title = { Text(stringResource(Res.string.ui_error)) },
+            text = { Text(message) },
+            confirmButton = {
+                TextButton(onClick = { htmlPreviewError = null }) {
+                    Text(stringResource(Res.string.ui_close))
+                }
+            }
+        )
+    }
     textPreview?.let { (fileName, content) ->
         ArchiveFileTextPreviewDialog(
             fileName = fileName,
@@ -614,13 +641,13 @@ fun ArchiveFileSelector(
                             .weight(1f)
                     )
 
-                    if (file.name.isText()) {
+                    if (file.name.isText() || file.name.isHtml()) {
                         IconButton(
                             onClick = { onPreviewText(file) }
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Description,
-                                contentDescription = stringResource(Res.string.archive_open_document)
+                                imageVector = Icons.Default.Visibility,
+                                contentDescription = stringResource(Res.string.ui_preview)
                             )
                         }
                     }

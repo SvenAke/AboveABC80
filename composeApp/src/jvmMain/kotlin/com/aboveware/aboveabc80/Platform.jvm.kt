@@ -149,6 +149,22 @@ actual fun openPdfPreview(name: String, data: ByteArray): Boolean {
     }
 }
 
+actual fun openHtmlPreview(name: String, data: ByteArray): Boolean {
+    return try {
+        check(Desktop.isDesktopSupported()) { "Ingen webbläsare är tillgänglig" }
+        val desktop = Desktop.getDesktop()
+        check(desktop.isSupported(Desktop.Action.BROWSE)) { "Ingen webbläsare är tillgänglig" }
+        val previewFile = File.createTempFile("aboveabc80-preview-", ".html")
+        previewFile.writeBytes(data)
+        previewFile.deleteOnExit()
+        desktop.browse(previewFile.toURI())
+        true
+    } catch (e: Exception) {
+        Abc80Log.wtf("Could not preview HTML $name: ${e.message}")
+        false
+    }
+}
+
 actual fun pickFolder(): String? {
     val lastFolder = getPersistedString("last_export_folder", System.getProperty("user.home"))
     val chooser = JFileChooser(lastFolder).apply {
