@@ -1,4 +1,5 @@
 <resources>
+    <string name="cassette_preview">Förhandsvisa BASIC-fil</string>
     <string name="sound_volume">Ljudvolym</string>
     <string name="sound_volume_boost">100 % är normal volym. Högre värden förstärker svaga ljud och kan förvränga starka ljud.</string>
     <string name="sound_mute">Stäng av ljud</string>

@@ -155,6 +155,48 @@ object Abc80Cassette {
         return infos
     }
 
+    fun previewBasic(info: FileInfo): String {
+        ensureLoaded()
+        require(info.displayName.substringAfterLast('.', "").equals("bas", ignoreCase = true)) {
+            "Only BASIC cassette files can be previewed"
+        }
+        require(info.position in 0..Int.MAX_VALUE.toLong()) { "Invalid cassette file position" }
+        var offset = info.position.toInt()
+        require(offset <= tape.size - BLOCK) { "Cassette file is no longer available" }
+        val name = Abc80Program.NameBlock()
+        name.load(tape.copyOfRange(offset, offset + BLOCK))
+        check(name.verify() && name.name == info.name) { "Cassette file has changed" }
+        offset += BLOCK
+        val text = StringBuilder()
+        var number = 0
+        while (offset <= tape.size - BLOCK) {
+            val raw = tape.copyOfRange(offset, offset + BLOCK)
+            val block = Abc80Program.DataBlock(number++)
+            block.load(raw)
+            check(block.verify()) { "Invalid BASIC cassette block" }
+            for (index in 39 until 291) {
+                val code = raw[index].toInt() and 0xff
+                if (code == 0) return text.toString().replace("\r\n", "\n").replace('\r', '\n')
+                text.append(when (code) {
+                    0x40 -> 'É'
+                    0x5b -> 'Ä'
+                    0x5c -> 'Ö'
+                    0x5d -> 'Å'
+                    0x5e -> 'Ü'
+                    0x60 -> 'é'
+                    0x7b -> 'ä'
+                    0x7c -> 'ö'
+                    0x7d -> 'å'
+                    0x7e -> 'ü'
+                    0x24 -> '¤'
+                    else -> code.toChar()
+                })
+            }
+            offset += BLOCK
+        }
+        error("BASIC cassette file has no end marker")
+    }
+
     fun format() {
         Abc80Log.cassette("FORMAT")
         tape = ByteArray(0)

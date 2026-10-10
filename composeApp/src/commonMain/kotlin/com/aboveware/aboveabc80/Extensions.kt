@@ -119,22 +119,8 @@ fun String.splitFilename(): Pair<String, String> {
 
 fun String.isText() =
     when (substringAfterLast('.', "").lowercase()) {
-        "doc",
-        "lst",
-        "asm",
-        "man",
-        "bas",
-        "tzx",
-        "hlp",
-        "msg",
-        "sub",
-        "zzz",
-        "hex",
-        "for",
-        "mac",
-        "asc",
-        "pdf",
-        "txt" -> true
+        "BAS",
+        "bas" -> true
 
         else -> when (substringBeforeLast('.', "").lowercase()) {
             "catalog" -> true

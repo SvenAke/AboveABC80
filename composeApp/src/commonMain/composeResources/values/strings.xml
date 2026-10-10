@@ -1,4 +1,5 @@
 <resources>
+    <string name="cassette_preview">Preview BASIC file</string>
     <string name="sound_volume">Sound volume</string>
     <string name="sound_volume_boost">100 % is normal volume. Higher values amplify quiet sounds and may distort loud sounds.</string>
     <string name="sound_mute">Mute sound</string>

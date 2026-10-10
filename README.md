@@ -120,6 +120,10 @@ blocks are retained in memory, not the full WAV recording.
 
 ### Cassette activity
 
+Files with a `.BAS` extension have a preview button in the cassette dialog.
+Preview reads the verified cassette blocks on a background thread and displays
+the BASIC text without changing tape position or loading it into the emulator.
+
 The cassette button in the upper-right corner, between the disk indicator and
 FPS, opens the cassette dialog. The icon-only button remains visible when CPU/FPS
 is hidden. A circular progress indicator is shown while the selected tape is

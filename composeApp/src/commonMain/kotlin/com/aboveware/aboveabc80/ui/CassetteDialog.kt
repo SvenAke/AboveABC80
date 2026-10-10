@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.FastRewind
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Upload
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -37,11 +38,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import com.aboveware.aboveabc80.Abc80Cassette
 import com.aboveware.aboveabc80.Abc80Log
 import com.aboveware.aboveabc80.Abc80CassetteStatus
 import com.aboveware.aboveabc80.LocalFileDialog
+import com.aboveware.aboveabc80.ArchiveFileTextPreviewDialog
 import com.aboveware.aboveabc80.StorageFileDialog
 import com.aboveware.aboveabc80.getCurrentTimestamp
 import com.aboveware.aboveabc80.saveLocalFile
@@ -73,6 +76,8 @@ fun CassetteDialog(onDismiss: () -> Unit) {
     var showSaved by remember { mutableStateOf(false) }
     var showCloud by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
+    var preview by remember { mutableStateOf<Pair<String, String>?>(null) }
+    var previewLoading by remember { mutableStateOf(false) }
     val importFailed = stringResource(Res.string.cassette_import_failed)
     val exportedFormat = stringResource(Res.string.cassette_exported)
     val saveFailedFormat = stringResource(Res.string.cassette_save_failed)
@@ -173,7 +178,34 @@ fun CassetteDialog(onDismiss: () -> Unit) {
                                     },
                                     leadingContent = { Text(if (info.current) "▶" else "") },
                                     trailingContent = {
-                                        if (info.length > 0) Text("${(info.length + 1023) / 1024} kB")
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            if (info.length > 0) Text("${(info.length + 1023) / 1024} kB")
+                                            if (info.displayName.substringAfterLast('.', "").equals("bas", true)) {
+                                                CassetteIconButton(
+                                                    Icons.Default.Visibility,
+                                                    stringResource(Res.string.cassette_preview),
+                                                    !loading && !previewLoading
+                                                ) {
+                                                    previewLoading = true
+                                                    message = null
+                                                    scope.launch {
+                                                        try {
+                                                            val content = withContext(Dispatchers.IO) {
+                                                                Abc80Cassette.previewBasic(info)
+                                                            }
+                                                            preview = info.displayName to content
+                                                        } catch (e: kotlinx.coroutines.CancellationException) {
+                                                            throw e
+                                                        } catch (e: Exception) {
+                                                            Abc80Log.wtf("Could not preview ${info.displayName}: ${e.message}")
+                                                            message = "${info.displayName}: ${e.message}"
+                                                        } finally {
+                                                            previewLoading = false
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
                                     }
                                 )
                             }
@@ -184,6 +216,10 @@ fun CassetteDialog(onDismiss: () -> Unit) {
         },
         confirmButton = { TextButton(enabled = !loading, onClick = onDismiss) { Text(stringResource(Res.string.cassette_close)) } }
     )
+
+    preview?.let { (name, content) ->
+        ArchiveFileTextPreviewDialog(name, AnnotatedString(content)) { preview = null }
+    }
 
     LocalFilePicker(
         show = showImport,
