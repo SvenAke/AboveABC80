@@ -42,6 +42,12 @@ in your IDE’s toolbar or run it directly from the terminal:
 Startup restores saved disks on a background dispatcher so file I/O and disk
 parsing do not block Android input handling.
 
+Disk mounting and ABC80 disk-port access share a lock so a live read cannot
+seek or close the disk file while an image is being copied. A disk is shown as
+mounted only after the ABC80 controller accepts it; the log records its DR
+number, format and byte size. Raw ABC80 images must be 81920, 163840, 327680 or
+655360 bytes. The bundled system disk contains `COPY.ABS` (not `COPY.BAS`).
+
 ### UI language
 
 All app-owned interface text is Swedish. Compose strings in both the default

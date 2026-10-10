@@ -12,18 +12,18 @@ enum class Abc80LogTag(val enabled: Boolean) {
     DEBUG(false),
     DOWNLOAD(false),
     INTERRUPT(false),
-    KEYBOARD(true),
+    KEYBOARD(false),
     MONITOR(false),
     PORT(false),
     BUS(false),
-    DISKETT(true),
+    DISKETTE(true),
     FLOPPY(false),
     CASSETTE(true),
     TAPE(false),
     PRINTER(true),
     SOUND(false),
     STORAGE(false),
-    TERMINAL(true),
+    TERMINAL(false),
     TRACE(false),
     WTF(true),
     Z80(false)
@@ -97,7 +97,7 @@ object Abc80Log {
         NativeLib.getObject().enableLogging(true)
     }
 
-    fun diskett(string: String) = log(Abc80LogTag.DISKETT, string)
+    fun diskett(string: String) = log(Abc80LogTag.DISKETTE, string)
 
     /** Logs cassette storage activity. */
     fun cassette(string: String) = log(Abc80LogTag.CASSETTE, string)

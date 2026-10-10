@@ -85,6 +85,7 @@ fun DiskManagerDialog(
     val importCloudLabel = stringResource(Res.string.disk_import_cloud)
     val deleteLabel = stringResource(Res.string.disk_delete)
     val copyFailedMessage = stringResource(Res.string.disk_copy_failed)
+    val mountFailedMessage = stringResource(Res.string.disk_mount_failed)
     var selectedDriveIndex by remember { mutableStateOf<Int?>(null) }
     var showNewDiskDialog by remember { mutableStateOf(false) }
     var showCloudImportDialog by remember { mutableStateOf(false) }
@@ -348,6 +349,8 @@ fun DiskManagerDialog(
                                                 }
                                             }
                                             selectedDriveIndex = null
+                                        } else {
+                                            errorMessage = "$diskName: $mountFailedMessage"
                                         }
                                     }
                                 )

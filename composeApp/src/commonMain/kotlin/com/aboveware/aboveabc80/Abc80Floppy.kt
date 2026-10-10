@@ -129,20 +129,43 @@ class Abc80Floppy : Abc80Bus.BusInterface {
     }
 
     /** Inserts a raw disk image in the given drive. The format is derived from the image size. */
+    @Synchronized
     fun mount(drive: Int, image: ByteArray, name: String = ""): Boolean {
         val format = listOf("fd2", "abc830", "fd4d", "abc832")
             .firstOrNull { Abc80FloppyLayout(it, drive).format?.sectorFormat?.size == image.size }
-            ?: return false
+            ?: run {
+                Abc80Log.wtf(
+                    "ABC80 DR$drive: cannot mount $name (${image.size} bytes). " +
+                        "Supported raw image sizes: 81920, 163840, 327680, 655360 bytes."
+                )
+                return false
+            }
         disks[drive].close()
         val layout = Abc80FloppyLayout(format, drive)
         disks[drive] = layout
-        return layout.load(java.io.ByteArrayInputStream(image), name)
+        val loaded = layout.load(java.io.ByteArrayInputStream(image), name)
+        cancelTransfer(drive)
+        if (loaded) {
+            Abc80Log.diskett("ABC80 DR$drive: mounted $name, format=$format, size=${image.size}")
+        } else {
+            Abc80Log.wtf("ABC80 DR$drive: failed to mount $name")
+        }
+        return loaded
     }
 
     /** Removes the disk from the given drive. */
+    @Synchronized
     fun unmount(drive: Int) {
         disks[drive].eject()
         disks[drive] = Abc80FloppyLayout("abc830", drive).open()
+        cancelTransfer(drive)
+    }
+
+    private fun cancelTransfer(drive: Int) {
+        if (drive == this.drive.toInt()) {
+            stateMachine.state = StateMachine.State.SELECTED
+            route.clear()
+        }
     }
 
     fun run() {}
@@ -162,6 +185,7 @@ class Abc80Floppy : Abc80Bus.BusInterface {
 
     private val route = mutableListOf<Int>()
 
+    @Synchronized
     override fun onWrite(port: UByte, data: UByte, status: UByte) {
         when (port.toInt()) {
             0x00 -> {
@@ -207,6 +231,7 @@ class Abc80Floppy : Abc80Bus.BusInterface {
         // todo Don not call disks.close()
     }
 
+    @Synchronized
     override fun onRead(port: UByte): UByte {
         return when (port.toInt()) {
             // Read status

@@ -68,8 +68,9 @@ class DiskController {
             val floppy = Floppy()
             floppy.loadRawData(data)
             val name = resourcePath.substringAfterLast("/")
-            loadDrive(index, floppy, MountedDisk(name, Source.RESOURCE))
-            NativeLib.getObject().bus.floppy.mount(index, data, name)
+            if (NativeLib.getObject().bus.floppy.mount(index, data, name)) {
+                loadDrive(index, floppy, MountedDisk(name, Source.RESOURCE))
+            }
         } catch (e: Exception) {
             Abc80Log.wtf("Failed to load disk resource $resourcePath: ${e.message}")
         }
@@ -91,8 +92,9 @@ class DiskController {
                 }
             }
 
+            val image = if (name.lowercase().endsWith(".imd")) floppy.getRawData() else data
+            if (!NativeLib.getObject().bus.floppy.mount(index, image, actualName)) return null
             loadDrive(index, floppy, MountedDisk(actualName, Source.LOCAL))
-            NativeLib.getObject().bus.floppy.mount(index, data, actualName)
             return actualName
         } else {
             Abc80Log.wtf("Failed to load local disk $name")
