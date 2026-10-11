@@ -107,7 +107,7 @@ class CloudDiskImportTest {
             val error = assertFailsWith<IllegalArgumentException> {
                 Abc80CloudDiskImport.prepare(name, ("OK\n" + "A".repeat(121)).encodeToByteArray())
             }
-            assertTrue(requireNotNull(error.message).contains("rad 2"))
+            assertTrue(requireNotNull(error.message).contains("line 2"))
             assertTrue(requireNotNull(error.message).contains("121"))
         }
         assertContentEquals(ByteArray(253),
