@@ -106,9 +106,9 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.ClipboardManager
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.aboveware.aboveabc80.core.AudioPlayer
@@ -129,7 +129,6 @@ import com.aboveware.aboveabc80.ui.CassetteDialog
 import com.aboveware.aboveabc80.ui.CassetteAnimation
 import com.aboveware.aboveabc80.ui.DiskManagerDialog
 import androidx.compose.material.icons.filled.Album
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -160,6 +159,7 @@ fun CPMScreen(startWithStorageOpen: Boolean = false) {
     val soundOutput = remember { SoundOutput(audioPlayer.sampleRate, soundVolume) }
     val focusRequester = remember { FocusRequester() }
     val pressedKeys = remember { mutableMapOf<Key, Int>() }
+    val screenSelection = remember { ABC80Selection() }
 
     var showStorageDialog by remember { mutableStateOf(value = startWithStorageOpen) }
     var showSettingsDialog by remember { mutableStateOf(value = false) }
@@ -190,6 +190,23 @@ fun CPMScreen(startWithStorageOpen: Boolean = false) {
     val scope = rememberCoroutineScope()
     @Suppress("DEPRECATION")
     val clipboardManager = LocalClipboardManager.current
+    var pasting by remember { mutableStateOf(false) }
+    fun pasteScreenClipboard() {
+        if (pasting) return
+        val text = clipboardManager.getText()?.text ?: return
+        screenSelection.clear()
+        pasting = true
+        scope.launch {
+            try {
+                pasteABC80Text(nativeLib, text)
+            } catch (e: IllegalArgumentException) {
+                Abc80Log.wtf("ABC80 paste failed: ${e.message}")
+                snackbarHostState.showSnackbar(requireNotNull(e.message))
+            } finally {
+                pasting = false
+            }
+        }
+    }
 
     var showDebugger by remember { mutableStateOf(value = false) }
 
@@ -493,7 +510,22 @@ fun CPMScreen(startWithStorageOpen: Boolean = false) {
                     }
                 }
                 .onKeyEvent { keyEvent ->
-                    val handled = handleTerminalKeyEvent(keyEvent, scope, clipboardManager, pressedKeys)
+                    val copy = keyEvent.isCtrlPressed && keyEvent.key == Key.C && screenSelection.range != null
+                    if (copy) {
+                        if (keyEvent.type == KeyEventType.KeyDown) {
+                            clipboardManager.setText(AnnotatedString(selectedABC80Text(
+                                decodeABC80Screen(nativeLib.getMemory()), requireNotNull(screenSelection.range)
+                            )))
+                        }
+                        return@onKeyEvent true
+                    }
+                    val paste = (keyEvent.isShiftPressed && keyEvent.key == Key.Insert) ||
+                        (keyEvent.isCtrlPressed && keyEvent.isShiftPressed && keyEvent.key == Key.V)
+                    if (paste) {
+                        if (keyEvent.type == KeyEventType.KeyDown) pasteScreenClipboard()
+                        return@onKeyEvent true
+                    }
+                    val handled = handleTerminalKeyEvent(keyEvent, pressedKeys)
                     if (handled) return@onKeyEvent true
 
                     // Fallback for F3 if handleTerminalKeyEvent failed for some reason
@@ -517,7 +549,31 @@ fun CPMScreen(startWithStorageOpen: Boolean = false) {
                     .padding(if (isFocused.value) 2.dp else 0.dp),
                 contentAlignment = Alignment.BottomCenter
             ) {
-                ABC80Screen(nativeLib = nativeLib)
+                ABC80Screen(
+                    nativeLib = nativeLib,
+                    selection = screenSelection,
+                    onRequestFocus = { focusRequester.requestFocus() }
+                )
+                if (screenSelection.range != null) {
+                    Row(
+                        Modifier.align(Alignment.BottomCenter).background(MaterialTheme.colorScheme.surface)
+                    ) {
+                        TextButton(onClick = {
+                            clipboardManager.setText(AnnotatedString(selectedABC80Text(
+                                decodeABC80Screen(nativeLib.getMemory()), requireNotNull(screenSelection.range)
+                            )))
+                            focusRequester.requestFocus()
+                        }) { Text(stringResource(Res.string.screen_copy)) }
+                        TextButton(onClick = {
+                            pasteScreenClipboard()
+                            focusRequester.requestFocus()
+                        }, enabled = !pasting) { Text(stringResource(Res.string.menu_paste)) }
+                        TextButton(onClick = {
+                            screenSelection.clear()
+                            focusRequester.requestFocus()
+                        }) { Text(stringResource(Res.string.ui_deselect_all)) }
+                    }
+                }
 
                 if (showCpuAndFps) Row(
                     modifier = Modifier
@@ -826,17 +882,7 @@ fun CPMScreen(startWithStorageOpen: Boolean = false) {
                                     SmallFloatingActionButton(
                                         onClick = {
                                             speedDialOpen = false
-                                            clipboardManager.getText()?.text?.let { text ->
-                                                val activeTerminal = TerminalManager.activeTerminal
-                                                val sanitized = text.replace("\r\n", "\r").replace("\n", "\r")
-                                                scope.launch {
-                                                    for (char in sanitized) {
-                                                        activeTerminal.onKeyEvent(char)
-                                                        activeTerminal.triggerClick()
-                                                        delay(10.milliseconds)
-                                                    }
-                                                }
-                                            }
+                                            pasteScreenClipboard()
                                             focusRequester.requestFocus()
                                         },
                                         containerColor = MaterialTheme.colorScheme.secondaryContainer,
@@ -1247,8 +1293,6 @@ private suspend fun loadFont(fontFile: String) {
 
 private fun handleTerminalKeyEvent(
     event: KeyEvent,
-    scope: CoroutineScope,
-    clipboardManager: ClipboardManager,
     pressedKeys: MutableMap<Key, Int>
 ): Boolean {
     val type = event.type
@@ -1262,21 +1306,6 @@ private fun handleTerminalKeyEvent(
             NativeLib.getObject().releaseKey(it)
             return true
         }
-    }
-
-    // Ctrl+V belongs to the ABC80 keyboard; use Shift+Insert for paste.
-    if (type == KeyEventType.KeyDown && isShift && key == Key.Insert) {
-        clipboardManager.getText()?.text?.let { text ->
-            val activeTerminal = TerminalManager.activeTerminal
-            val sanitized = text.replace("\r\n", "\r").replace("\n", "\r")
-            scope.launch {
-                for (char in sanitized) {
-                    abc80CharCode(char)?.let { NativeLib.getObject().sendKey(it) }
-                    delay(10.milliseconds)
-                }
-            }
-        }
-        return true
     }
 
     if (!activeTerminal.isSetupVisible) {

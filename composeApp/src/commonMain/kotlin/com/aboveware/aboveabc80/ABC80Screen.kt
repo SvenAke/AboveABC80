@@ -1,6 +1,8 @@
 package com.aboveware.aboveabc80
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.aspectRatio
@@ -18,6 +20,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.input.pointer.pointerInput
 import kotlinx.coroutines.delay
 
 // Same as @color/abc80 on Android: the ABC80 case colour around the screen
@@ -90,7 +93,12 @@ internal fun decodeABC80ScreenGlyphs(memory: ByteArray, wide: Boolean = TKN80.en
 
 @OptIn(ExperimentalUnsignedTypes::class)
 @Composable
-fun ABC80Screen(nativeLib: NativeLib, modifier: Modifier = Modifier) {
+internal fun ABC80Screen(
+    nativeLib: NativeLib,
+    modifier: Modifier = Modifier,
+    selection: ABC80Selection = remember { ABC80Selection() },
+    onRequestFocus: () -> Unit = {}
+) {
     val charMap = remember { Abc80MonitorCharacterMap() }
     var rows by remember { mutableStateOf(List(ABC80_SCREEN_ROWS) { " ".repeat(ABC80_SCREEN_COLUMNS) }) }
     var cursor by remember { mutableStateOf<Pair<Int, Int>?>(null) }
@@ -108,8 +116,26 @@ fun ABC80Screen(nativeLib: NativeLib, modifier: Modifier = Modifier) {
     val cw = charMap.charWidth
     val ch = charMap.charHeight
     val columns = rows.first().length
+    LaunchedEffect(columns) { selection.clear() }
     Box(modifier.fillMaxSize().background(ABC80_CASE_COLOR), contentAlignment = Alignment.Center) {
-        Canvas(Modifier.aspectRatio((columns * cw).toFloat() / (ABC80_SCREEN_ROWS * ch)).fillMaxSize().background(Color.Black)) {
+        Canvas(Modifier.aspectRatio((columns * cw).toFloat() / (ABC80_SCREEN_ROWS * ch))
+            .fillMaxSize().background(Color.Black)
+            .pointerInput(columns) {
+                fun cell(position: Offset): Int {
+                    val col = (position.x * columns / size.width).toInt().coerceIn(0, columns - 1)
+                    val row = (position.y * ABC80_SCREEN_ROWS / size.height).toInt()
+                        .coerceIn(0, ABC80_SCREEN_ROWS - 1)
+                    return row * columns + col
+                }
+                detectDragGestures(
+                    onDragStart = { selection.start(cell(it)); onRequestFocus() },
+                    onDrag = { change, _ -> selection.extend(cell(change.position)); change.consume() },
+                    onDragCancel = { selection.clear() }
+                )
+            }
+            .pointerInput(Unit) {
+                detectTapGestures { selection.clear(); onRequestFocus() }
+            }) {
             val px = size.width / (columns * cw)
             val py = size.height / (ABC80_SCREEN_ROWS * ch)
             val pixel = Size(px, py)
@@ -118,11 +144,15 @@ fun ABC80Screen(nativeLib: NativeLib, modifier: Modifier = Modifier) {
             }
             rows.forEachIndexed { r, line ->
                 line.forEachIndexed { c, char ->
+                    val selected = selection.range?.contains(r * columns + c) == true
+                    if (selected) drawRect(
+                        ABC80_SCREEN_COLOR, Offset(c * cw * px, r * ch * py), Size(cw * px, ch * py)
+                    )
                     if (char == ' ') return@forEachIndexed
                     charMap.forEach(char.code) { bits, y ->
                         charMap.forEachBit(bits.toInt()) { on, x ->
                             if (on) drawRect(
-                                ABC80_SCREEN_COLOR,
+                                if (selected) Color.Black else ABC80_SCREEN_COLOR,
                                 Offset((c * cw + x) * px, (r * ch + y) * py),
                                 pixel
                             )

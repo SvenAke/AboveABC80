@@ -102,6 +102,12 @@ importing a BAS file does not clear or overwrite the program in emulator RAM.
 The screen renderer recognizes text-mode controls used by graphics programs
 such as BESÖK.GRF, so dates can be printed as text inside a block-graphics frame.
 
+Drag across the ABC80 screen to select text; selected cells use inverted
+foreground/background colors. Use Kopiera or Ctrl+C while a selection exists.
+Klistra in (selection toolbar or menu), Shift+Insert and Ctrl+Shift+V send
+clipboard text to the ABC80 keyboard. Ctrl+V retains its ABC80 key meaning.
+Copying converts Swedish ABC80 codes to Unicode and does not alter screen RAM.
+
 ### UI language
 
 All app-owned interface text is Swedish. Compose strings in both the default
