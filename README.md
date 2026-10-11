@@ -63,6 +63,8 @@ or Windows-1252, and Latin-1 as DOS CP437 (for example `bes÷k.grf` becomes
 `besök.grf`). Original cloud object paths remain unchanged. Disk imports use
 the same repair before uppercasing and encoding filenames in the ABC80 character
 set; internal-storage downloads retain their original filenames.
+Disk directory listings decode ABC80 filename codes to Unicode Swedish letters
+(`][\}{|` to `ÅÄÖåäö`) without modifying the disk image.
 
 Cloud and archive dialogs offer text previews for filenames accepted by
 `String.isText()`. Preview actions use the same eye icon as cassette previews;

@@ -83,7 +83,7 @@ class Abc80FloppyLayout(formatName: String, val drive: Int) {
                 val (name, length) = entry.split("!")
                 val base = name.take(8).trim()
                 val ext = name.drop(8).trim()
-                (if (ext.isEmpty()) base else "$base.$ext") to length.toInt()
+                (if (ext.isEmpty()) base else "$base.$ext").toAndroid() to length.toInt()
             }
         }
     }

@@ -5,10 +5,28 @@ import kotlinx.coroutines.runBlocking
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertContentEquals
 import kotlin.test.assertTrue
 
 @OptIn(ExperimentalUnsignedTypes::class)
 class FloppyFormatTest {
+    @Test
+    fun listingDecodesAllSwedishLettersWithoutModifyingTheImage() {
+        val image = Abc80FloppyLayout.importFiles(
+            Abc80FloppyLayout("abc830", 0).create(),
+            listOf("SWEDISH.BAS" to ByteArray(253))
+        )
+        val size = requireNotNull(Abc80FloppyLayout.list(image)).single().second
+        fun physical(sector: Int) = (sector and 15.inv()) or ((sector * 7) and 15)
+        val nameOffset = physical(8) * 256 + 16 + 4
+        "][\\}{|  BAS".encodeToByteArray().copyInto(image, nameOffset)
+        val before = image.copyOf()
+        assertEquals(listOf("ÅÄÖåäö.BAS" to size), Abc80FloppyLayout.list(image))
+        assertContentEquals(before, image)
+        assertEquals("BESÖK.GRF", "BES\\K.GRF".toAndroid())
+        assertEquals("besök.grf", "bes|k.grf".toAndroid())
+    }
+
     @OptIn(ExperimentalResourceApi::class)
     @Test
     fun bundledSystemDirectoryStillContainsCopy() = runBlocking {

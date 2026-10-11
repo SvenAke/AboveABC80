@@ -139,6 +139,11 @@ fun formatSize(size: Long): String {
 }
 
 fun String.toAndroid() = replace(']', 'Å')
+    .replace('[', 'Ä')
+    .replace('\\', 'Ö')
+    .replace('}', 'å')
+    .replace('{', 'ä')
+    .replace('|', 'ö')
 fun String.toAbc() = replace('Å', ']')
 
 /** The name is formatted as 8.3 characters with spaces. */
