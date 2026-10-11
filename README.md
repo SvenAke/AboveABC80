@@ -58,6 +58,12 @@ automatically.
 
 ### Cloud files on ABC80 disks
 
+Cloud display names repair Swedish letters misdecoded from UTF-8 as Latin-1
+or Windows-1252, and Latin-1 as DOS CP437 (for example `bes÷k.grf` becomes
+`besök.grf`). Original cloud object paths remain unchanged. Disk imports use
+the same repair before uppercasing and encoding filenames in the ABC80 character
+set; internal-storage downloads retain their original filenames.
+
 Cloud and archive dialogs offer text previews for filenames accepted by
 `String.isText()`. Preview actions use the same eye icon as cassette previews;
 cloud image previews also use this icon. Previewing does not import files to
@@ -67,18 +73,23 @@ Android uses an internal WebView with scripts, local-file access and network
 loads disabled. Only the downloaded HTML file is supplied; linked assets are
 not downloaded by the app.
 
-Cloud downloads of `.bas`, `.bac`, `.abs` and `.txt` are saved to the active
+Cloud downloads of all file types are saved to the active
 ABC80 disk (or the drive whose cloud-import button was selected). Both direct
 downloads and files selected from archives use the ABC80 directory, allocation
-bitmap and 253-byte data records, not the CP/M filesystem. BAS/TXT files accept
-UTF-8 or Latin-1 text, convert Swedish characters to ABC80 codes, and use CR
-line endings; lines are limited to 160 characters and never split across records.
-BAC and ABS records retain their binary contents and are validated before import.
+bitmap and 253-byte data records, not the CP/M filesystem. BAC and ABS files
+retain their binary contents and receive format-specific validation. All other
+files, regardless of extension, are imported as UTF-8 or Latin-1 text with
+Swedish ABC80 character conversion and CR line endings. Text lines are limited
+to 120 characters and never split across records; longer lines are rejected
+with the filename and source line number, not truncated. Intermediate records
+are padded with byte 3 and the final record with zeros. Empty text files use
+one zero-filled record.
 
 Imports support the 80, 160 and 320 kB disk formats. Existing files are preserved
 unless the explicit clear-disk option is selected; a matching filename is
 replaced. A batch is prepared on a copy and rejected without changing the disk
-if its format, a filename, or available space is invalid. The mounted working
+if its disk format, a filename (limited to 8+3 characters), BAC/ABS contents,
+or available space is invalid. The mounted working
 image and the saved disk image are both updated. Unlike the old downloader,
 importing a BAS file does not clear or overwrite the program in emulator RAM.
 

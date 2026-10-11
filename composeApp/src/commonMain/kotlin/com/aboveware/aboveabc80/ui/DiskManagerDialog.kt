@@ -77,6 +77,7 @@ import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.stringResource
 
 
+@OptIn(ExperimentalUnsignedTypes::class)
 @Composable
 fun DiskManagerDialog(
     onDismiss: () -> Unit
@@ -588,6 +589,7 @@ fun DiskManagerDialog(
     }
 }
 
+@OptIn(ExperimentalUnsignedTypes::class)
 @Composable
 fun NewDiskDialog(
     onDismiss: () -> Unit,

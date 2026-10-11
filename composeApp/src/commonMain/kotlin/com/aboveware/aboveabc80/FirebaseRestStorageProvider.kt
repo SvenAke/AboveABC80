@@ -43,7 +43,9 @@ data class StorageNode(
     val isDirectory: Boolean,
     val size: Long = 0,
     val children: MutableList<StorageNode> = mutableListOf()
-)
+) {
+    val displayName: String get() = name.toCloudDisplayName()
+}
 
 class FirebaseRestStorageProvider(
     bucketName: String = "abovecpm-1a939.firebasestorage.app",
@@ -139,7 +141,7 @@ class FirebaseRestStorageProvider(
             val folders = response.prefixes.map {
                 val name = it.removeSuffix("/").substringAfterLast("/")
                 StorageNode(name, it, true)
-            }.sortedBy { it.name.lowercase() }
+            }.sortedBy { it.displayName.lowercase() }
 
             val files = response.items.map { item ->
                 async {
@@ -147,7 +149,7 @@ class FirebaseRestStorageProvider(
                     val size = getFileSize(item.name)
                     StorageNode(name, item.name, false, size)
                 }
-            }.awaitAll().sortedBy { it.name.lowercase() }
+            }.awaitAll().sortedBy { it.displayName.lowercase() }
 
             folders + files
         } catch (e: Exception) {

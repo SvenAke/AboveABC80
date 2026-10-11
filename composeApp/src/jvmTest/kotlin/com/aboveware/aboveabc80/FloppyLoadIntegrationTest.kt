@@ -58,6 +58,7 @@ class FloppyLoadIntegrationTest {
         val home = Files.createTempDirectory("abc80-floppy-test").toFile()
         val previousHome = System.getProperty("user.home")
         System.setProperty("user.home", home.absolutePath)
+        check(home.resolve(".aboveabc80").resolve("dr").mkdirs())
         var native: NativeLib? = null
         try {
             val lib = NativeLib.getObject()
@@ -136,8 +137,10 @@ class FloppyLoadIntegrationTest {
                     val programStart = word(0xFE1C)
                     val programEnd = word(0xFE1E)
                     Abc80CloudDiskImport.save(1, listOf(
-                        "CLOUD.BAS" to "10 PRINT \"MOLN\"\n20 PRINT 123\n".encodeToByteArray(),
+                        "CLOUD.BAS" to ((1..15).joinToString("\n") { "${it * 10} REM MOLN" } +
+                            "\n200 PRINT 123\n").encodeToByteArray(),
                         "NOTES.TXT" to "Anteckningar\nAndra raden\n".encodeToByteArray(),
+                        "RAW.BIN" to "Text även utan textändelse\n".encodeToByteArray(),
                         "TOKEN.BAC" to CloudDiskImportTest.readRecords(saved, "EMPTY.BAS"),
                         "CODE.ABS" to byteArrayOf(0, 1, 0, 0x90.toByte(), 0x6F, 0, 0xFF.toByte(),
                             0xC9.toByte(), 0xC9.toByte(), 0, 0, 0, 0x90.toByte(), 0x6F, 0, 0xFF.toByte())
@@ -151,7 +154,7 @@ class FloppyLoadIntegrationTest {
                     command("NEW")
                     command("LOAD DR1:CLOUD.BAS")
                     command("LIST")
-                    assertTrue(decodeABC80Screen(lib.getMemory(), false).any { it.contains("20 PRINT 123") }, format)
+                    assertTrue(decodeABC80Screen(lib.getMemory(), false).any { it.contains("200 PRINT 123") }, format)
                     command("NEW")
                     command("LOAD DR1:TOKEN.BAC")
                     command("LIST")
@@ -162,6 +165,9 @@ class FloppyLoadIntegrationTest {
                     assertTrue(decodeABC80Screen(lib.getMemory(), false).any { it.contains("Anteckningar") }, format)
                     command("CLOSE 1")
                     val importedImage = lib.bus.floppy.snapshot(1)
+                    val expectedText = "Text {ven utan text{ndelse\r".encodeToByteArray()
+                    assertContentEquals(expectedText,
+                        CloudDiskImportTest.readRecords(importedImage, "RAW.BIN").copyOf(expectedText.size), format)
                     assertEquals(0xC9.toByte(),
                         CloudDiskImportTest.readRecords(importedImage, "CODE.ABS")[7], format)
                     command("SAVE DR1:AGAIN.BAC")

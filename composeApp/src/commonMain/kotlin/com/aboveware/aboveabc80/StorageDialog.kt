@@ -168,7 +168,7 @@ fun StorageFileDialog(
 
     fun openArchive(node: StorageNode) {
         scope.launch {
-            downloadingFileName = node.name
+            downloadingFileName = node.displayName
             isDownloading = true
             try {
                 val data = fileCache[node.fullName] ?: provider.downloadFile(node.fullName)
@@ -184,7 +184,7 @@ fun StorageFileDialog(
                         "lbr" -> NativeLib.getObject().extractLbrArchive(data)
                         else -> emptyList()
                     }
-                    archivePreview = node.name to files
+                    archivePreview = node.displayName to files
                 }
             } catch (e: Exception) {
                 Abc80Log.wtf("Could not open archive ${node.name}: ${e.message}")
@@ -257,7 +257,7 @@ fun StorageFileDialog(
                     )
                     if (pathStack.size > 1 && selectedCloudFiles.isEmpty()) {
                         Text(
-                            text = "/" + pathStack.last().removePrefix("cpm/"),
+                            text = "/" + pathStack.last().removePrefix("cpm/").toCloudDisplayName(),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -465,7 +465,7 @@ fun StorageFileDialog(
 
                         items(filteredNodes) { node ->
                             val thumbnail = thumbnails[node.fullName]
-                            val displayName = node.name
+                            val displayName = node.displayName
                             val isTextFile = !node.isDirectory && (node.name.isText() || node.name.isHtml())
                             val isArchiveFile = !node.isDirectory && isArchiveFile(node.name)
                             val isImageFile = !node.isDirectory && isImageFile(node.name)
@@ -549,10 +549,10 @@ fun StorageFileDialog(
                                                             cachedData.decodeToString()
                                                         }
                                                         textPreview =
-                                                            node.name to AnnotatedString(content)
+                                                            node.displayName to AnnotatedString(content)
                                                     } else {
                                                         scope.launch {
-                                                            downloadingFileName = node.name
+                                                            downloadingFileName = node.displayName
                                                             isDownloading = true
                                                             try {
                                                                 val downloadedData = cachedData
@@ -565,22 +565,22 @@ fun StorageFileDialog(
 
                                                                 if (node.name.isHtml()) {
                                                                     val opened = withContext(Dispatchers.IO) {
-                                                                        openHtmlPreview(node.name, downloadedData)
+                                                                        openHtmlPreview(node.displayName, downloadedData)
                                                                     }
                                                                     if (!opened) {
-                                                                        errorMessage = "${node.name}: $htmlPreviewFailedMessage"
+                                                                        errorMessage = "${node.displayName}: $htmlPreviewFailedMessage"
                                                                     }
                                                                 } else if (isPdf) {
                                                                     val opened =
                                                                         withContext(Dispatchers.IO) {
                                                                             openPdfPreview(
-                                                                                node.name,
+                                                                                node.displayName,
                                                                                 downloadedData
                                                                             )
                                                                         }
                                                                     if (!opened) {
                                                                         errorMessage =
-                                                                            "${node.name}: $pdfOpenFailedMessage"
+                                                                            "${node.displayName}: $pdfOpenFailedMessage"
                                                                     }
                                                                 } else {
                                                                     val content =
@@ -593,7 +593,7 @@ fun StorageFileDialog(
                                                                             downloadedData.decodeToString()
                                                                         }
                                                                     textPreview =
-                                                                        node.name to AnnotatedString(
+                                                                        node.displayName to AnnotatedString(
                                                                             content
                                                                         )
                                                                 }
@@ -602,7 +602,7 @@ fun StorageFileDialog(
                                                             } catch (e: Exception) {
                                                                 Abc80Log.wtf("Could not open ${node.name}: ${e.message}")
                                                                 errorMessage =
-                                                                    "${node.name}: $fileOpenFailedMessage"
+                                                                    "${node.displayName}: $fileOpenFailedMessage"
                                                             } finally {
                                                                 isDownloading = false
                                                             }
@@ -781,7 +781,7 @@ fun StorageFileDialog(
                                         var allOk = true
                                         try {
                                             for (node in selectedNodes) {
-                                                downloadingFileName = node.name
+                                                downloadingFileName = node.displayName
                                                 downloadedBytes = 0
                                                 if (destinationFolder != null) {
                                                     provider.downloadToFile(
@@ -905,9 +905,9 @@ fun StorageFileDialog(
                 title = {
                     Text(
                         if (totalImages > 1) {
-                            "${currentNode.name} (${currentIndex + 1}/$totalImages)"
+                            "${currentNode.displayName} (${currentIndex + 1}/$totalImages)"
                         } else {
-                            currentNode.name
+                            currentNode.displayName
                         }
                     )
                 },
@@ -937,7 +937,7 @@ fun StorageFileDialog(
                             if (currentBitmap != null) {
                                 Image(
                                     bitmap = currentBitmap,
-                                    contentDescription = currentNode.name,
+                                    contentDescription = currentNode.displayName,
                                     modifier = Modifier.fillMaxWidth()
                                 )
                             } else {

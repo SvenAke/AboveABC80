@@ -181,11 +181,11 @@ class Abc80Floppy : Abc80Bus.BusInterface {
 
     @Synchronized
     fun updateImage(drive: Int, name: String, update: (ByteArray) -> ByteArray) {
-        check(mountedNames[drive] == name) { "Disketten på DR$drive: har bytts. Försök igen." }
-        require(disks[drive].isValid()) { "Disketten på DR$drive: är inte läsbar" }
+        check(mountedNames[drive] == name) { "The floppy disk in DR$drive: has been changed. Try again." }
+        require(disks[drive].isValid()) { "The floppy disk in DR$drive: is not readable" }
         val image = update(disks[drive].readImage())
-        check(saveLocalDisk(name, image)) { "Kunde inte spara disketten $name" }
-        check(mount(drive, image, name)) { "Kunde inte montera den uppdaterade disketten $name" }
+        check(saveLocalDisk(name, image)) { "Could not save the floppy disk $name" }
+        check(mount(drive, image, name)) { "Could not mount the updated floppy disk $name" }
     }
 
     @Synchronized

@@ -6,9 +6,6 @@ import java.nio.charset.CharacterCodingException
 
 @OptIn(ExperimentalUnsignedTypes::class)
 object Abc80CloudDiskImport {
-    fun supports(name: String): Boolean =
-        name.substringAfterLast('.', "").lowercase() in setOf("bas", "bac", "abs", "txt")
-
     fun save(drive: Int, files: List<Pair<String, ByteArray>>, clear: Boolean = false) {
         require(files.isNotEmpty()) { "Inga filer valda" }
         val records = files.map { (name, data) -> name to prepare(name, data) }
@@ -23,10 +20,8 @@ object Abc80CloudDiskImport {
     }
 
     internal fun prepare(name: String, data: ByteArray): ByteArray {
-        require(supports(name)) { "Filtypen stöds inte: $name" }
-        return when (name.substringAfterLast('.').lowercase()) {
-            "bas", "txt" -> textRecords(data)
-            else -> {
+        when (name.substringAfterLast('.', "").lowercase()) {
+            "bac", "abs" -> {
                 require(data.isNotEmpty()) { "Filen är tom: $name" }
                 if (name.endsWith(".bac", true)) {
                     require(data[0] == 0x82.toByte()) { "Ogiltig BAC-fil: $name" }
@@ -50,9 +45,10 @@ object Abc80CloudDiskImport {
                 } else {
                     validateAbs(name, data)
                 }
-                data.copyOf(((data.size + 252) / 253) * 253)
             }
+            else -> return textRecords(name, data)
         }
+        return data.copyOf(((data.size + 252) / 253).coerceAtLeast(1) * 253)
     }
 
     private fun validateAbs(name: String, data: ByteArray) {
@@ -88,7 +84,7 @@ object Abc80CloudDiskImport {
         code.toByte()
     }.toByteArray()
 
-    private fun textRecords(data: ByteArray): ByteArray {
+    private fun textRecords(name: String, data: ByteArray): ByteArray {
         val decoded = try {
             Charsets.UTF_8.newDecoder().decode(ByteBuffer.wrap(data)).toString().removePrefix("\uFEFF")
         } catch (_: CharacterCodingException) {
@@ -98,8 +94,10 @@ object Abc80CloudDiskImport {
         val blocks = mutableListOf<ByteArray>()
         var block = ByteArray(253) { 3 }
         var used = 0
-        for (line in lines.dropLastWhile { it.isEmpty() }) {
-            require(line.length <= 160) { "Textrader får innehålla högst 160 tecken" }
+        for ((index, line) in lines.dropLastWhile { it.isEmpty() }.withIndex()) {
+            require(line.length <= 120) {
+                "$name: rad ${index + 1} innehåller ${line.length} tecken (högst 120)"
+            }
             val bytes = encodeText(line + "\r")
             if (used + bytes.size > block.size) {
                 blocks.add(block)

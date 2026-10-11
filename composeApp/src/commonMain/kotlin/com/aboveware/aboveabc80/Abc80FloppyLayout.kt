@@ -159,16 +159,14 @@ class Abc80FloppyLayout(formatName: String, val drive: Int) {
     private fun writeRecords(image: ByteArray, filename: String, records: ByteArray) {
         require(records.isNotEmpty() && records.size % 253 == 0) { "Ogiltiga ABC80-filposter" }
         val diskFormat = requireNotNull(format)
-        val name = Abc80CloudDiskImport.encodeText(
-            filename.substringAfterLast('/').substringAfterLast('\\').uppercase()
-        ).decodeToString()
+        val name = filename.substringAfterLast('/').substringAfterLast('\\').toCloudDisplayName().uppercase()
         val base = name.substringBeforeLast('.', name)
         val extension = name.substringAfterLast('.', "")
-        require(base.length in 1..8 && extension.length in 1..3 &&
-            (base + extension).all { it in '!'..'~' && it !in ":/\\." }) {
+        require(base.length in 1..8 && extension.length in 0..3 &&
+            (base + extension).all { (it in '!'..'~' || it in "ÅÄÖ") && it !in ":/\\." }) {
             "Ogiltigt ABC80-filnamn: $filename (högst 8+3 tecken)"
         }
-        val diskName = (base.padEnd(8) + extension.padEnd(3)).encodeToByteArray()
+        val diskName = Abc80CloudDiskImport.encodeText(base.padEnd(8) + extension.padEnd(3))
         val bitmap = physicalSector(diskFormat.systemSector) * 256
         require(image[bitmap + 255].toInt() == 0 &&
             (0 until diskFormat.numberOfDirectorySectors).all {
