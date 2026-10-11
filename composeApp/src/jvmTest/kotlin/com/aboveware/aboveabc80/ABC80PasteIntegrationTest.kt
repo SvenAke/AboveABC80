@@ -24,6 +24,7 @@ class ABC80PasteIntegrationTest {
         val watcher = object : NativeLib.MemoryReadWatcher {
             override fun onRead(address: Int): Boolean {
                 prompts.incrementAndGet()
+                lib.commandHistory.atPrompt = true
                 return false
             }
         }
@@ -63,6 +64,16 @@ class ABC80PasteIntegrationTest {
             assertEquals(10, word(firstLine + 1))
             val secondLine = firstLine + (loaded[firstLine].toInt() and 255)
             assertEquals(20, word(secondLine + 1))
+            delay(500)
+            val before = prompts.get()
+            pasteABC80Text(lib, "PRINT 7654\r")
+            val wait = TimeSource.Monotonic.markNow()
+            while (prompts.get() == before && wait.elapsedNow().inWholeMilliseconds < 10000) delay(10)
+            assertTrue(prompts.get() > before)
+            assertEquals("PRINT 7654", lib.commandHistory.recall(-1, ""))
+            pasteABC80Text(lib, "PRINT 7654")
+            delay(500)
+            assertEquals("PRINT 7654", abc80PromptLine(lib.getMemory()))
         } finally {
             lib.freeze()
             lib.removeMemoryReadWatcher(0x00db, watcher)

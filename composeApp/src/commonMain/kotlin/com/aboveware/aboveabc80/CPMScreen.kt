@@ -160,6 +160,16 @@ fun CPMScreen(startWithStorageOpen: Boolean = false) {
     val focusRequester = remember { FocusRequester() }
     val pressedKeys = remember { mutableMapOf<Key, Int>() }
     val screenSelection = remember { ABC80Selection() }
+    DisposableEffect(nativeLib) {
+        val watcher = object : NativeLib.MemoryReadWatcher {
+            override fun onRead(address: Int): Boolean {
+                nativeLib.commandHistory.atPrompt = true
+                return false
+            }
+        }
+        nativeLib.addMemoryReadWatcher(0x00db, watcher)
+        onDispose { nativeLib.removeMemoryReadWatcher(0x00db, watcher) }
+    }
 
     var showStorageDialog by remember { mutableStateOf(value = startWithStorageOpen) }
     var showSettingsDialog by remember { mutableStateOf(value = false) }
@@ -190,6 +200,23 @@ fun CPMScreen(startWithStorageOpen: Boolean = false) {
     val scope = rememberCoroutineScope()
     @Suppress("DEPRECATION")
     val clipboardManager = LocalClipboardManager.current
+    var recallingCommand by remember { mutableStateOf(false) }
+    fun recallCommand(code: Int): Boolean {
+        if (code != 10 && code != 11) return false
+        if (!nativeLib.commandHistory.atPrompt || TerminalManager.activeTerminal.isSetupVisible) return false
+        if (recallingCommand) return true
+        val current = abc80PromptLine(nativeLib.getMemory()) ?: return false
+        val replacement = nativeLib.commandHistory.recall(if (code == 11) -1 else 1, current) ?: return false
+        recallingCommand = true
+        scope.launch {
+            try {
+                pasteABC80Text(nativeLib, "\b".repeat(current.length) + replacement)
+            } finally {
+                recallingCommand = false
+            }
+        }
+        return true
+    }
     var pasting by remember { mutableStateOf(false) }
     fun pasteScreenClipboard() {
         if (pasting) return
@@ -251,6 +278,7 @@ fun CPMScreen(startWithStorageOpen: Boolean = false) {
         activeTerminal.onKeyInput = { char ->
             val code = if (char.code in 0..31) char.code else abc80CharCode(char)
             code?.let {
+                if (recallCommand(it)) return@let
                 val source = touchCode.get()
                 if (source != null) {
                     touchKeys[source] = it
@@ -284,7 +312,7 @@ fun CPMScreen(startWithStorageOpen: Boolean = false) {
             if (activeTerminal.isSetupVisible) {
                 activeTerminal.onKeyEvent(char)
             } else {
-                abc80CharCode(char)?.let { nativeLib.pressKey(it) }
+                abc80CharCode(char)?.let { if (!recallCommand(it)) nativeLib.pressKey(it) }
             }
             activeTerminal.triggerClick()
         }
@@ -510,6 +538,15 @@ fun CPMScreen(startWithStorageOpen: Boolean = false) {
                     }
                 }
                 .onKeyEvent { keyEvent ->
+                    if (!keyEvent.isCtrlPressed && !keyEvent.isShiftPressed &&
+                        (keyEvent.key == Key.DirectionUp || keyEvent.key == Key.DirectionDown) &&
+                        nativeLib.commandHistory.atPrompt && !TerminalManager.activeTerminal.isSetupVisible
+                    ) {
+                        if (keyEvent.type == KeyEventType.KeyUp) return@onKeyEvent true
+                        if (recallCommand(if (keyEvent.key == Key.DirectionUp) 11 else 10)) {
+                            return@onKeyEvent true
+                        }
+                    }
                     val copy = keyEvent.isCtrlPressed && keyEvent.key == Key.C && screenSelection.range != null
                     if (copy) {
                         if (keyEvent.type == KeyEventType.KeyDown) {

@@ -133,9 +133,21 @@ class NativeLib {
     fun requestCassetteInterrupt(vector: Int) = requestCassetteInterruptNative(vector)
     private external fun requestCassetteInterruptNative(vector: Int)
 
-    fun sendKey(code: Int) = sendKeyNative(code)
+    internal val commandHistory = ABC80CommandHistory()
+
+    private fun recordCommand(code: Int) {
+        commandHistory.record(code)
+    }
+
+    fun sendKey(code: Int) {
+        recordCommand(code)
+        sendKeyNative(code)
+    }
     private external fun sendKeyNative(code: Int)
-    fun pressKey(code: Int) = pressKeyNative(code)
+    fun pressKey(code: Int) {
+        recordCommand(code)
+        pressKeyNative(code)
+    }
     private external fun pressKeyNative(code: Int)
     fun releaseKey(code: Int) = releaseKeyNative(code)
     private external fun releaseKeyNative(code: Int)

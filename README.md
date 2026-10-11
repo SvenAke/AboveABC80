@@ -107,6 +107,9 @@ foreground/background colors. Use Kopiera or Ctrl+C while a selection exists.
 Klistra in (selection toolbar or menu), Shift+Insert and Ctrl+Shift+V send
 clipboard text to the ABC80 keyboard. Ctrl+V retains its ABC80 key meaning.
 Copying converts Swedish ABC80 codes to Unicode and does not alter screen RAM.
+At the ABC80 command prompt, Up/Down recall submitted commands without executing
+them; Down past the newest command restores the unfinished input. While a
+program runs, arrow keys retain their normal ABC80 behavior.
 
 ### UI language
 
