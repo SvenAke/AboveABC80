@@ -99,7 +99,8 @@ object Abc80CloudDiskImport {
                 "$name: rad ${index + 1} innehåller ${line.length} tecken (högst 120)"
             }
             val bytes = encodeText(line + "\r")
-            if (used + bytes.size > block.size) {
+            // ROM LOAD needs a post terminator before the final payload byte.
+            if (used + bytes.size + 2 > block.size) {
                 blocks.add(block)
                 block = ByteArray(253) { 3 }
                 used = 0

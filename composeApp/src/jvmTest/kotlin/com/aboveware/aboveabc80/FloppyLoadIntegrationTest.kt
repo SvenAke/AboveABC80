@@ -63,6 +63,7 @@ class FloppyLoadIntegrationTest {
         try {
             val lib = NativeLib.getObject()
             native = lib
+            assertEquals(64, lib.portRead(3))
             val memory = ByteArray(0x10000)
             Res.readBytes("files/prom.rom").copyInto(memory)
             Res.readBytes("files/dos.rom").copyInto(memory, 0x6000)
@@ -180,6 +181,22 @@ class FloppyLoadIntegrationTest {
                     command("LOAD DR1:EMPTY.BAS")
                     command("LIST")
                     assertTrue(decodeABC80Screen(lib.getMemory(), false).any { it.contains("10 PRINT 42") }, format)
+                    val largeText = buildString {
+                        appendLine("10 REM ".padEnd(80, 'A'))
+                        appendLine("20 REM ".padEnd(80, 'B'))
+                        appendLine("30 REM ".padEnd(90, 'C'))
+                        appendLine("40 GOTO 1200")
+                        for (number in 50..1190 step 10) appendLine("$number REM ".padEnd(90, 'D'))
+                        appendLine("1200 PRINT 9876")
+                        appendLine("1210 END")
+                    }
+                    Abc80CloudDiskImport.save(1, listOf("LARGE.BAS" to largeText.encodeToByteArray()))
+                    command("NEW")
+                    command("LOAD DR1:LARGE.BAS")
+                    command("LIST 1200,1210")
+                    assertTrue(decodeABC80Screen(lib.getMemory(), false).any { it.contains("1200 PRINT 9876") }, format)
+                    command("RUN")
+                    assertTrue(decodeABC80Screen(lib.getMemory(), false).any { it.trim() == "9876" }, format)
                 }
             } finally {
                 lib.removeMemoryReadWatcher(0x00db, promptWatcher)

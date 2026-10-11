@@ -85,7 +85,9 @@ Swedish ABC80 character conversion and CR line endings. Text lines are limited
 to 120 characters and never split across records; longer lines are rejected
 with the filename and source line number, not truncated. Intermediate records
 are padded with byte 3 and the final record with zeros. Empty text files use
-one zero-filled record.
+one zero-filled record. Text packing reserves at least two terminator bytes
+per record: filling the payload closer to its end can make the ROM's LOAD
+stop early even though the disk file contains further lines.
 
 Imports support the 80, 160 and 320 kB disk formats. Existing files are preserved
 unless the explicit clear-disk option is selected; a matching filename is
@@ -94,6 +96,11 @@ if its disk format, a filename (limited to 8+3 characters), BAC/ABS contents,
 or available space is invalid. The mounted working
 image and the saved disk image are both updated. Unlike the old downloader,
 importing a BAS file does not clear or overwrite the program in emulator RAM.
+
+### Screen graphics
+
+The screen renderer recognizes text-mode controls used by graphics programs
+such as BESÖK.GRF, so dates can be printed as text inside a block-graphics frame.
 
 ### UI language
 

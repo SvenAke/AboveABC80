@@ -120,6 +120,26 @@ class CloudDiskImportTest {
     }
 
     @Test
+    fun textPostsReserveTwoBytesEvenWhenLinesAlmostFillThePayload() {
+        for (lastLength in 88..90) {
+            val lines = listOf("A".repeat(80), "B".repeat(80), "C".repeat(lastLength), "NEXT")
+            val records = Abc80CloudDiskImport.prepare("BOUND.BAS", lines.joinToString("\n").encodeToByteArray())
+            assertEquals(506, records.size)
+            if (lastLength == 88) {
+                assertContentEquals((lines.take(3).joinToString("\r") + "\r").encodeToByteArray(),
+                    records.copyOf(251))
+                assertContentEquals(byteArrayOf(3, 3), records.copyOfRange(251, 253))
+                assertTrue(records.copyOfRange(253, 506).decodeToString().startsWith("NEXT\r"))
+            } else {
+                assertContentEquals((lines.take(2).joinToString("\r") + "\r").encodeToByteArray(),
+                    records.copyOf(162))
+                assertTrue(records.copyOfRange(162, 253).all { it == 3.toByte() })
+                assertTrue(records.copyOfRange(253, 506).decodeToString().startsWith(lines[2] + "\rNEXT\r"))
+            }
+        }
+    }
+
+    @Test
     fun replacementAndFullDiskAreAtomic() {
         val image = Abc80FloppyLayout("fd2", 0).create()
         val first = Abc80FloppyLayout.importFiles(image, listOf("ONE.TXT" to ByteArray(506) { 42 }))

@@ -43,6 +43,21 @@ class ABC80ScreenTest {
 
     @OptIn(ExperimentalUnsignedTypes::class)
     @Test
+    fun tombstoneDateSwitchesToTextInsideGraphicsAndBack() {
+        for (wide in listOf(false, true)) {
+            for (textControl in listOf(0x83, 0x07)) {
+                val memory = ByteArray(0x10000)
+                val bytes = byteArrayOf(
+                    0x97.toByte(), 0x35, textControl.toByte()
+                ) + "* 2026-10-11".encodeToByteArray() + byteArrayOf(0x97.toByte(), 0x35)
+                bytes.copyInto(memory, TKN80.rowAddress(0, wide))
+                val row = decodeABC80ScreenGlyphs(memory, wide)[0]
+                assertEquals(" \u00b5 * 2026-10-11 \u00b5", row.take(bytes.size))
+            }
+        }
+    }
+
+    @Test
     fun keyboardMosaicsHaveSolidEdgesAndLettersStayText() {
         val map = Abc80MonitorCharacterMap()
         for (row in 0 until map.charHeight) {

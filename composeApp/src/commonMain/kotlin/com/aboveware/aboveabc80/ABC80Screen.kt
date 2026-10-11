@@ -75,8 +75,8 @@ internal fun decodeABC80ScreenGlyphs(memory: ByteArray, wide: Boolean = TKN80.en
             for (col in 0 until columns) {
                 val value = memory[start + col].toInt() and 0x7F
                 when (value) {
-                    0x16 -> { graphics = false; append(' ') }
-                    0x17 -> { graphics = true; append(' ') }
+                    0x03, 0x07, 0x16 -> { graphics = false; append(' ') }
+                    0x14, 0x17 -> { graphics = true; append(' ') }
                     in 0x20..0x7F -> append(
                         if (graphics) (value or 0x80).toChar()
                         else if (value == 0x7F) ' ' else value.toChar()
