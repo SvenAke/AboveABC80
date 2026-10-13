@@ -577,9 +577,7 @@ fun EmulatorScreen(startWithStorageOpen: Boolean = false) {
                     .weight(1f)
                     .fillMaxWidth()
                     .clipToBounds()
-                    .onFocusChanged { state -> isFocused.value = state.isFocused }
-                    .border(if (isFocused.value) 2.dp else 0.dp, Color.Green.copy(alpha = 0.5f))
-                    .padding(if (isFocused.value) 2.dp else 0.dp),
+                    .onFocusChanged { state -> isFocused.value = state.isFocused },
                 contentAlignment = Alignment.BottomCenter
             ) {
                 ABC80Screen(

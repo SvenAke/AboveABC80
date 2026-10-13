@@ -7,7 +7,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -19,21 +18,34 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.input.pointer.pointerInput
 import kotlinx.coroutines.delay
 
-// Same as @color/abc80 on Android: the ABC80 case colour around the screen
+/** The ABC80 computer case color (beige/tan) rendered around the monitor display. */
 internal val ABC80_CASE_COLOR = Color(0xFFDFAD75)
+
+/** The cyan phosphor foreground color of the ABC80 monitor display. */
 internal val ABC80_SCREEN_COLOR = Color(0xFF57C6F8)
 
+/** The fixed number of text rows (24) on the ABC80 screen. */
 internal const val ABC80_SCREEN_ROWS = 24
+
+/** The standard number of text columns (40) on the ABC80 screen in normal mode. */
 internal const val ABC80_SCREEN_COLUMNS = 40
 
+/** System RAM memory address storing the active screen cursor row (0xFDF3). */
 const val SCREEN_ROW = 0xFDF3      // 253:243 Screen row
+
+/** System RAM memory address storing the active screen cursor column (0xFDF4). */
 const val SCREEN_COLUMN = 0xFDF4   // 253:244 Screen column
 
-/** Cursor (row, column) read from system RAM, or null if outside the screen. */
+/**
+ * Reads and decodes the current cursor position (row, column) from system RAM.
+ *
+ * @param memory The raw system RAM byte array.
+ * @param columns The active screen column count (e.g. 40 in standard mode or 80 in wide mode).
+ * @return A [Pair] containing 0-indexed (row, column), or `null` if the cursor is outside valid bounds.
+ */
 internal fun decodeABC80Cursor(memory: ByteArray, columns: Int = TKN80.columns): Pair<Int, Int>? {
     if (memory.size <= SCREEN_COLUMN) return null
     val row = memory[SCREEN_ROW].toInt() and 0xFF
@@ -41,9 +53,20 @@ internal fun decodeABC80Cursor(memory: ByteArray, columns: Int = TKN80.columns):
     return if (row < ABC80_SCREEN_ROWS && col < columns) row to col else null
 }
 
+/**
+ * Returns the starting RAM address for the specified screen [row].
+ *
+ * @param row The 0-indexed screen row (0..23).
+ * @return The memory offset address corresponding to the start of the row.
+ */
 internal fun abc80RowAddress(row: Int) = TKN80.rowAddress(row)
 
-/** Writes the characters 0..255 into screen RAM using the current width, starting at [firstRow]. */
+/**
+ * Writes the full character set (ASCII bytes 0..255) into screen RAM using the current column width.
+ *
+ * @param nativeLib The native emulator instance providing access to system memory.
+ * @param firstRow The 0-indexed row at which to start writing characters (defaults to row 2).
+ */
 fun writeAllCharactersToScreen(nativeLib: NativeLib, firstRow: Int = 2) {
     val columns = TKN80.columns
     for (i in 0 until 256 step columns) {
@@ -54,6 +77,14 @@ fun writeAllCharactersToScreen(nativeLib: NativeLib, firstRow: Int = 2) {
     }
 }
 
+/**
+ * Decodes the 24 lines of text from screen RAM into plain ASCII strings without graphics processing.
+ *
+ * @param memory The raw system RAM byte array.
+ * @param wide `true` if 80-column wide mode (TKN80) is enabled, `false` for 40-column mode.
+ * @return A list of 24 string rows containing plain characters.
+ * @throws IllegalArgumentException if memory size is less than 32 KB (0x8000).
+ */
 internal fun decodeABC80Screen(memory: ByteArray, wide: Boolean = TKN80.enabled): List<String> {
     require(memory.size >= 0x8000) { "ABC80 screen requires memory through address 0x7fff" }
     return List(ABC80_SCREEN_ROWS) { row ->
@@ -68,6 +99,17 @@ internal fun decodeABC80Screen(memory: ByteArray, wide: Boolean = TKN80.enabled)
     }
 }
 
+/**
+ * Decodes screen RAM into strings containing glyph characters, evaluating semi-graphics control codes.
+ *
+ * ABC80 screen memory uses control codes to switch between text and semi-graphics mode on a row.
+ * Graphics characters have bit 7 set (`or 0x80`) to differentiate them from standard text characters.
+ *
+ * @param memory The raw system RAM byte array.
+ * @param wide `true` if 80-column wide mode (TKN80) is enabled, `false` for 40-column mode.
+ * @return A list of 24 string rows processed for character and graphics glyph rendering.
+ * @throws IllegalArgumentException if memory size is less than 32 KB (0x8000).
+ */
 internal fun decodeABC80ScreenGlyphs(memory: ByteArray, wide: Boolean = TKN80.enabled): List<String> {
     require(memory.size >= 0x8000) { "ABC80 screen requires memory through address 0x7fff" }
     return List(ABC80_SCREEN_ROWS) { row ->
@@ -91,6 +133,17 @@ internal fun decodeABC80ScreenGlyphs(memory: ByteArray, wide: Boolean = TKN80.en
     }
 }
 
+/**
+ * Composable screen component that renders the simulated ABC80 monitor display.
+ *
+ * Periodically polls the emulator memory to decode and render text and semi-graphics glyphs using
+ * [Abc80MonitorCharacterMap], draws a blinking cursor, and supports click and drag text selection.
+ *
+ * @param nativeLib The native emulator instance providing system memory access.
+ * @param modifier The [Modifier] to be applied to the outer layout container.
+ * @param selection State holder for the active screen text selection range.
+ * @param onRequestFocus Callback triggered when the user interacts with the screen to request input focus.
+ */
 @OptIn(ExperimentalUnsignedTypes::class)
 @Composable
 internal fun ABC80Screen(
