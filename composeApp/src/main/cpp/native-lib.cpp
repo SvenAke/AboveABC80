@@ -113,7 +113,7 @@ void onWritePort(int port, int value) {
         abc80_write_sound(value & 0xFF);
         return;
     }
-    if ((port8 <= 7 || (port8 >= 0x39 && port8 <= 0x3B)) && g_native_lib_object && g_port_write_method && g_vm) {
+    if ((port8 <= 7 || port8 == 0x80 || (port8 >= 0x39 && port8 <= 0x3B)) && g_native_lib_object && g_port_write_method && g_vm) {
         JNIEnv *env = nullptr;
         if (attach_current_thread(&env) == JNI_OK) {
             env->CallVoidMethod(g_native_lib_object, g_port_write_method, port8, value & 0xFF);

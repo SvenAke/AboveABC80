@@ -162,6 +162,7 @@ fun EmulatorScreen(startWithStorageOpen: Boolean = false) {
         val watcher = object : NativeLib.MemoryReadWatcher {
             override fun onRead(address: Int): Boolean {
                 nativeLib.commandHistory.atPrompt = true
+                nativeLib.dosActive = false
                 return false
             }
         }
@@ -1180,12 +1181,32 @@ fun EmulatorScreen(startWithStorageOpen: Boolean = false) {
             onLoadFile = { drive, fileName ->
                 showDiskManagerDialog = false
                 focusRequester.requestFocus()
-                scope.launch { pasteABC80Text(nativeLib, "LOAD DR$drive:$fileName\r") }
+                scope.launch {
+                    try {
+                        loadABC80DiskFile(nativeLib, drive, fileName, run = false)
+                    } catch (e: IllegalArgumentException) {
+                        Abc80Log.wtf("Could not load $fileName: ${e.message}")
+                        snackbarHostState.showSnackbar(requireNotNull(e.message))
+                    } catch (e: IllegalStateException) {
+                        Abc80Log.wtf("Could not load $fileName: ${e.message}")
+                        snackbarHostState.showSnackbar(requireNotNull(e.message))
+                    }
+                }
             },
             onRunFile = { drive, fileName ->
                 showDiskManagerDialog = false
                 focusRequester.requestFocus()
-                scope.launch { pasteABC80Text(nativeLib, "RUN DR$drive:$fileName\r") }
+                scope.launch {
+                    try {
+                        loadABC80DiskFile(nativeLib, drive, fileName, run = true)
+                    } catch (e: IllegalArgumentException) {
+                        Abc80Log.wtf("Could not run $fileName: ${e.message}")
+                        snackbarHostState.showSnackbar(requireNotNull(e.message))
+                    } catch (e: IllegalStateException) {
+                        Abc80Log.wtf("Could not run $fileName: ${e.message}")
+                        snackbarHostState.showSnackbar(requireNotNull(e.message))
+                    }
+                }
             }
         ) {
             showDiskManagerDialog = false
@@ -1204,6 +1225,15 @@ fun EmulatorScreen(startWithStorageOpen: Boolean = false) {
                 showCassetteDialog = false
                 focusRequester.requestFocus()
                 scope.launch {
+                    if (Abc80Cassette.list().firstOrNull { it.current }?.executableFormat == Abc80ExecutableFormat.ABS) {
+                        try {
+                            runABC80AbsoluteFile(nativeLib, "CAS:$name")
+                        } catch (e: IllegalStateException) {
+                            Abc80Log.wtf("Could not run $name: ${e.message}")
+                            snackbarHostState.showSnackbar(requireNotNull(e.message))
+                        }
+                        return@launch
+                    }
                     pasteABC80Text(nativeLib, "LOAD CAS:$name\r")
                     val started = TimeSource.Monotonic.markNow()
                     while (!Abc80CassetteStatus.visible && started.elapsedNow().inWholeMilliseconds < 3000) delay(20)

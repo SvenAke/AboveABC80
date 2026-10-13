@@ -37,6 +37,12 @@ class CassetteLoadIntegrationTest {
                 screen(lib).contains("ABC80")
             }
             Thread.sleep(250)
+            type(lib, "OUT 128,1\r")
+            assertFalse(lib.screenCursorVisible)
+            assertEquals(null, decodeABC80Cursor(lib.getMemory(), visible = lib.screenCursorVisible))
+            type(lib, "OUT 128,0\r")
+            assertTrue(lib.screenCursorVisible)
+            assertTrue(decodeABC80Cursor(lib.getMemory(), visible = lib.screenCursorVisible) != null)
             val tape = file("DRAW    GRF", "10 PRINT \"EXTENSION TEST\"\r20 END\r")
             assertTrue(Abc80Cassette.import(tape.inputStream(), "extension-test.tape"))
             val source = Abc80Cassette.list().first { it.displayName == "DRAW.GRF" }
@@ -70,6 +76,7 @@ class CassetteLoadIntegrationTest {
             Abc80CassetteStatus.cancel()
             native?.freeze()
             native?.setFastSpeed(false)
+            native?.portWrite(128, 0)
             Abc80Cassette.eject()
             System.setProperty("user.home", previousHome)
             home.deleteRecursively()

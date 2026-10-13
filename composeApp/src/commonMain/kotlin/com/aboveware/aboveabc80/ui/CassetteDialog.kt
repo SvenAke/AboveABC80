@@ -230,7 +230,7 @@ fun CassetteDialog(
                                             val ext = info.displayName.substringAfterLast('.', "")
                                             val isBas = info.executableFormat == Abc80ExecutableFormat.BAS
                                             if (info.executableFormat != null) {
-                                                CassetteIconButton(
+                                                if (info.executableFormat != Abc80ExecutableFormat.ABS) CassetteIconButton(
                                                     Icons.Default.Download,
                                                     stringResource(Res.string.cassette_load),
                                                     !loading

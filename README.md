@@ -230,14 +230,26 @@ The cassette list's load and play buttons check BASIC files before loading:
 incomplete BAS files without a text end marker and BAC files without an end
 record are rejected rather than leaving LOAD waiting.
 Preview can still display the available text up to a blank tape gap.
-Executable files (`.BAS`, `.BAC`, `.ABS`) in disk and cassette lists have a
+Executable BASIC files (`.BAS`, `.BAC`) in disk and cassette lists have a
 download-arrow button before the play button. The arrow sends LOAD without RUN;
-play loads and runs the file. Both cassette actions position the tape at the
+play loads and runs the file. ABS programs have only play: it enters the DOS
+command interpreter with `BYE`, then sends the device-qualified file name
+without BASIC LOAD/RUN. A system disk with CMDINT.SYS must be mounted.
+When DOS is active (including after manually entering BYE), a button in the
+screen's lower-right corner sends `¤BASIC` and Return to go back to BASIC.
+Both cassette actions position the tape at the
 selected file first.
 Both lists share content-based executable detection: numbered BASIC text, BAC
 headers and ABS headers also enable these buttons for other extensions such as
 `.GRF`. The original file name is retained in LOAD/RUN commands. Cassette
 validation uses the detected format, not just the extension.
+
+As an emulator extension, `OUT 128,1` hides the screen cursor and `OUT 128,0`
+shows it again. Bit 0 of the output value controls visibility in both 40- and
+80-column modes without changing screen RAM or cursor position. The setting
+persists until explicitly restored or the emulator is restarted; ending a BASIC
+program does not restore it automatically. This is not a claim about the
+original ABC80 hardware's port assignments.
 
 The desktop cassette regression test boots the BASIC ROM, loads a multi-block
 program after another file on a synthetic tape at normal CPU speed, and verifies

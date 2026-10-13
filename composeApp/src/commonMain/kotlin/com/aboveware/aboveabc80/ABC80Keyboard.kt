@@ -93,6 +93,7 @@ internal fun abc80KeyCode(key: Key, char: Char?, shift: Boolean, control: Boolea
 /** Converts Unicode input/paste to ABC80 codes; physical modifiers use the key table. */
 internal fun abc80CharCode(char: Char, shift: Boolean = false): Int? = when(char) {
     '\r', '\n' -> 0x0D
+    '\u00a4' -> 0x24
     in '\u0000'..'\u001F', '\u007F' -> char.code
     'Å', 'å' -> if (char == 'Å') 0x5D else 0x7D
     'Ä', 'ä' -> if (char == 'Ä') 0x5B else 0x7B

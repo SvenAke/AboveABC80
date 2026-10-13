@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -18,6 +20,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -26,6 +29,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.input.pointer.pointerInput
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /** The ABC80 computer case color (beige/tan) rendered around the monitor display. */
 internal val ABC80_CASE_COLOR = Color(0xFFDFAD75)
@@ -73,8 +77,12 @@ const val SCREEN_COLUMN = 0xFDF4   // 253:244 Screen column
  * @param columns The active screen column count (e.g. 40 in standard mode or 80 in wide mode).
  * @return A [Pair] containing 0-indexed (row, column), or `null` if the cursor is outside valid bounds.
  */
-internal fun decodeABC80Cursor(memory: ByteArray, columns: Int = TKN80.columns): Pair<Int, Int>? {
-    if (memory.size <= SCREEN_COLUMN) return null
+internal fun decodeABC80Cursor(
+    memory: ByteArray,
+    columns: Int = TKN80.columns,
+    visible: Boolean = true
+): Pair<Int, Int>? {
+    if (!visible || memory.size <= SCREEN_COLUMN) return null
     val row = memory[SCREEN_ROW].toInt() and 0xFF
     val col = memory[SCREEN_COLUMN].toInt() and 0xFF
     return if (row < ABC80_SCREEN_ROWS && col < columns) row to col else null
@@ -183,12 +191,15 @@ internal fun ABC80Screen(
     var rows by remember { mutableStateOf(List(ABC80_SCREEN_ROWS) { " ".repeat(ABC80_SCREEN_COLUMNS) }) }
     var cursor by remember { mutableStateOf<Pair<Int, Int>?>(null) }
     var blinkOn by remember { mutableStateOf(true) }
+    val scope = rememberCoroutineScope()
+    var returningToBasic by remember { mutableStateOf(false) }
     LaunchedEffect(nativeLib) {
         var ticks = 0
         while (true) {
             val memory = nativeLib.getMemory()
+            if (abc80DosPromptVisible(memory)) nativeLib.dosActive = true
             rows = decodeABC80ScreenGlyphs(memory)
-            cursor = decodeABC80Cursor(memory)
+            cursor = decodeABC80Cursor(memory, visible = nativeLib.screenCursorVisible)
             if (++ticks % 10 == 0) blinkOn = !blinkOn
             delay(50)
         }
@@ -201,7 +212,9 @@ internal fun ABC80Screen(
         modifier.fillMaxSize().background(ABC80_CASE_COLOR).padding(BEZEL_WIDTH),
         contentAlignment = Alignment.Center
     ) {
-        Canvas(Modifier.aspectRatio((columns * cw).toFloat() / (ABC80_SCREEN_ROWS * ch))
+        Box(Modifier.aspectRatio((columns * cw).toFloat() / (ABC80_SCREEN_ROWS * ch))
+            .fillMaxSize()) {
+        Canvas(Modifier
             .fillMaxSize()
             .drawBehind { drawRecessedBezel(BEZEL_WIDTH.toPx()) }
             .background(Color.Black)
@@ -247,9 +260,29 @@ internal fun ABC80Screen(
                                 pixel
                             )
                         }
+                        }
                     }
                 }
             }
+            }
+            if (nativeLib.dosActive) {
+                TextButton(
+                    modifier = Modifier.align(Alignment.BottomEnd),
+                    enabled = !returningToBasic,
+                    onClick = {
+                        returningToBasic = true
+                        onRequestFocus()
+                        scope.launch {
+                            try {
+                                pasteABC80Text(nativeLib, "\u00a4BASIC\r")
+                            } finally {
+                                returningToBasic = false
+                            }
+                        }
+                    }
+                ) {
+                    Text("\u00a4BASIC")
+                }
             }
         }
     }

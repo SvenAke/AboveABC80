@@ -7,8 +7,13 @@ package com.aboveware.aboveabc80
 import com.aboveware.aboveabc80.core.cpu
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 
 class NativeLib {
+    internal var dosActive by mutableStateOf(false)
+
     interface MemoryReadWatcher {
         fun onRead(address: Int): Boolean
     }
@@ -91,7 +96,11 @@ class NativeLib {
     fun disassemble(pc: Int): String = disassembleNative(pc)
     private external fun disassembleNative(pc: Int): String
 
-    fun startEmulator(cpuFrequency: Int) = startEmulatorNative(cpuFrequency)
+    fun startEmulator(cpuFrequency: Int) {
+        screenCursorVisible = true
+        dosActive = false
+        startEmulatorNative(cpuFrequency)
+    }
     private external fun startEmulatorNative(cpuFrequency: Int)
 
     val bus = Abc80Bus().also { it.run() }
@@ -110,7 +119,15 @@ class NativeLib {
         } catch (e: Throwable) { 0xFF }
     }
 
+    @Volatile
+    internal var screenCursorVisible = true
+        private set
+
     fun portWrite(port: Int, data: Int) {
+        if (port and 0xff == 0x80) {
+            screenCursorVisible = data and 1 == 0
+            return
+        }
         try {
             if (port in 0x39..0x3B) cassettePlayer.write(port, data) else bus.write(port, data)
         } catch (_: Throwable) {}

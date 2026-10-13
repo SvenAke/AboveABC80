@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Storage
@@ -77,6 +78,7 @@ import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.stringResource
 import com.aboveware.aboveabc80.abc80ExecutableFormat
+import com.aboveware.aboveabc80.Abc80ExecutableFormat
 
 
 @OptIn(ExperimentalUnsignedTypes::class)
@@ -113,7 +115,7 @@ fun DiskManagerDialog(
 
     var listing by remember { mutableStateOf<Pair<String, List<Pair<String, Int>>?>?>(null) }
     var listingDrive by remember { mutableStateOf(0) }
-    var runnableFiles by remember { mutableStateOf(emptySet<String>()) }
+    var runnableFiles by remember { mutableStateOf(emptyMap<String, Abc80ExecutableFormat>()) }
 
     data class ExportPending(val parentDir: String, val floppyName: String, val floppy: AbcDiskImage)
     var exportPending by remember { mutableStateOf<ExportPending?>(null) }
@@ -177,7 +179,7 @@ fun DiskManagerDialog(
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Text("${(size + 1023) / 1024} kB")
                                         if (runnable) {
-                                            CassetteIconButton(
+                                            if (runnableFiles[name] != Abc80ExecutableFormat.ABS) CassetteIconButton(
                                                 Icons.Default.Download,
                                                 stringResource(Res.string.cassette_load),
                                                 true
@@ -250,8 +252,8 @@ fun DiskManagerDialog(
                                                                 val data = checkNotNull(Abc80FloppyLayout.readFile(checkNotNull(image), name)) {
                                                                     "Could not read $name from ${mounted.name}"
                                                                 }
-                                                                name.takeIf { abc80ExecutableFormat(name, data, 253) != null }
-                                                            }.toSet()
+                                                                abc80ExecutableFormat(name, data, 253)?.let { name to it }
+                                                            }.toMap()
                                                             listing = mounted.name to files
                                                         } catch (e: IllegalArgumentException) {
                                                             Abc80Log.wtf("Invalid ABC80 directory in ${mounted.name}: ${e.message}")
@@ -283,7 +285,7 @@ fun DiskManagerDialog(
                                                         }
                                                     }) {
                                                         Icon(
-                                                            Icons.Default.Download,
+                                                            Icons.Default.Upload,
                                                             contentDescription = exportPcLabel
                                                         )
                                                     }

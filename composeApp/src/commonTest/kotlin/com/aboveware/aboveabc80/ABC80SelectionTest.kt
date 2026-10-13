@@ -33,4 +33,9 @@ class ABC80SelectionTest {
             abc80PasteCodes("ÅÄÖåäö\r\nA\nB\r"))
         assertFailsWith<IllegalArgumentException> { abc80PasteCodes("ABC€") }
     }
+
+    @Test
+    fun pasteConvertsDosBasicCommand() {
+        assertEquals(listOf(0x24, 66, 65, 83, 73, 67, 13), abc80PasteCodes("\u00a4BASIC\r"))
+    }
 }
