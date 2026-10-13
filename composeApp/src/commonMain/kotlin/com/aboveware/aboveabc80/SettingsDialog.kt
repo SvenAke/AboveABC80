@@ -54,7 +54,6 @@ import com.aboveware.aboveabc80.printer.Diablo630ConfigView
 import com.aboveware.aboveabc80.printer.Mx80ConfigView
 import com.aboveware.aboveabc80.printer.PrinterManager
 import com.aboveware.aboveabc80.printer.PrinterType
-import com.aboveware.aboveabc80.terminal.TerminalColor
 import com.aboveware.aboveabc80.terminal.TerminalManager
 import com.aboveware.aboveabc80.ui.TooltipIconButton
 import kotlin.math.roundToInt
@@ -134,48 +133,6 @@ fun SettingsDialog(
                         modifier = Modifier.weight(1f)
                     ) {
                         Text(stringResource(Res.string.settings_load_state))
-                    }
-                }
-
-                HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
-
-                // 2. Terminal Color
-                Text(
-                    stringResource(Res.string.settings_terminal_color),
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-
-                Column(modifier = Modifier.selectableGroup()) {
-                    TerminalColor.entries.forEach { colorType ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(48.dp)
-                                .selectable(
-                                    selected = (TerminalManager.terminalColor == colorType),
-                                    onClick = { TerminalManager.terminalColor = colorType },
-                                    role = Role.RadioButton
-                                ),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            RadioButton(
-                                selected = (TerminalManager.terminalColor == colorType),
-                                onClick = null
-                            )
-                            Text(
-                                text = stringResource(
-                                    when (colorType) {
-                                        TerminalColor.GREEN -> Res.string.settings_color_green
-                                        TerminalColor.AMBER -> Res.string.settings_color_amber
-                                        TerminalColor.WHITE -> Res.string.settings_color_white
-                                        TerminalColor.BLUE -> Res.string.settings_color_blue
-                                    }
-                                ),
-                                style = MaterialTheme.typography.bodyLarge,
-                                modifier = Modifier.padding(start = 16.dp)
-                            )
-                        }
                     }
                 }
 
@@ -338,26 +295,6 @@ fun SettingsDialog(
                     )
                     Text(
                         text = stringResource(Res.string.settings_show_cpu_fps),
-                        style = MaterialTheme.typography.bodyLarge,
-                        modifier = Modifier.padding(start = 16.dp)
-                    )
-                }
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp)
-                        .clickable {
-                            TerminalManager.autoUppercase = !TerminalManager.autoUppercase
-                        },
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Checkbox(
-                        checked = TerminalManager.autoUppercase,
-                        onCheckedChange = { TerminalManager.autoUppercase = it }
-                    )
-                    Text(
-                        text = stringResource(Res.string.settings_auto_uppercase),
                         style = MaterialTheme.typography.bodyLarge,
                         modifier = Modifier.padding(start = 16.dp)
                     )

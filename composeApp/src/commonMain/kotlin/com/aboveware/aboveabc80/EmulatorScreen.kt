@@ -267,7 +267,7 @@ fun EmulatorScreen(startWithStorageOpen: Boolean = false) {
         }
     }
 
-    DisposableEffect(TerminalManager.activeTerminal, TerminalManager.autoUppercase) {
+    DisposableEffect(TerminalManager.activeTerminal) {
         val activeTerminal = TerminalManager.activeTerminal
         Abc80Log.keyboard("EmulatorScreen: Attaching keyboard listeners to ${activeTerminal::class.simpleName}")
         activeTerminal.connect()

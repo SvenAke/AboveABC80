@@ -25,7 +25,6 @@ object TerminalManager {
     var currentTerminalType: TerminalType by mutableStateOf(TerminalType.ABC80)
     var terminalColor: TerminalColor by mutableStateOf(TerminalColor.BLUE)
     var scanlineIntensity: Float by mutableStateOf(0.15f)
-    var autoUppercase: Boolean by mutableStateOf(false)
 
     private val abc80Instance by lazy { ABC80() }
 
@@ -36,6 +35,5 @@ object TerminalManager {
         currentTerminalType = TerminalType.ABC80
         terminalColor = TerminalColor.BLUE
         scanlineIntensity = 0.15f
-        autoUppercase = false
     }
 }

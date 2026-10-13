@@ -85,7 +85,6 @@
     <string name="settings_cpu_speed">Processorhastighet</string>
     <string name="settings_cpu_max">MAX</string>
     <string name="settings_show_cpu_fps">Visa CPU och FPS</string>
-    <string name="settings_auto_uppercase">Automatisk versalisering</string>
     <string name="settings_clear_saved">Rensa sparade inställningar</string>
     <string name="settings_clear_saved_title">Rensa sparade inställningar?</string>
     <string name="settings_clear_saved_message">Det här tar bort alla sparade appinställningar på den här enheten. Diskavbilder påverkas inte.</string>
