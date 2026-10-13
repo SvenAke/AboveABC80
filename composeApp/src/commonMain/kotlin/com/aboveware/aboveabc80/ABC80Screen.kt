@@ -42,14 +42,16 @@ private val SCREEN_MARGIN = 12.dp
 private fun DrawScope.drawRecessedBezel(b: Float) {
     val w = size.width
     val h = size.height
-    val shadow = Color(0xFF8A6535)
-    val light = Color(0xFFF2D2A5)
+    val top = Color(0xFF7A552A)
+    val left = Color(0xFF9A7240)
+    val bottom = Color(0xFFC89A62)
+    val right = Color(0xFFE6C08C)
     fun quad(a: Offset, bb: Offset, c: Offset, d: Offset, color: Color) =
         drawPath(Path().apply { moveTo(a.x, a.y); lineTo(bb.x, bb.y); lineTo(c.x, c.y); lineTo(d.x, d.y); close() }, color)
-    quad(Offset(-b, -b), Offset(w + b, -b), Offset(w, 0f), Offset(0f, 0f), shadow)
-    quad(Offset(-b, -b), Offset(0f, 0f), Offset(0f, h), Offset(-b, h + b), shadow.copy(alpha = 0.85f))
-    quad(Offset(-b, h + b), Offset(0f, h), Offset(w, h), Offset(w + b, h + b), light)
-    quad(Offset(w + b, -b), Offset(w + b, h + b), Offset(w, h), Offset(w, 0f), light.copy(alpha = 0.85f))
+    quad(Offset(-b, -b), Offset(w + b, -b), Offset(w, 0f), Offset(0f, 0f), top)
+    quad(Offset(-b, -b), Offset(0f, 0f), Offset(0f, h), Offset(-b, h + b), left)
+    quad(Offset(-b, h + b), Offset(0f, h), Offset(w, h), Offset(w + b, h + b), bottom)
+    quad(Offset(w + b, -b), Offset(w + b, h + b), Offset(w, h), Offset(w, 0f), right)
 }
 
 /** The fixed number of text rows (24) on the ABC80 screen. */
