@@ -133,6 +133,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.yield
 import kotlinx.coroutines.withContext
+import kotlin.time.TimeSource
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.stringResource
 import kotlin.time.Duration.Companion.milliseconds
@@ -1176,6 +1177,11 @@ fun EmulatorScreen(startWithStorageOpen: Boolean = false) {
 
     if (showDiskManagerDialog) {
         DiskManagerDialog(
+            onLoadFile = { drive, fileName ->
+                showDiskManagerDialog = false
+                focusRequester.requestFocus()
+                scope.launch { pasteABC80Text(nativeLib, "LOAD DR$drive:$fileName\r") }
+            },
             onRunFile = { drive, fileName ->
                 showDiskManagerDialog = false
                 focusRequester.requestFocus()
@@ -1188,7 +1194,24 @@ fun EmulatorScreen(startWithStorageOpen: Boolean = false) {
     }
 
     if (showCassetteDialog) {
-        CassetteDialog {
+        CassetteDialog(
+            onLoadFile = { name ->
+                showCassetteDialog = false
+                focusRequester.requestFocus()
+                scope.launch { pasteABC80Text(nativeLib, "LOAD CAS:$name\r") }
+            },
+            onRunFile = { name ->
+                showCassetteDialog = false
+                focusRequester.requestFocus()
+                scope.launch {
+                    pasteABC80Text(nativeLib, "LOAD CAS:$name\r")
+                    val started = TimeSource.Monotonic.markNow()
+                    while (!Abc80CassetteStatus.visible && started.elapsedNow().inWholeMilliseconds < 3000) delay(20)
+                    while (Abc80CassetteStatus.visible) delay(50)
+                    pasteABC80Text(nativeLib, "RUN\r")
+                }
+            }
+        ) {
             showCassetteDialog = false
             focusRequester.requestFocus()
         }

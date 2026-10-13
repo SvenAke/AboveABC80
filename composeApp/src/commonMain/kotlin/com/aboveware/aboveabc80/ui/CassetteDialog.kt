@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -15,8 +16,10 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Eject
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.FastRewind
 import androidx.compose.material.icons.filled.FolderOpen
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material.icons.filled.Visibility
@@ -36,6 +39,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.AnnotatedString
@@ -56,7 +60,7 @@ import kotlinx.coroutines.withContext
 private const val SAVED_TAPES = "tapes"
 
 @Composable
-private fun CassetteIconButton(
+internal fun CassetteIconButton(
     icon: ImageVector,
     label: String,
     enabled: Boolean,
@@ -68,7 +72,11 @@ private fun CassetteIconButton(
 }
 
 @Composable
-fun CassetteDialog(onDismiss: () -> Unit) {
+fun CassetteDialog(
+    onRunFile: (String) -> Unit = {},
+    onLoadFile: (String) -> Unit = {},
+    onDismiss: () -> Unit
+) {
     var files by remember { mutableStateOf(emptyList<Abc80Cassette.FileInfo>()) }
     var loading by remember { mutableStateOf(true) }
     val scope = rememberCoroutineScope()
@@ -76,10 +84,12 @@ fun CassetteDialog(onDismiss: () -> Unit) {
     var showSaved by remember { mutableStateOf(false) }
     var showCloud by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
+    var messageIsError by remember { mutableStateOf(false) }
     var preview by remember { mutableStateOf<Pair<String, String>?>(null) }
     var previewLoading by remember { mutableStateOf(false) }
     val importFailed = stringResource(Res.string.cassette_import_failed)
     val previewFailed = stringResource(Res.string.cassette_preview_failed)
+    val loadFailed = stringResource(Res.string.cassette_load_invalid)
     val exportedFormat = stringResource(Res.string.cassette_exported)
     val saveFailedFormat = stringResource(Res.string.cassette_save_failed)
 
@@ -95,6 +105,29 @@ fun CassetteDialog(onDismiss: () -> Unit) {
         files = list
     }
 
+    fun loadFile(info: Abc80Cassette.FileInfo, run: Boolean) {
+        try {
+            if (info.displayName.substringAfterLast('.', "").equals("bas", true)) {
+                Abc80Cassette.validateBasicLoad(info)
+            }
+            if (info.displayName.substringAfterLast('.', "").equals("bac", true)) {
+                Abc80Cassette.validateBacLoad(info)
+            }
+            Abc80Cassette.seek(info)
+        } catch (e: IllegalStateException) {
+            Abc80Log.wtf("Could not load ${info.displayName}: ${e.message}")
+            message = "${info.displayName}: $loadFailed"
+            messageIsError = true
+            return
+        } catch (e: IllegalArgumentException) {
+            Abc80Log.wtf("Could not load ${info.displayName}: ${e.message}")
+            message = "${info.displayName}: $loadFailed"
+            messageIsError = true
+            return
+        }
+        if (run) onRunFile(info.displayName) else onLoadFile(info.displayName)
+    }
+
     fun importTape(name: String, openStream: () -> java.io.InputStream) {
         loading = true
         message = null
@@ -105,12 +138,14 @@ fun CassetteDialog(onDismiss: () -> Unit) {
                     imported to Abc80Cassette.list()
                 }
                 message = if (imported) null else importFailed
+                messageIsError = !imported
                 files = contents
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
             } catch (e: Exception) {
                 Abc80Log.wtf("Could not import cassette $name: ${e.message}")
                 message = "$name: $importFailed"
+                messageIsError = true
             } finally {
                 loading = false
             }
@@ -153,12 +188,22 @@ fun CassetteDialog(onDismiss: () -> Unit) {
                         enabled = !loading && Abc80Cassette.anyCassette(),
                         onClick = {
                             val name = "tape-${getCurrentTimestamp()}.tape"
-                            if (saveLocalFile(SAVED_TAPES, name, Abc80Cassette.exportBytes()))
+                            if (saveLocalFile(SAVED_TAPES, name, Abc80Cassette.exportBytes())) {
                                 message = exportedFormat.replace("%1\$s", name)
+                                messageIsError = false
+                            }
                         }
                     )
                 }
-                message?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+                message?.let {
+                    Text(
+                        it,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (messageIsError) {
+                            Color.Red
+                        } else MaterialTheme.colorScheme.onSurface
+                    )
+                }
                 Box(modifier = Modifier.sizeIn(minHeight = 200.dp, maxHeight = 400.dp).fillMaxWidth()) {
                     if (loading) {
                         CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
@@ -168,7 +213,12 @@ fun CassetteDialog(onDismiss: () -> Unit) {
                             modifier = Modifier.align(Alignment.Center)
                         )
                     } else {
-                        LazyColumn {
+                        val listState = rememberLazyListState()
+                        LaunchedEffect(files) {
+                            val index = files.indexOfFirst { it.current }
+                            if (index >= 0) listState.animateScrollToItem(index)
+                        }
+                        LazyColumn(state = listState) {
                             items(files) { info ->
                                 ListItem(
                                     headlineContent = {
@@ -181,7 +231,25 @@ fun CassetteDialog(onDismiss: () -> Unit) {
                                     trailingContent = {
                                         Row(verticalAlignment = Alignment.CenterVertically) {
                                             if (info.length > 0) Text("${(info.length + 1023) / 1024} kB")
-                                            if (info.displayName.substringAfterLast('.', "").equals("bas", true)) {
+                                            val ext = info.displayName.substringAfterLast('.', "")
+                                            val isBas = ext.equals("bas", true)
+                                            if (ext.uppercase() in setOf("BAS", "BAC", "ABS")) {
+                                                CassetteIconButton(
+                                                    Icons.Default.Download,
+                                                    stringResource(Res.string.cassette_load),
+                                                    !loading
+                                                ) {
+                                                    loadFile(info, run = false)
+                                                }
+                                                CassetteIconButton(
+                                                    Icons.Default.PlayArrow,
+                                                    stringResource(Res.string.cassette_run),
+                                                    !loading
+                                                ) {
+                                                    loadFile(info, run = true)
+                                                }
+                                            }
+                                            if (isBas || ext.equals("txt", true)) {
                                                 CassetteIconButton(
                                                     Icons.Default.Visibility,
                                                     stringResource(Res.string.cassette_preview),
@@ -200,6 +268,7 @@ fun CassetteDialog(onDismiss: () -> Unit) {
                                                         } catch (e: Exception) {
                                                             Abc80Log.wtf("Could not preview ${info.displayName}: ${e.message}")
                                                             message = "${info.displayName}: $previewFailed"
+                                                            messageIsError = true
                                                         } finally {
                                                             previewLoading = false
                                                         }
@@ -238,6 +307,7 @@ fun CassetteDialog(onDismiss: () -> Unit) {
             onDismiss = { showCloud = false },
             onFilesDownloaded = { names ->
                 showCloud = false
+                messageIsError = false
                 message = names.joinToString("\n") { name ->
                     exportedFormat.replace("%1\$s", name)
                 }

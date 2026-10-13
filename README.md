@@ -226,6 +226,14 @@ rewind and retry the same LOAD from the beginning, or cancel the search.
 To load a program with DOS enabled, rewind the inserted tape and use
 `LOAD CAS:MUSIK.BAS`, then `RUN`. The `CAS:` prefix selects the cassette rather
 than the default disk device.
+The cassette list's load and play buttons check BASIC files before loading:
+incomplete BAS files without a text end marker and BAC files without an end
+record are rejected rather than leaving LOAD waiting.
+Preview can still display the available text up to a blank tape gap.
+Executable files (`.BAS`, `.BAC`, `.ABS`) in disk and cassette lists have a
+download-arrow button before the play button. The arrow sends LOAD without RUN;
+play loads and runs the file. Both cassette actions position the tape at the
+selected file first.
 
 The desktop cassette regression test boots the BASIC ROM, loads a multi-block
 program after another file on a synthetic tape at normal CPU speed, and verifies

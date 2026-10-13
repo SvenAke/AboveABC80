@@ -24,24 +24,7 @@ object Abc80CloudDiskImport {
             "bac", "abs" -> {
                 require(data.isNotEmpty()) { "File is empty: $name" }
                 if (name.endsWith(".bac", true)) {
-                    require(data[0] == 0x82.toByte()) { "Invalid BAC file: $name" }
-                    var offset = 1
-                    var ended = false
-                    while (offset < data.size) {
-                        val length = data[offset].toInt() and 255
-                        if (length == 1) {
-                            ended = true
-                            break
-                        }
-                        if (length == 0) {
-                            offset = (offset / 253 + 1) * 253
-                        } else {
-                            require(length >= 3 && offset + length <= data.size &&
-                                offset % 253 + length <= 253) { "Incomplete BAC file: $name" }
-                            offset += length
-                        }
-                    }
-                    require(ended) { "BAC file missing end record: $name" }
+                    validateBac(name, data, 253)
                 } else {
                     validateAbs(name, data)
                 }
@@ -49,6 +32,23 @@ object Abc80CloudDiskImport {
             else -> return textRecords(name, data)
         }
         return data.copyOf(((data.size + 252) / 253).coerceAtLeast(1) * 253)
+    }
+
+    internal fun validateBac(name: String, data: ByteArray, recordSize: Int) {
+        require(data.isNotEmpty() && data[0] == 0x82.toByte()) { "Invalid BAC file: $name" }
+        var offset = 1
+        while (offset < data.size) {
+            val length = data[offset].toInt() and 255
+            if (length == 1) return
+            if (length == 0) {
+                offset = (offset / recordSize + 1) * recordSize
+            } else {
+                require(length >= 3 && offset + length <= data.size &&
+                    offset % recordSize + length <= recordSize) { "Incomplete BAC file: $name" }
+                offset += length
+            }
+        }
+        throw IllegalArgumentException("BAC file missing end record: $name")
     }
 
     private fun validateAbs(name: String, data: ByteArray) {

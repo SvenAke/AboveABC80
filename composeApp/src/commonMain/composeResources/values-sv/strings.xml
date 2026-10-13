@@ -1,5 +1,8 @@
 <resources>
-    <string name="cassette_preview">Förhandsvisa BASIC-fil</string>
+    <string name="cassette_preview">Förhandsvisa fil</string>
+    <string name="cassette_run">Ladda och kör</string>
+    <string name="cassette_load">Ladda utan att köra</string>
+    <string name="cassette_load_invalid">Bandfilen är ofullständig eller skadad och kan inte laddas. Importera en komplett kopia.</string>
     <string name="sound_volume">Ljudvolym</string>
     <string name="sound_volume_boost">100 % är normal volym. Högre värden förstärker svaga ljud och kan förvränga starka ljud.</string>
     <string name="sound_mute">Stäng av ljud</string>

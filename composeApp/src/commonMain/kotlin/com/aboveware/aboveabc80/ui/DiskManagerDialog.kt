@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -81,6 +82,7 @@ import org.jetbrains.compose.resources.stringResource
 @Composable
 fun DiskManagerDialog(
     onRunFile: (drive: Int, fileName: String) -> Unit = { _, _ -> },
+    onLoadFile: (drive: Int, fileName: String) -> Unit = { _, _ -> },
     onDismiss: () -> Unit
 ) {
     val controller = DiskController.instance
@@ -166,14 +168,32 @@ fun DiskManagerDialog(
                     files.isEmpty() -> Text(stringResource(Res.string.disk_no_files))
                     else -> LazyColumn(modifier = Modifier.sizeIn(maxHeight = 400.dp)) {
                         items(files) { (name, size) ->
-                            val runnable = name.substringAfterLast('.', "").uppercase() in setOf("BAS", "BAC")
+                            val runnable = name.substringAfterLast('.', "").uppercase() in setOf("BAS", "BAC", "ABS")
                             ListItem(
-                                modifier = if (runnable) Modifier.clickable {
-                                    listing = null
-                                    onRunFile(listingDrive, name)
-                                } else Modifier,
                                 headlineContent = { Text(name) },
-                                trailingContent = { Text("${(size + 1023) / 1024} kB") }
+                                trailingContent = {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text("${(size + 1023) / 1024} kB")
+                                        if (runnable) {
+                                            CassetteIconButton(
+                                                Icons.Default.Download,
+                                                stringResource(Res.string.cassette_load),
+                                                true
+                                            ) {
+                                                listing = null
+                                                onLoadFile(listingDrive, name)
+                                            }
+                                            CassetteIconButton(
+                                                Icons.Default.PlayArrow,
+                                                stringResource(Res.string.cassette_run),
+                                                true
+                                            ) {
+                                                listing = null
+                                                onRunFile(listingDrive, name)
+                                            }
+                                        }
+                                    }
+                                }
                             )
                         }
                     }

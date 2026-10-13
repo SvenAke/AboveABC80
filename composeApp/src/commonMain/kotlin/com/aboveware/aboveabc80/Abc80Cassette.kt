@@ -155,25 +155,29 @@ object Abc80Cassette {
         return infos
     }
 
-    fun previewBasic(info: FileInfo): String {
-        ensureLoaded()
-        require(info.displayName.substringAfterLast('.', "").equals("bas", ignoreCase = true)) {
-            "Only BASIC cassette files can be previewed"
+    fun previewBasic(info: FileInfo): String = readText(info, requireEndMarker = false)
+
+    fun validateBasicLoad(info: FileInfo) {
+        require(info.displayName.substringAfterLast('.', "").equals("bas", true)) {
+            "Only BASIC cassette files can be run"
         }
-        require(info.position in 0..Int.MAX_VALUE.toLong()) { "Invalid cassette file position" }
-        var offset = info.position.toInt()
-        require(offset <= tape.size - BLOCK) { "Cassette file is no longer available" }
-        val name = Abc80Program.NameBlock()
-        name.load(tape.copyOfRange(offset, offset + BLOCK))
-        check(name.verify() && name.name == info.name) { "Cassette file has changed" }
-        offset += BLOCK
+        readText(info, requireEndMarker = true)
+    }
+
+    fun validateBacLoad(info: FileInfo) {
+        require(info.displayName.substringAfterLast('.', "").equals("bac", true)) {
+            "Only BAC cassette files can be validated"
+        }
+        val data = fileDataBlocks(info).flatMap { it.copyOfRange(39, 291).asSequence() }.toList().toByteArray()
+        Abc80CloudDiskImport.validateBac(info.displayName, data, 252)
+    }
+
+    private fun readText(info: FileInfo, requireEndMarker: Boolean): String {
+        require(info.displayName.substringAfterLast('.', "").let { it.equals("bas", true) || it.equals("txt", true) }) {
+            "Only BASIC and text cassette files can be previewed"
+        }
         val text = StringBuilder()
-        var number = 0
-        while (offset <= tape.size - BLOCK) {
-            val raw = tape.copyOfRange(offset, offset + BLOCK)
-            val block = Abc80Program.DataBlock(number++)
-            block.load(raw)
-            check(block.verify()) { "Invalid BASIC cassette block" }
+        for (raw in fileDataBlocks(info)) {
             for (index in 39 until 291) {
                 val code = raw[index].toInt() and 0xff
                 if (code == 0) return text.toString().replace("\r\n", "\n").replace('\r', '\n')
@@ -192,9 +196,33 @@ object Abc80Cassette {
                     else -> code.toChar()
                 })
             }
+        }
+        check(!requireEndMarker) { "BASIC cassette file has no end marker" }
+        return text.toString().replace("\r\n", "\n").replace('\r', '\n')
+    }
+
+    private fun fileDataBlocks(info: FileInfo): Sequence<ByteArray> = sequence {
+        ensureLoaded()
+        require(info.position in 0..Int.MAX_VALUE.toLong()) { "Invalid cassette file position" }
+        var offset = info.position.toInt()
+        require(offset <= tape.size - BLOCK) { "Cassette file is no longer available" }
+        val name = Abc80Program.NameBlock()
+        name.load(tape.copyOfRange(offset, offset + BLOCK))
+        check(name.verify() && name.name == info.name) { "Cassette file has changed" }
+        offset += BLOCK
+        var number = 0
+        while (offset <= tape.size - BLOCK) {
+            val raw = tape.copyOfRange(offset, offset + BLOCK)
+            if (number > 0 && raw.all { it == 0.toByte() }) {
+                return@sequence
+            }
+            val block = Abc80Program.DataBlock(number++)
+            block.load(raw)
+            check(block.verify()) { "Invalid cassette data block" }
+            yield(raw)
             offset += BLOCK
         }
-        error("BASIC cassette file has no end marker")
+        error("Cassette file has no terminating tape gap")
     }
 
     fun format() {
@@ -209,6 +237,13 @@ object Abc80Cassette {
     fun rewind() {
         ensureLoaded()
         position = 0
+        persist()
+    }
+
+    /** Positions the tape at the start of [info]. */
+    fun seek(info: FileInfo) {
+        ensureLoaded()
+        position = info.position.toInt().coerceIn(0, tape.size)
         persist()
     }
 
