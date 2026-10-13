@@ -46,6 +46,44 @@ class Abc80FloppyLayout(formatName: String, val drive: Int) {
     companion object {
         private val imageFormats = listOf("fd2", "abc830", "fd4d", "abc832")
 
+        @OptIn(ExperimentalUnsignedTypes::class)
+        fun readFile(image: ByteArray, name: String): ByteArray? {
+            val layout = imageFormats.map { Abc80FloppyLayout(it, 0) }
+                .firstOrNull { it.format?.sectorFormat?.size == image.size }
+                ?: throw IllegalArgumentException("Diskformatet stöds inte")
+            val format = requireNotNull(layout.format)
+            val diskName = Abc80CloudDiskImport.encodeText(
+                name.substringBeforeLast('.', name).uppercase().padEnd(8) +
+                    name.substringAfterLast('.', "").uppercase().padEnd(3)
+            )
+            require(diskName.size == 11) { "Ogiltigt ABC80-filnamn: $name" }
+            val usedDirectories = layout.usedDirectorySectors(image)
+            for (dir in 0 until format.numberOfDirectorySectors) {
+                if (!usedDirectories[dir]) continue
+                val sector = layout.physicalSector(format.directorySectors.a + dir) * 256
+                for (slot in 1..15) {
+                    val entry = sector + slot * 16
+                    if (image[entry] == 0.toByte() || image[entry] == 0xFF.toByte()) continue
+                    if (!image.copyOfRange(entry + 4, entry + 15).contentEquals(diskName)) continue
+                    val header = layout.offset(image[entry].toUByte().toInt(), image[entry + 1].toUByte().toInt())
+                    require(header in 0..image.size - 256) { "Ogiltig ABC80-filhuvudpekare för $name" }
+                    val sectors = mutableListOf<Int>()
+                    for (offset in 4 until 240 step 2) {
+                        if (image[header + offset] == 0xFF.toByte()) break
+                        val file = image[header + offset].toUByte().toInt()
+                        val address = image[header + offset + 1].toUByte().toInt()
+                        repeat((address and 31) + 1) {
+                            val at = layout.offset(file, (address and 224) + it)
+                            require(at in 0..image.size - 256) { "Ogiltig ABC80-sektorpekare för $name" }
+                            sectors.add(at)
+                        }
+                    }
+                    return sectors.drop(1).flatMap { image.copyOfRange(it + 3, it + 256).asIterable() }.toByteArray()
+                }
+            }
+            return null
+        }
+
         fun freeSpace(image: ByteArray): Long {
             val layout = imageFormats.map { Abc80FloppyLayout(it, 0) }
                 .firstOrNull { it.format?.sectorFormat?.size == image.size }

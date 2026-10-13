@@ -1,5 +1,5 @@
 /**
- * CPMScreen: Main screen for the AboveABC80 emulator and terminal interface.
+ * EmulatorScreen: Main screen for the ABC80 emulator.
  *
  * Recent fixes:
  * - Optimized state using mutableIntStateOf for FPS tracking.
@@ -113,8 +113,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.aboveware.aboveabc80.core.AudioPlayer
 import com.aboveware.aboveabc80.core.SoundOutput
-import com.aboveware.aboveabc80.core.BIOS
-import com.aboveware.aboveabc80.core.CpmDebugger
+import com.aboveware.aboveabc80.core.Abc80Debugger
 import com.aboveware.aboveabc80.core.DiskController
 import com.aboveware.aboveabc80.keyboard.Keyboard
 import com.aboveware.aboveabc80.printer.VirtualPrinter
@@ -122,9 +121,7 @@ import com.aboveware.aboveabc80.printer.VirtualPrinterView
 import com.aboveware.aboveabc80.tape.TapeController
 import com.aboveware.aboveabc80.tape.TapeView
 import com.aboveware.aboveabc80.terminal.TerminalManager
-import com.aboveware.aboveabc80.terminal.TerminalType
-import com.aboveware.aboveabc80.terminal.TerminalView
-import com.aboveware.aboveabc80.ui.CpmDebuggerView
+import com.aboveware.aboveabc80.ui.Abc80DebuggerView
 import com.aboveware.aboveabc80.ui.CassetteDialog
 import com.aboveware.aboveabc80.ui.CassetteAnimation
 import com.aboveware.aboveabc80.ui.DiskManagerDialog
@@ -141,7 +138,7 @@ import org.jetbrains.compose.resources.stringResource
 import kotlin.time.Duration.Companion.milliseconds
 
 @Composable
-fun CPMScreen(startWithStorageOpen: Boolean = false) {
+fun EmulatorScreen(startWithStorageOpen: Boolean = false) {
     val assembler = remember { Assembler.instance }
     val nativeLib = remember { NativeLib.getObject() }
     val keyboard = remember { Keyboard.instance }
@@ -239,8 +236,7 @@ fun CPMScreen(startWithStorageOpen: Boolean = false) {
 
     // Handle ULA port watching and Program Running watch
     DisposableEffect(Unit) {
-        CpmDebugger.instance.init(scope)
-        CpmDebugger.instance.onBreakpointHit = {
+        Abc80Debugger.instance.onBreakpointHit = {
             showDebugger = true
         }
 
@@ -271,7 +267,7 @@ fun CPMScreen(startWithStorageOpen: Boolean = false) {
 
     DisposableEffect(TerminalManager.activeTerminal, TerminalManager.autoUppercase) {
         val activeTerminal = TerminalManager.activeTerminal
-        Abc80Log.keyboard("CPMScreen: Attaching keyboard listeners to ${activeTerminal::class.simpleName}")
+        Abc80Log.keyboard("EmulatorScreen: Attaching keyboard listeners to ${activeTerminal::class.simpleName}")
         activeTerminal.connect()
         val touchKeys = java.util.concurrent.ConcurrentHashMap<String, Int>()
         val touchCode = ThreadLocal<String>()
@@ -291,7 +287,7 @@ fun CPMScreen(startWithStorageOpen: Boolean = false) {
             }
         }
         keyboard.onKeyCodes = { codes, l1, l2, l3, l4, l5, l6 ->
-            Abc80Log.keyboard("CPMScreen: onKeyCodes received codes='$codes' label='$l1'")
+            Abc80Log.keyboard("EmulatorScreen: onKeyCodes received codes='$codes' label='$l1'")
             touchCode.set(codes)
             try {
                 activeTerminal.keyboard.handleKeyEvent(codes, l1, l2, l3, l4, l5, l6)
@@ -465,7 +461,7 @@ fun CPMScreen(startWithStorageOpen: Boolean = false) {
             delay(500.milliseconds)
             try {
                 focusRequester.requestFocus()
-                Abc80Log.keyboard("CPMScreen: Focus requested successfully")
+                Abc80Log.keyboard("EmulatorScreen: Focus requested successfully")
             } catch (e: Exception) {
                 // Ignore, will retry
             }
@@ -478,7 +474,7 @@ fun CPMScreen(startWithStorageOpen: Boolean = false) {
     LaunchedEffect(printer.isVisible) {
         if (!printer.isVisible && !isFirstPrinterCheck) {
             focusRequester.requestFocus()
-            Abc80Log.keyboard("CPMScreen: Printer hidden, requesting focus back to terminal")
+            Abc80Log.keyboard("EmulatorScreen: Printer hidden, requesting focus back to terminal")
         }
         isFirstPrinterCheck = false
     }
@@ -524,7 +520,7 @@ fun CPMScreen(startWithStorageOpen: Boolean = false) {
                 .imePadding()
                 .focusRequester(focusRequester)
                 .onFocusChanged { state ->
-                    Abc80Log.keyboard("CPMScreen: Column focus changed: ${state.isFocused}")
+                    Abc80Log.keyboard("EmulatorScreen: Column focus changed: ${state.isFocused}")
                     if (!state.isFocused) {
                         pressedKeys.clear()
                         nativeLib.releaseAllKeys()
@@ -533,7 +529,7 @@ fun CPMScreen(startWithStorageOpen: Boolean = false) {
                 .focusable()
                 .pointerInput(Unit) {
                     detectTapGestures {
-                        Abc80Log.keyboard("CPMScreen: Screen tapped, requesting focus")
+                        Abc80Log.keyboard("EmulatorScreen: Screen tapped, requesting focus")
                         focusRequester.requestFocus()
                     }
                 }
@@ -725,7 +721,7 @@ fun CPMScreen(startWithStorageOpen: Boolean = false) {
                                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                     mountedDisks.keys.sorted().forEach { driveIndex ->
                                         Text(
-                                            text = ('A' + driveIndex).toString(),
+                                            text = "DR$driveIndex:",
                                             color = if (
                                                 isBlinking &&
                                                 driveIndex == DiskController.instance.lastAccessDriveIndex
@@ -800,7 +796,7 @@ fun CPMScreen(startWithStorageOpen: Boolean = false) {
                 CassetteAnimation(modifier = Modifier.zIndex(2f))
 
                 if (!TerminalManager.activeTerminal.isSetupVisible && printer.isVisible) {
-                    Abc80Log.terminal("CPMScreen: Showing VirtualPrinterView (isVisible=${printer.isVisible})")
+                    Abc80Log.terminal("EmulatorScreen: Showing VirtualPrinterView (isVisible=${printer.isVisible})")
                     VirtualPrinterView(modifier = Modifier.align(Alignment.CenterStart).zIndex(1f))
                 }
 
@@ -809,7 +805,7 @@ fun CPMScreen(startWithStorageOpen: Boolean = false) {
                 }
 
                 if (showDebugger) {
-                    CpmDebuggerView(modifier = Modifier.align(Alignment.BottomCenter))
+                    Abc80DebuggerView(modifier = Modifier.align(Alignment.BottomCenter))
                 }
 
                 // Floating Action Button Menu (Above Keyboard)
@@ -848,7 +844,7 @@ fun CPMScreen(startWithStorageOpen: Boolean = false) {
                                     SmallFloatingActionButton(
                                         onClick = {
                                             speedDialOpen = false
-                                            BIOS.instance.restart()
+                                            assembler.restart()
                                             focusRequester.requestFocus()
                                         },
                                         containerColor = MaterialTheme.colorScheme.errorContainer,
@@ -1269,7 +1265,7 @@ private suspend fun loadFont(fontFile: String) {
     if (fontFile == "DEFAULT") {
         "\u001B(B".forEach { terminal.putChar(it) }
         terminal.putChar('\u000F') // SI (G0 -> GL)
-        Abc80Log.terminal("CPMScreen: Reset to standard font")
+        Abc80Log.terminal("EmulatorScreen: Reset to standard font")
         return
     }
 
@@ -1322,9 +1318,9 @@ private suspend fun loadFont(fontFile: String) {
         "\u001B(B".forEach { terminal.putChar(it) }
         terminal.putChar('\u000F') // SI (G0 into GL)
 
-        Abc80Log.terminal("CPMScreen: Font $fontFile loaded and designated to G0")
+        Abc80Log.terminal("EmulatorScreen: Font $fontFile loaded and designated to G0")
     } catch (e: Exception) {
-        Abc80Log.wtf("CPMScreen: Failed to load font $fontFile: ${e.message}")
+        Abc80Log.wtf("EmulatorScreen: Failed to load font $fontFile: ${e.message}")
     }
 }
 
@@ -1356,33 +1352,13 @@ private fun handleTerminalKeyEvent(
             return true
         }
     }
-    if (type == KeyEventType.KeyDown &&
-        !isCtrl &&
-        !isShift &&
-        !activeTerminal.isSetupVisible &&
-        !BIOS.instance.isTransientProgramRunning
-    ) {
-        val direction = when (key) {
-            Key.DirectionUp -> -1
-            Key.DirectionDown -> 1
-            else -> 0
-        }
-        if (direction != 0 && TerminalManager.commandHistory.navigate(direction) {
-                activeTerminal.onKeyEvent(it)
-                activeTerminal.triggerClick()
-            }
-        ) {
-            return true
-        }
-    }
-
     if (key == Key.Enter || key == Key.NumPadEnter) {
         charValue = '\r'
     } else if (charValue == '\n') {
         return true // Skip redundant LF
     }
 
-    Abc80Log.keyboard("CPMScreen: handleTerminalKeyEvent activeTerminal=${activeTerminal::class.simpleName} type=$type, key=$key, char='$charValue', ctrl=$isCtrl, shift=$isShift")
+    Abc80Log.keyboard("EmulatorScreen: handleTerminalKeyEvent activeTerminal=${activeTerminal::class.simpleName} type=$type, key=$key, char='$charValue', ctrl=$isCtrl, shift=$isShift")
 
     val isRepeat = getRepeatCount(event) > 0
     val timeMillis = getEventTime(event)
@@ -1396,7 +1372,7 @@ private fun handleTerminalKeyEvent(
             timeMillis
         )
     ) {
-        Abc80Log.keyboard("CPMScreen: Physical key handled by terminal keyboard")
+        Abc80Log.keyboard("EmulatorScreen: Physical key handled by terminal keyboard")
         return true
     }
 
@@ -1431,7 +1407,7 @@ private fun handleTerminalKeyEvent(
     if (char != null && char.code != 0) {
         // Only handle KeyDown for character input to avoid double letters on Desktop
         if (type == KeyEventType.KeyDown) {
-            Abc80Log.keyboard("CPMScreen: sending char to terminal: char=${char.code} ('$char')")
+            Abc80Log.keyboard("EmulatorScreen: sending char to terminal: char=${char.code} ('$char')")
             activeTerminal.onKeyEvent(char)
             activeTerminal.triggerClick()
         }

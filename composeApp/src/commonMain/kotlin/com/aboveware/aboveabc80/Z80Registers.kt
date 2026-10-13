@@ -1,7 +1,7 @@
 package com.aboveware.aboveabc80
 
 /**
- * Z80 Registers state for state saving/restoring and BIOS initialization.
+ * Z80 register state for saving, restoring and restarting the emulator.
  */
 data class Z80Registers(
     val af: Short, val bc: Short, val de: Short, val hl: Short,

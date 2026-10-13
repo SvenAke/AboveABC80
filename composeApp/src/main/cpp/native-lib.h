@@ -2,8 +2,8 @@
 // Created by svena on 2025-11-28.
 //
 
-#ifndef ABOVE_CPM_NATIVE_LIB_H
-#define ABOVE_CPM_NATIVE_LIB_H
+#ifndef ABOVE_ABC80_NATIVE_LIB_H
+#define ABOVE_ABC80_NATIVE_LIB_H
 
 #include <jni.h>
 
@@ -35,7 +35,6 @@ extern std::atomic<bool> g_frozen;
 extern std::atomic<bool> g_enable_logging;
 extern std::atomic<bool> g_on_z80_main_loop_enabled;
 extern std::atomic<bool> g_fast_speed;
-extern std::atomic<bool> g_is_testing;
 extern std::atomic<bool> g_single_step;
 
 #endif // __cplusplus
@@ -76,4 +75,4 @@ void onTState(int tStates, int pc);
 }
 #endif // __cplusplus
 
-#endif //ABOVE_CPM_NATIVE_LIB_H
+#endif //ABOVE_ABC80_NATIVE_LIB_H

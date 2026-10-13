@@ -39,7 +39,6 @@ std::atomic<bool> g_enable_logging(true);
 std::atomic<bool> g_on_z80_main_loop_enabled(false);
 std::atomic<bool> g_fast_speed(false);
 std::atomic<bool> g_screen_invalidated(false);
-std::atomic<bool> g_is_testing(false);
 std::atomic<bool> g_single_step(false);
 
 jclass g_native_lib_class = nullptr;
@@ -366,7 +365,7 @@ Java_com_aboveware_aboveabc80_NativeLib_setZ80RegistersNative(JNIEnv *env, jobje
 JNIEXPORT void JNICALL
 Java_com_aboveware_aboveabc80_NativeLib_setRegisterANative(JNIEnv *env, jobject, jint value) {
     z80.af.b.h = static_cast<uint8_t>(value & 0xFF);
-    // Flags (af.b.l) are preserved entirely to avoid side effects in BDOS logic.
+    // Preserve AF flags while changing the accumulator.
 }
 
 JNIEXPORT void JNICALL

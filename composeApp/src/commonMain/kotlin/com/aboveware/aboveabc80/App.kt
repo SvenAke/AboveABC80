@@ -20,9 +20,8 @@ fun App() {
             .fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            // CPM display
             Box(modifier = Modifier.weight(1f)) {
-                CPMScreen()
+                EmulatorScreen()
             }
         }
     }

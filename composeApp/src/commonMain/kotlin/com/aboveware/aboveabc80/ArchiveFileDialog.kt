@@ -59,10 +59,9 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableIntStateOf
 import com.aboveware.aboveabc80.core.DiskController
-import com.aboveware.aboveabc80.core.Floppy
 import org.jetbrains.compose.resources.stringResource
 
-private fun ByteArray.toCpmPreviewText(): AnnotatedString {
+private fun ByteArray.toAbc80PreviewText(): AnnotatedString {
     data class InlinePart(
         val text: String,
         val bold: Boolean,
@@ -459,7 +458,7 @@ fun ArchiveFileDialog(
                             file.content
                         }
 
-                        val content = previewBytes.toCpmPreviewText()
+                        val content = previewBytes.toAbc80PreviewText()
                         textPreview = file.name to content
                     }
                 }
@@ -715,7 +714,7 @@ fun ArchiveFileTextPreviewDialogPreview() {
                 ArchiveFileTextPreviewContent(
                     fileName = "README.TXT",
                     content = AnnotatedString("""
-                        ABOVE CPM EMULATOR - Version 1.0
+                        ABOVE ABC80 EMULATOR - Version 1.0
                         --------------------------------
                         
                         Detta är en testtext för att se att preview-fönstret

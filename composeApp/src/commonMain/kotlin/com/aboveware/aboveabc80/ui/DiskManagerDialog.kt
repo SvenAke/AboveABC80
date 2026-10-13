@@ -55,7 +55,7 @@ import com.aboveware.aboveabc80.StorageFileDialog
 import com.aboveware.aboveabc80.Abc80FloppyLayout
 import com.aboveware.aboveabc80.Abc80Log
 import com.aboveware.aboveabc80.core.DiskController
-import com.aboveware.aboveabc80.core.Floppy
+import com.aboveware.aboveabc80.core.AbcDiskImage
 import com.aboveware.aboveabc80.core.unzipFile
 import com.aboveware.aboveabc80.createFolder
 import com.aboveware.aboveabc80.deleteFolder
@@ -109,31 +109,41 @@ fun DiskManagerDialog(
 
     var listing by remember { mutableStateOf<Pair<String, List<Pair<String, Int>>?>?>(null) }
 
-    data class ExportPending(val parentDir: String, val floppyName: String, val floppy: Floppy)
+    data class ExportPending(val parentDir: String, val floppyName: String, val floppy: AbcDiskImage)
     var exportPending by remember { mutableStateOf<ExportPending?>(null) }
 
-    fun performExport(parentDir: String, floppyName: String, floppy: Floppy, deleteFirst: Boolean) {
-        val fullPath = if (deleteFirst) {
-            val path = "$parentDir/$floppyName"
-            deleteFolder(path)
-            createFolder(parentDir, floppyName)
-        } else {
-            createFolder(parentDir, floppyName)
-        }
+    fun performExport(parentDir: String, floppyName: String, floppy: AbcDiskImage, deleteFirst: Boolean) {
+        try {
+            val fullPath = if (deleteFirst) {
+                val path = "$parentDir/$floppyName"
+                deleteFolder(path)
+                createFolder(parentDir, floppyName)
+            } else {
+                createFolder(parentDir, floppyName)
+            }
 
-        if (fullPath != null) {
-            val files = floppy.listFiles().filter { it.isActive() }
-            val uniqueFiles = mutableSetOf<String>()
-            files.forEach { entry ->
-                val fullName = if (entry.extension.isBlank()) entry.filename else "${entry.filename}.${entry.extension}"
-                if (uniqueFiles.add(fullName)) {
-                    val data = floppy.readFile(entry.filename, entry.extension)
-                    if (data != null) {
-                        writeFileToFolder(fullPath, fullName, data)
+            if (fullPath != null) {
+                val files = floppy.listFiles()
+                val uniqueFiles = mutableSetOf<String>()
+                files.forEach { entry ->
+                    val fullName = if (entry.extension.isBlank()) entry.filename else "${entry.filename}.${entry.extension}"
+                    if (uniqueFiles.add(fullName)) {
+                        val data = floppy.readFile(entry.filename, entry.extension)
+                        checkNotNull(data) { "Kunde inte läsa $fullName från disketten" }
+                        check(writeFileToFolder(fullPath, fullName, data)) { "Kunde inte exportera $fullName" }
                     }
                 }
+                Abc80Log.terminal("Exported ${uniqueFiles.size} files to $fullPath")
+            } else {
+                errorMessage = "Kunde inte skapa exportmappen $floppyName"
+                Abc80Log.wtf(requireNotNull(errorMessage))
             }
-            Abc80Log.terminal("Exported ${uniqueFiles.size} files to $fullPath")
+        } catch (e: IllegalArgumentException) {
+            errorMessage = e.message ?: "Disketten kunde inte exporteras"
+            Abc80Log.wtf("ABC80-export: $errorMessage")
+        } catch (e: IllegalStateException) {
+            errorMessage = e.message ?: "Disketten kunde inte exporteras"
+            Abc80Log.wtf("ABC80-export: $errorMessage")
         }
     }
 

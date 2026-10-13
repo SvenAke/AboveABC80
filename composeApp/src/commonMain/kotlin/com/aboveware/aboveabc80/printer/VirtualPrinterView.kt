@@ -44,7 +44,6 @@ import com.aboveware.aboveabc80.Abc80Log
 @Composable
 fun VirtualPrinterView(modifier: Modifier = Modifier) {
     val printer = VirtualPrinter.instance
-    // Removing the internal isVisible check as it's now handled by the caller (CPMScreen)
     // and adding a log to confirm composition.
     SideEffect {
         Abc80Log.terminal("VirtualPrinterView: Composed")

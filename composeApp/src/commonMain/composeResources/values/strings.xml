@@ -13,7 +13,6 @@
     <string name="download">Hämta</string>
     <string name="download_files">Hämta filer</string>
     <string name="menu">Meny</string>
-    <string name="zx_spectrum_screen">CP/M-skärm</string>
     <string name="cpu_label">CPU:</string>
     <string name="fps_label">FPS:</string>
     <string name="cassette_title">Kassett</string>
@@ -170,7 +169,7 @@
     <string name="printer_on">PÅ</string>
     <string name="printer_off">AV</string>
     <string name="printer_back_panel">Bakpanel</string>
-    <string name="debugger_title">CP/M-felsökare (PC: %1$s)</string>
+    <string name="debugger_title">ABC80-felsökare (PC: %1$s)</string>
     <string name="debugger_pause">Pausa</string>
     <string name="debugger_resume">Fortsätt</string>
     <string name="debugger_step">Stega</string>

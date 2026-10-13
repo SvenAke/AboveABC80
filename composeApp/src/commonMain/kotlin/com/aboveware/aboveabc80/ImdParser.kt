@@ -140,14 +140,14 @@ class ImdParser(val data: ByteArray) {
         val maxHead = allTracks.maxOf { it.head }
         val headsCount = maxHead + 1
 
-        // CP/M usually expects consistent SPT across all tracks in a raw image
+        // Keep track offsets stable even if the image omits a track.
         val maxPhysicalSectors = allTracks.maxOf { it.sectorCount }
         val logicalSectorsPerPhysicalSector = sectorSize / 128
         val logicalSectorsPerTrack = maxPhysicalSectors * logicalSectorsPerPhysicalSector
 
         val totalSize = (maxCyl + 1) * headsCount * logicalSectorsPerTrack * 128
         val raw = ByteArray(totalSize)
-        raw.fill(0xE5.toByte()) // Default CP/M empty value
+        raw.fill(0xE5.toByte())
 
         Abc80Log.diskett(
             "Converting IMD to raw DSK: Cyls=${maxCyl + 1}, Heads=$headsCount, " +

@@ -39,6 +39,11 @@ in your IDE’s toolbar or run it directly from the terminal:
 
 ### Startup
 
+The application runs ABC80 only. Reset reloads the ABC80 ROMs and resets the
+Z80 registers. The debugger uses the bundled ABC80 ROM disassembly, with
+breakpoints, pause/resume and single stepping. Disk capacity and file export
+use the ABC80 filesystem; IMD import accepts ABC80 sector geometry.
+
 Startup restores saved disks on a background dispatcher so file I/O and disk
 parsing do not block Android input handling.
 
@@ -78,7 +83,7 @@ not downloaded by the app.
 Cloud downloads of all file types are saved to the active
 ABC80 disk (or the drive whose cloud-import button was selected). Both direct
 downloads and files selected from archives use the ABC80 directory, allocation
-bitmap and 253-byte data records, not the CP/M filesystem. BAC and ABS files
+bitmap and 253-byte data records. BAC and ABS files
 retain their binary contents and receive format-specific validation. All other
 files, regardless of extension, are imported as UTF-8 or Latin-1 text with
 Swedish ABC80 character conversion and CR line endings. Text lines are limited

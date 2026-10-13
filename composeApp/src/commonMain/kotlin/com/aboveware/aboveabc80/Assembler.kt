@@ -13,6 +13,22 @@ import java.util.Locale
 import java.util.TreeSet
 
 class Assembler {
+    fun restart() {
+        val lib = NativeLib.getObject()
+        lib.freeze(true)
+        try {
+            lib.copyToMemory(0, memory)
+            lib.releaseAllKeys()
+            lib.setZ80Registers(Z80Registers(
+                af = 0, bc = 0, de = 0, hl = 0, af2 = 0, bc2 = 0, de2 = 0, hl2 = 0,
+                ix = 0, iy = 0, sp = 0xFFFF.toShort(), pc = 0,
+                i = 0, r = 0, iff1 = 0, iff2 = 0, im = 0, tStates = 0,
+                holdIntReqCycles = 0, flags = 0, memPtr = 0
+            ))
+        } finally {
+            lib.freeze(false)
+        }
+    }
     @OptIn(ExperimentalResourceApi::class)
     suspend fun loadRomFiles() = withContext(Dispatchers.Default) {
         try {
@@ -21,7 +37,6 @@ class Assembler {
             loadRom("files/dos.rom", 0x6000)
             loadRom("files/printer.rom", 0x7800)
             patchPrinterColumnTracking()
-            loadLabels(Res.readBytes("files/cpm.txt").decodeToString())
             opcodeList = Res.readBytes("files/opcode.lst").decodeToString().lines().toTypedArray()
             NativeLib.getObject().copyToMemory(0, memory)
         } catch (e: Exception) {
@@ -154,18 +169,6 @@ class Assembler {
             "ROM $resourcePath (${bytes.size} bytes) does not fit at address 0x${startAddress.toString(16)}"
         }
         bytes.copyInto(memory, destinationOffset = startAddress)
-    }
-
-    private fun loadLabels(listing: String) {
-        val labelPattern = Regex("""([A-Za-z_][A-Za-z0-9_]*)\s*:\s*([0-9A-Fa-f]{4})""")
-        val loadedLabels = listing.lineSequence()
-            .filter { it.startsWith("[ASSEMBLE] LABELS ") }
-            .flatMap { line -> labelPattern.findAll(line).map { it.groupValues[1] to it.groupValues[2].toInt(16) } }
-            .toList()
-
-        require(loadedLabels.isNotEmpty()) { "No labels found in files/cpm.txt" }
-        labels.labels.clear()
-        loadedLabels.forEach { (label, address) -> labels.put(label, address) }
     }
 
     companion object {
@@ -671,7 +674,7 @@ class Assembler {
             }
         }
 
-        private fun isCPMCharacter(char: Char): Boolean {
+        private fun isLabelCharacter(char: Char): Boolean {
             return Character.isLetterOrDigit(char) || char in listOf(
                 '_',
                 '?',
@@ -688,7 +691,7 @@ class Assembler {
 
         private fun isPossibleLabel(expression: String) =
             if (!reserved.contains(expression) && !expression.uppercase(Locale.ROOT)
-                    .startsWith("0X") && expression.indexOfFirst { !isCPMCharacter(it) } == -1
+                    .startsWith("0X") && expression.indexOfFirst { !isLabelCharacter(it) } == -1
             ) !secondPass else false
 
         private fun eval(str: String): Int {

@@ -9,7 +9,7 @@ import org.jetbrains.compose.resources.painterResource
 fun main() = application {
     Window(
         onCloseRequest = ::exitApplication,
-        title = "above CP/M",
+        title = "AboveABC80",
         icon = painterResource(Res.drawable.windows_icon)
     ) {
         App()

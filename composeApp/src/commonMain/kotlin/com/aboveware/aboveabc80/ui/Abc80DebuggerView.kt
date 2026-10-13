@@ -37,17 +37,18 @@ import androidx.compose.ui.graphics.Color
 import com.aboveware.aboveabc80.abc80FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.aboveware.aboveabc80.core.CpmDebugger
+import com.aboveware.aboveabc80.core.Abc80Debugger
 import com.aboveware.aboveabc80.toHex
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
-fun CpmDebuggerView(modifier: Modifier = Modifier) {
-    val debugger = CpmDebugger.instance
+fun Abc80DebuggerView(modifier: Modifier = Modifier) {
+    val debugger = Abc80Debugger.instance
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
+    LaunchedEffect(Unit) { debugger.init(scope) }
 
-    val currentLineIndex = remember(debugger.currentPc) {
+    val currentLineIndex = remember(debugger.currentPc, debugger.lines.size) {
         debugger.getLineForPc(debugger.currentPc)
     }
 
@@ -96,7 +97,7 @@ fun CpmDebuggerView(modifier: Modifier = Modifier) {
                 }
 
                 IconButton(
-                    onClick = { debugger.step() },
+                    onClick = { debugger.step(scope) },
                     enabled = debugger.isPaused
                 ) {
                     Icon(

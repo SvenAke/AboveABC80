@@ -61,7 +61,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.aboveware.aboveabc80.core.DiskController
-import com.aboveware.aboveabc80.core.Floppy
+import com.aboveware.aboveabc80.core.AbcDiskImage
 import com.aboveware.aboveabc80.Abc80Log
 import com.aboveware.aboveabc80.core.unzipFile
 import kotlinx.coroutines.Dispatchers
@@ -257,7 +257,7 @@ fun StorageFileDialog(
                     )
                     if (pathStack.size > 1 && selectedCloudFiles.isEmpty()) {
                         Text(
-                            text = "/" + pathStack.last().removePrefix("cpm/").toCloudDisplayName(),
+                            text = "/" + pathStack.last().removePrefix("abc80/").toCloudDisplayName(),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -321,7 +321,7 @@ fun StorageFileDialog(
                                     val freeSpace =
                                         if (clearDestinationBeforeDownload && isTargetDrive && floppy != null) {
                                             val copy =
-                                                Floppy.createFromData(floppy.getRawData().copyOf())
+                                                AbcDiskImage.createFromData(floppy.getRawData().copyOf())
                                             copy.format()
                                             copy.getFreeSpace()
                                         } else {
@@ -405,7 +405,7 @@ fun StorageFileDialog(
                                 items(otherDisks) { diskName ->
                                     val ext = diskName.substringAfterLast(".").uppercase()
                                     val bytes = loadLocalDisk(diskName)
-                                    val freeSpace = if (bytes != null) Floppy.createFromData(bytes)
+                                    val freeSpace = if (bytes != null) AbcDiskImage.createFromData(bytes)
                                         .getFreeSpace() else 0L
                                     val fits = freeSpace >= totalBytes
 

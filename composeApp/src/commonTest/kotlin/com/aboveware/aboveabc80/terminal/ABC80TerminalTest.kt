@@ -2,8 +2,33 @@ package com.aboveware.aboveabc80.terminal
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 
 class ABC80TerminalTest {
+    @Test
+    fun keyInputCallbackReceivesCharactersWithoutBufferingThem() {
+        val terminal = ABC80()
+        val received = mutableListOf<Char>()
+        terminal.onKeyInput = received::add
+
+        "RUN\r".forEach(terminal::onKeyEvent)
+
+        assertEquals("RUN\r".toList(), received)
+        assertFalse(terminal.hasChar())
+    }
+
+    @Test
+    fun keyInputWithoutCallbackPreservesBufferedCharacters() {
+        val terminal = ABC80()
+
+        "LIST\r".forEach(terminal::onKeyEvent)
+
+        assertEquals("LIST\r".map(Char::code), buildList {
+            while (terminal.hasChar()) add(terminal.getChar())
+        })
+        assertFalse(terminal.hasChar())
+    }
+
     @Test
     fun abc80AndHitchCursorAddressingMoveWithoutPrintingParameters() {
         val terminal = ABC80()

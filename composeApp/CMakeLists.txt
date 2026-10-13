@@ -46,7 +46,6 @@ add_library(aboveabc80 SHARED
         src/main/cpp/z80.cpp
         src/main/cpp/z80main.cpp
         src/main/cpp/z80_ops.cpp
-        src/main/cpp/run_zexall_test.cpp
         src/main/cpp/nomarch-1.4/nomarch.cpp
         src/main/cpp/nomarch-1.4/readrle.cpp
         src/main/cpp/nomarch-1.4/readhuff.cpp

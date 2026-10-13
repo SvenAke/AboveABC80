@@ -6,7 +6,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import com.aboveware.aboveabc80.Abc80Log
-import com.aboveware.aboveabc80.core.BIOS
 
 private const val abc80AnswerBack = "aboveABC80\r"
 
@@ -163,9 +162,6 @@ class ABC80 : Terminal {
 
     override fun onKeyEvent(char: Char) {
         onKeyInput?.let { it(char); return }
-        if (!BIOS.instance.isTransientProgramRunning) {
-            TerminalManager.commandHistory.record(char)
-        }
         synchronized(lock) {
             if (char.code == 0x05) { // ENQ - Answer Back
                 Abc80Log.keyboard("ABC80: Answer Back triggered")

@@ -174,6 +174,7 @@ class Abc80Floppy : Abc80Bus.BusInterface {
 
     private fun selectDrive(value: Int) {
         drive = (value and 7).toUByte()
+        DiskController.instance.recordAccess(drive.toInt())
         if (drive.toInt() < DiskController.MAX_DRIVES) {
             DiskController.instance.currentDriveIndex = drive.toInt()
         }
