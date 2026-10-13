@@ -7,6 +7,12 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.inset
+import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -26,6 +32,25 @@ internal val ABC80_CASE_COLOR = Color(0xFFDFAD75)
 
 /** The cyan phosphor foreground color of the ABC80 monitor display. */
 internal val ABC80_SCREEN_COLOR = Color(0xFF57C6F8)
+
+private val BEZEL_WIDTH = 10.dp
+
+/** Black gap between the bezel and the text area. */
+private val SCREEN_MARGIN = 12.dp
+
+/** Draws a bevelled frame outside the draw bounds so the screen looks sunk into the case. */
+private fun DrawScope.drawRecessedBezel(b: Float) {
+    val w = size.width
+    val h = size.height
+    val shadow = Color(0xFF8A6535)
+    val light = Color(0xFFF2D2A5)
+    fun quad(a: Offset, bb: Offset, c: Offset, d: Offset, color: Color) =
+        drawPath(Path().apply { moveTo(a.x, a.y); lineTo(bb.x, bb.y); lineTo(c.x, c.y); lineTo(d.x, d.y); close() }, color)
+    quad(Offset(-b, -b), Offset(w + b, -b), Offset(w, 0f), Offset(0f, 0f), shadow)
+    quad(Offset(-b, -b), Offset(0f, 0f), Offset(0f, h), Offset(-b, h + b), shadow.copy(alpha = 0.85f))
+    quad(Offset(-b, h + b), Offset(0f, h), Offset(w, h), Offset(w + b, h + b), light)
+    quad(Offset(w + b, -b), Offset(w + b, h + b), Offset(w, h), Offset(w, 0f), light.copy(alpha = 0.85f))
+}
 
 /** The fixed number of text rows (24) on the ABC80 screen. */
 internal const val ABC80_SCREEN_ROWS = 24
@@ -170,13 +195,21 @@ internal fun ABC80Screen(
     val ch = charMap.charHeight
     val columns = rows.first().length
     LaunchedEffect(columns) { selection.clear() }
-    Box(modifier.fillMaxSize().background(ABC80_CASE_COLOR), contentAlignment = Alignment.Center) {
+    Box(
+        modifier.fillMaxSize().background(ABC80_CASE_COLOR).padding(BEZEL_WIDTH),
+        contentAlignment = Alignment.Center
+    ) {
         Canvas(Modifier.aspectRatio((columns * cw).toFloat() / (ABC80_SCREEN_ROWS * ch))
-            .fillMaxSize().background(Color.Black)
+            .fillMaxSize()
+            .drawBehind { drawRecessedBezel(BEZEL_WIDTH.toPx()) }
+            .background(Color.Black)
             .pointerInput(columns) {
                 fun cell(position: Offset): Int {
-                    val col = (position.x * columns / size.width).toInt().coerceIn(0, columns - 1)
-                    val row = (position.y * ABC80_SCREEN_ROWS / size.height).toInt()
+                    val m = SCREEN_MARGIN.toPx()
+                    val w = size.width - 2 * m
+                    val h = size.height - 2 * m
+                    val col = ((position.x - m) * columns / w).toInt().coerceIn(0, columns - 1)
+                    val row = ((position.y - m) * ABC80_SCREEN_ROWS / h).toInt()
                         .coerceIn(0, ABC80_SCREEN_ROWS - 1)
                     return row * columns + col
                 }
@@ -189,6 +222,8 @@ internal fun ABC80Screen(
             .pointerInput(Unit) {
                 detectTapGestures { selection.clear(); onRequestFocus() }
             }) {
+            val m = SCREEN_MARGIN.toPx()
+            inset(m) {
             val px = size.width / (columns * cw)
             val py = size.height / (ABC80_SCREEN_ROWS * ch)
             val pixel = Size(px, py)
@@ -212,6 +247,7 @@ internal fun ABC80Screen(
                         }
                     }
                 }
+            }
             }
         }
     }
