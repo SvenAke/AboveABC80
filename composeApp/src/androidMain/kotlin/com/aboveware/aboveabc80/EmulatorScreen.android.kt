@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
@@ -33,24 +34,31 @@ actual fun PlatformKeyboard(keyboard: Keyboard, modifier: Modifier) {
     val activeTerminal = TerminalManager.activeTerminal
     val layoutId = activeTerminal.keyboardXmlResId
 
-    AndroidView(
-        modifier = modifier.padding(8.dp),
-        factory = { context ->
-            KeyboardView(context, null).apply {
-                visibility = View.VISIBLE
-                keyboardXmlResId = layoutId
-                this.keyboard = keyboard
-                onMappingsLoaded = { mappings ->
-                    activeTerminal.keyboard.updateMappings(mappings)
+    Box(
+        modifier = modifier,
+        contentAlignment = Alignment.Center
+    ) {
+        AndroidView(
+            modifier = Modifier
+                .fillMaxWidth(0.8f)
+                .padding(8.dp),
+            factory = { context ->
+                KeyboardView(context, null).apply {
+                    visibility = View.VISIBLE
+                    keyboardXmlResId = layoutId
+                    this.keyboard = keyboard
+                    onMappingsLoaded = { mappings ->
+                        activeTerminal.keyboard.updateMappings(mappings)
+                    }
+                }
+            },
+            update = { view ->
+                if (view.keyboardXmlResId != layoutId) {
+                    view.keyboardXmlResId = layoutId
                 }
             }
-        },
-        update = { view ->
-            if (view.keyboardXmlResId != layoutId) {
-                view.keyboardXmlResId = layoutId
-            }
-        }
-    )
+        )
+    }
 }
 
 @Preview(widthDp = 400, heightDp = 200, showBackground = true, backgroundColor = 0xFF444444)
