@@ -83,7 +83,7 @@ class FloppyLoadIntegrationTest {
             assertEquals(null, controller.loadFromLocal(0, "INVALID.DSK"))
             assertEquals("SYSTEM.DSK", controller.mountedDisks[0]?.name)
             assertSame(mounted, lib.bus.floppy.disks[0])
-            for (drive in 0..1) {
+            for (drive in 0 until DiskController.MAX_DRIVES) {
                 val before = decodeABC80Screen(lib.getMemory(), false).count { it.trim() == "ABC80" }
                 "LOAD DR$drive:COPY.ABS\r".forEach { lib.sendKey(it.code) }
                 val started = TimeSource.Monotonic.markNow()
@@ -203,7 +203,7 @@ class FloppyLoadIntegrationTest {
             }
         } finally {
             native?.freeze()
-            for (drive in 0..1) DiskController.instance.clearDrive(drive)
+            for (drive in 0 until DiskController.MAX_DRIVES) DiskController.instance.clearDrive(drive)
             native?.bus?.floppy?.disks?.close()
             System.setProperty("user.home", previousHome)
             home.deleteRecursively()

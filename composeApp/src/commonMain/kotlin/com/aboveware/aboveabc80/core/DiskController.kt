@@ -17,7 +17,7 @@ class DiskController {
 
     companion object {
         val instance = DiskController()
-        const val MAX_DRIVES = 2
+        const val MAX_DRIVES = 3
     }
 
     val mountedDisks = mutableStateMapOf<Int, MountedDisk>()

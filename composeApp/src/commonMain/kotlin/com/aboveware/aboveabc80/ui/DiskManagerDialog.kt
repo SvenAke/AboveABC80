@@ -614,7 +614,7 @@ fun NewDiskDialog(
     onCreated: (String) -> Unit
 ) {
     val templates = listOf("fd2" to "ABC80 80 kB (SSSD)", "abc830" to "ABC80 160 kB (SSDD)", "fd4d" to "ABC80 320 kB (DSDD)", "abc832" to "ABC80 640 kB (DSQD)")
-    var selectedTemplate by remember { mutableStateOf(templates[0].first) }
+    var selectedTemplate by remember { mutableStateOf("abc830") }
     var systemDisk by remember { mutableStateOf(true) }
     var newName by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
@@ -659,24 +659,14 @@ fun NewDiskDialog(
                     }
                 }
                 if (!systemDisk) {
-                    Text(stringResource(Res.string.storage_format), style = MaterialTheme.typography.labelSmall)
-                }
-                if (!systemDisk) templates.forEach { (template, label) ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { selectedTemplate = template }
-                            .padding(vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RadioButton(
-                            selected = selectedTemplate == template,
-                            onClick = { selectedTemplate = template })
-                        Text(
-                            label,
-                            modifier = Modifier.padding(start = 8.dp)
-                        )
-                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    DiskFormatDropdown(
+                        formats = templates,
+                        selected = selectedTemplate,
+                        onSelected = { selectedTemplate = it },
+                        label = stringResource(Res.string.storage_format),
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))

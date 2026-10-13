@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import com.aboveware.aboveabc80.ui.DiskFormatDropdown
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -991,7 +992,7 @@ fun NewDisketteDialog(
     onCreated: (String) -> Unit
 ) {
     val templates = listOf("fd2" to "ABC80 80 kB (SSSD)", "abc830" to "ABC80 160 kB (SSDD)", "fd4d" to "ABC80 320 kB (DSDD)")
-    var selectedTemplate by remember { mutableStateOf(templates[0].first) }
+    var selectedTemplate by remember { mutableStateOf("abc830") }
     var systemDisk by remember { mutableStateOf(true) }
     var newName by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
@@ -1036,24 +1037,14 @@ fun NewDisketteDialog(
                     }
                 }
                 if (!systemDisk) {
-                    Text(stringResource(Res.string.storage_format), style = MaterialTheme.typography.labelSmall)
-                }
-                if (!systemDisk) templates.forEach { (template, label) ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { selectedTemplate = template }
-                            .padding(vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RadioButton(
-                            selected = selectedTemplate == template,
-                            onClick = { selectedTemplate = template })
-                        Text(
-                            label,
-                            modifier = Modifier.padding(start = 8.dp)
-                        )
-                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    DiskFormatDropdown(
+                        formats = templates,
+                        selected = selectedTemplate,
+                        onSelected = { selectedTemplate = it },
+                        label = stringResource(Res.string.storage_format),
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
