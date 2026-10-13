@@ -15,7 +15,18 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 
-/** Combobox for choosing a floppy format; [formats] holds pairs of format id and display label. */
+/**
+ * A drop-down menu (combobox) composable for selecting a disk format from a list of options.
+ *
+ * Displays an [OutlinedTextField] showing the current selection's display label and expands
+ * into a menu showing all available [formats] when clicked.
+ *
+ * @param formats List of format pairs, where `first` is the format ID and `second` is the display label.
+ * @param selected The ID of the currently selected disk format.
+ * @param onSelected Callback invoked when the user selects a format, passing the selected format ID.
+ * @param label The label text displayed on the dropdown text field.
+ * @param modifier The [Modifier] to be applied to the dropdown menu box container.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DiskFormatDropdown(
