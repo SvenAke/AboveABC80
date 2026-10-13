@@ -80,6 +80,7 @@ import org.jetbrains.compose.resources.stringResource
 @OptIn(ExperimentalUnsignedTypes::class)
 @Composable
 fun DiskManagerDialog(
+    onRunFile: (drive: Int, fileName: String) -> Unit = { _, _ -> },
     onDismiss: () -> Unit
 ) {
     val controller = DiskController.instance
@@ -108,6 +109,7 @@ fun DiskManagerDialog(
     }
 
     var listing by remember { mutableStateOf<Pair<String, List<Pair<String, Int>>?>?>(null) }
+    var listingDrive by remember { mutableStateOf(0) }
 
     data class ExportPending(val parentDir: String, val floppyName: String, val floppy: AbcDiskImage)
     var exportPending by remember { mutableStateOf<ExportPending?>(null) }
@@ -164,7 +166,12 @@ fun DiskManagerDialog(
                     files.isEmpty() -> Text(stringResource(Res.string.disk_no_files))
                     else -> LazyColumn(modifier = Modifier.sizeIn(maxHeight = 400.dp)) {
                         items(files) { (name, size) ->
+                            val runnable = name.substringAfterLast('.', "").uppercase() in setOf("BAS", "BAC")
                             ListItem(
+                                modifier = if (runnable) Modifier.clickable {
+                                    listing = null
+                                    onRunFile(listingDrive, name)
+                                } else Modifier,
                                 headlineContent = { Text(name) },
                                 trailingContent = { Text("${(size + 1023) / 1024} kB") }
                             )
@@ -215,6 +222,7 @@ fun DiskManagerDialog(
                                                             }
                                                         }
                                                         try {
+                                                            listingDrive = index
                                                             listing = mounted.name to image?.let { Abc80FloppyLayout.list(it) }
                                                         } catch (e: IllegalArgumentException) {
                                                             Abc80Log.wtf("Invalid ABC80 directory in ${mounted.name}: ${e.message}")

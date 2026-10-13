@@ -1177,7 +1177,13 @@ fun EmulatorScreen(startWithStorageOpen: Boolean = false) {
     }
 
     if (showDiskManagerDialog) {
-        DiskManagerDialog {
+        DiskManagerDialog(
+            onRunFile = { drive, fileName ->
+                showDiskManagerDialog = false
+                focusRequester.requestFocus()
+                scope.launch { pasteABC80Text(nativeLib, "RUN DR$drive:$fileName\r") }
+            }
+        ) {
             showDiskManagerDialog = false
             focusRequester.requestFocus()
         }
