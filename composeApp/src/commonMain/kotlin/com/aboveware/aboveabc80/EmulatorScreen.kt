@@ -1117,8 +1117,8 @@ fun EmulatorScreen(startWithStorageOpen: Boolean = false) {
                                     focusRequester.requestFocus()
                                 }
                             },
-                            containerColor = Color.Transparent,
-                            contentColor = MaterialTheme.colorScheme.primary
+                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                         ) {
                             Icon(
                                 if (speedDialOpen) Icons.Default.Close
