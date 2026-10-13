@@ -234,6 +234,10 @@ Executable files (`.BAS`, `.BAC`, `.ABS`) in disk and cassette lists have a
 download-arrow button before the play button. The arrow sends LOAD without RUN;
 play loads and runs the file. Both cassette actions position the tape at the
 selected file first.
+Both lists share content-based executable detection: numbered BASIC text, BAC
+headers and ABS headers also enable these buttons for other extensions such as
+`.GRF`. The original file name is retained in LOAD/RUN commands. Cassette
+validation uses the detected format, not just the extension.
 
 The desktop cassette regression test boots the BASIC ROM, loads a multi-block
 program after another file on a synthetic tape at normal CPU speed, and verifies

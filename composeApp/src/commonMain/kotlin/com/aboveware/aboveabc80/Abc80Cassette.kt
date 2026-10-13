@@ -20,6 +20,7 @@ object Abc80Cassette {
         var position = 0L
         var current = false
         var valid = false
+        internal var executableFormat: Abc80ExecutableFormat? = null
 
         val displayName get() = name.eightPointThree().ifEmpty { "-" }
     }
@@ -108,13 +109,17 @@ object Abc80Cassette {
                 Abc80Log.cassette("READ $nameBlock")
                 program?.add(nameBlock)
                 var blockNumber = 0
+                val fileData = mutableListOf<Byte>()
                 while (pos + BLOCK <= tape.size) {
                     val dataBlock = Abc80Program.DataBlock(blockNumber++)
-                    dataBlock.load(tape.copyOfRange(pos, pos + BLOCK))
+                    val raw = tape.copyOfRange(pos, pos + BLOCK)
+                    dataBlock.load(raw)
                     pos += BLOCK
                     if (!dataBlock.verify()) break
+                    fileData.addAll(raw.copyOfRange(39, 291).asList())
                     program?.add(dataBlock)
                 }
+                info.executableFormat = abc80ExecutableFormat(info.displayName, fileData.toByteArray(), 252)
                 info.length = (pos - position - BLOCK).toLong()
                 position = pos
                 persist()
@@ -157,23 +162,40 @@ object Abc80Cassette {
 
     fun previewBasic(info: FileInfo): String = readText(info, requireEndMarker = false)
 
+    internal fun executableFormat(info: FileInfo): Abc80ExecutableFormat? =
+        abc80ExecutableFormat(info.displayName, byteArrayOf(), 252)
+            ?: abc80ExecutableFormat(info.displayName, fileData(info), 252)
+
+    private fun fileData(info: FileInfo): ByteArray =
+        fileDataBlocks(info).flatMap { it.copyOfRange(39, 291).asSequence() }.toList().toByteArray()
+
     fun validateBasicLoad(info: FileInfo) {
-        require(info.displayName.substringAfterLast('.', "").equals("bas", true)) {
+        require(executableFormat(info) == Abc80ExecutableFormat.BAS) {
             "Only BASIC cassette files can be run"
         }
         readText(info, requireEndMarker = true)
     }
 
     fun validateBacLoad(info: FileInfo) {
-        require(info.displayName.substringAfterLast('.', "").equals("bac", true)) {
+        require(executableFormat(info) == Abc80ExecutableFormat.BAC) {
             "Only BAC cassette files can be validated"
         }
-        val data = fileDataBlocks(info).flatMap { it.copyOfRange(39, 291).asSequence() }.toList().toByteArray()
+        val data = fileData(info)
         Abc80CloudDiskImport.validateBac(info.displayName, data, 252)
     }
 
+    internal fun validateExecutableLoad(info: FileInfo) {
+        when (executableFormat(info)) {
+            Abc80ExecutableFormat.BAS -> validateBasicLoad(info)
+            Abc80ExecutableFormat.BAC -> validateBacLoad(info)
+            Abc80ExecutableFormat.ABS -> Abc80CloudDiskImport.validateAbs(info.displayName, fileData(info), 252)
+            null -> error("Cassette file is not executable")
+        }
+    }
+
     private fun readText(info: FileInfo, requireEndMarker: Boolean): String {
-        require(info.displayName.substringAfterLast('.', "").let { it.equals("bas", true) || it.equals("txt", true) }) {
+        require(info.displayName.substringAfterLast('.', "").equals("txt", true) ||
+            executableFormat(info) == Abc80ExecutableFormat.BAS) {
             "Only BASIC and text cassette files can be previewed"
         }
         val text = StringBuilder()

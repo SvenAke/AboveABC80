@@ -17,6 +17,66 @@ import kotlin.time.TimeSource
 @OptIn(ExperimentalUnsignedTypes::class, ExperimentalResourceApi::class)
 class CassetteLoadIntegrationTest {
     @Test
+    fun cassetteLoadsBasicAndBacWithNonstandardExtension() = runBlocking {
+        val home = Files.createTempDirectory("abc80-cassette-extension-test").toFile()
+        val previousHome = System.getProperty("user.home")
+        System.setProperty("user.home", home.absolutePath)
+        var native: NativeLib? = null
+        try {
+            check(home.resolve(".aboveabc80").resolve("dr").mkdirs())
+            val lib = NativeLib.getObject()
+            native = lib
+            val memory = ByteArray(0x10000)
+            Res.readBytes("files/prom.rom").copyInto(memory)
+            Res.readBytes("files/dos.rom").copyInto(memory, 0x6000)
+            Res.readBytes("files/printer.rom").copyInto(memory, 0x7800)
+            lib.copyToMemory(0, memory)
+            lib.enableLogging(false)
+            lib.startEmulator(3_000_000)
+            await("BASIC must finish booting before loading the test cassette") {
+                screen(lib).contains("ABC80")
+            }
+            Thread.sleep(250)
+            val tape = file("DRAW    GRF", "10 PRINT \"EXTENSION TEST\"\r20 END\r")
+            assertTrue(Abc80Cassette.import(tape.inputStream(), "extension-test.tape"))
+            val source = Abc80Cassette.list().first { it.displayName == "DRAW.GRF" }
+            assertEquals(Abc80ExecutableFormat.BAS, source.executableFormat)
+            Abc80Cassette.validateExecutableLoad(source)
+            Abc80Cassette.seek(source)
+            type(lib, "LOAD CAS:DRAW.GRF\r")
+            type(lib, "LIST\r")
+            assertTrue(screen(lib).contains("EXTENSION TEST"), screen(lib))
+
+            Abc80Cassette.format()
+            type(lib, "SAVE CAS:TOKEN.BAC\r")
+            val binaryTape = Abc80Cassette.exportBytes()
+            val renamedHeader = binaryTape.copyOfRange(36, 292).apply {
+                "TOKEN   GRF".encodeToByteArray().copyInto(this, 3)
+            }
+            block(renamedHeader).copyInto(binaryTape)
+            assertTrue(Abc80Cassette.import(binaryTape.inputStream(), "binary-extension-test.tape"))
+            val binary = Abc80Cassette.list().first { it.displayName == "TOKEN.GRF" }
+            assertEquals(Abc80ExecutableFormat.BAC, binary.executableFormat)
+            Abc80Cassette.validateExecutableLoad(binary)
+            type(lib, "NEW\r")
+            Abc80Cassette.seek(binary)
+            type(lib, "LOAD CAS:TOKEN.GRF\r")
+            type(lib, "LIST\r")
+            assertTrue(screen(lib).contains("10 PRINT"), screen(lib))
+            assertTrue(screen(lib).contains("EXTENSION TEST"), screen(lib))
+            assertTrue(binaryTape.contentEquals(Abc80Cassette.exportBytes()))
+
+        } finally {
+            Abc80CassetteStatus.cancel()
+            native?.freeze()
+            native?.setFastSpeed(false)
+            Abc80Cassette.eject()
+            System.setProperty("user.home", previousHome)
+            home.deleteRecursively()
+        }
+    }
+
+    @Test
     fun basicLoadsNamedProgramAfterAnotherFileOnTape() = runBlocking {
         val home = Files.createTempDirectory("abc80-cassette-test").toFile()
         val previousHome = System.getProperty("user.home")

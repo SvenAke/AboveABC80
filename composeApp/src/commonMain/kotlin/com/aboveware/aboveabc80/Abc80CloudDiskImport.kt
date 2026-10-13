@@ -51,13 +51,13 @@ object Abc80CloudDiskImport {
         throw IllegalArgumentException("BAC file missing end record: $name")
     }
 
-    private fun validateAbs(name: String, data: ByteArray) {
+    internal fun validateAbs(name: String, data: ByteArray, recordSize: Int = 253) {
         var offset = 0
         while (offset <= data.size - 7) {
             val type = data[offset].toInt() and 255
             val length = data[offset + 1].toInt() and 255
             if (type == 255) {
-                offset = (offset / 253 + 1) * 253
+                offset = (offset / recordSize + 1) * recordSize
                 continue
             }
             require(type == 0 && data[offset + 2] == 0.toByte() &&
@@ -67,11 +67,11 @@ object Abc80CloudDiskImport {
             }
             if (length == 0) return
             require(offset + length + 8 <= data.size &&
-                offset % 253 + length + 8 <= 253) { "Incomplete ABS file: $name" }
+                offset % recordSize + length + 8 <= recordSize) { "Incomplete ABS file: $name" }
             val sum = data.copyOfRange(offset + 7, offset + 7 + length).sum() and 255
             require(sum == data[offset + 7 + length].toInt() and 255) { "Incorrect ABS checksum: $name" }
             offset += length + 8
-            if (253 - offset % 253 < 8) offset = (offset / 253 + 1) * 253
+            if (recordSize - offset % recordSize < 8) offset = (offset / recordSize + 1) * recordSize
         }
         throw IllegalArgumentException("ABS file missing end record: $name")
     }

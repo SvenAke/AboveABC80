@@ -76,6 +76,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.stringResource
+import com.aboveware.aboveabc80.abc80ExecutableFormat
 
 
 @OptIn(ExperimentalUnsignedTypes::class)
@@ -112,6 +113,7 @@ fun DiskManagerDialog(
 
     var listing by remember { mutableStateOf<Pair<String, List<Pair<String, Int>>?>?>(null) }
     var listingDrive by remember { mutableStateOf(0) }
+    var runnableFiles by remember { mutableStateOf(emptySet<String>()) }
 
     data class ExportPending(val parentDir: String, val floppyName: String, val floppy: AbcDiskImage)
     var exportPending by remember { mutableStateOf<ExportPending?>(null) }
@@ -168,7 +170,7 @@ fun DiskManagerDialog(
                     files.isEmpty() -> Text(stringResource(Res.string.disk_no_files))
                     else -> LazyColumn(modifier = Modifier.sizeIn(maxHeight = 400.dp)) {
                         items(files) { (name, size) ->
-                            val runnable = name.substringAfterLast('.', "").uppercase() in setOf("BAS", "BAC", "ABS")
+                            val runnable = name in runnableFiles
                             ListItem(
                                 headlineContent = { Text(name) },
                                 trailingContent = {
@@ -243,9 +245,19 @@ fun DiskManagerDialog(
                                                         }
                                                         try {
                                                             listingDrive = index
-                                                            listing = mounted.name to image?.let { Abc80FloppyLayout.list(it) }
+                                                            val files = image?.let { Abc80FloppyLayout.list(it) }
+                                                            runnableFiles = files.orEmpty().mapNotNull { (name, _) ->
+                                                                val data = checkNotNull(Abc80FloppyLayout.readFile(checkNotNull(image), name)) {
+                                                                    "Could not read $name from ${mounted.name}"
+                                                                }
+                                                                name.takeIf { abc80ExecutableFormat(name, data, 253) != null }
+                                                            }.toSet()
+                                                            listing = mounted.name to files
                                                         } catch (e: IllegalArgumentException) {
                                                             Abc80Log.wtf("Invalid ABC80 directory in ${mounted.name}: ${e.message}")
+                                                            errorMessage = "${mounted.name}: $listingFailedMessage"
+                                                        } catch (e: IllegalStateException) {
+                                                            Abc80Log.wtf("Could not read ABC80 files in ${mounted.name}: ${e.message}")
                                                             errorMessage = "${mounted.name}: $listingFailedMessage"
                                                         }
                                                     }

@@ -45,6 +45,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import com.aboveware.aboveabc80.Abc80Cassette
+import com.aboveware.aboveabc80.Abc80ExecutableFormat
 import com.aboveware.aboveabc80.Abc80Log
 import com.aboveware.aboveabc80.Abc80CassetteStatus
 import com.aboveware.aboveabc80.LocalFileDialog
@@ -107,12 +108,7 @@ fun CassetteDialog(
 
     fun loadFile(info: Abc80Cassette.FileInfo, run: Boolean) {
         try {
-            if (info.displayName.substringAfterLast('.', "").equals("bas", true)) {
-                Abc80Cassette.validateBasicLoad(info)
-            }
-            if (info.displayName.substringAfterLast('.', "").equals("bac", true)) {
-                Abc80Cassette.validateBacLoad(info)
-            }
+            Abc80Cassette.validateExecutableLoad(info)
             Abc80Cassette.seek(info)
         } catch (e: IllegalStateException) {
             Abc80Log.wtf("Could not load ${info.displayName}: ${e.message}")
@@ -232,8 +228,8 @@ fun CassetteDialog(
                                         Row(verticalAlignment = Alignment.CenterVertically) {
                                             if (info.length > 0) Text("${(info.length + 1023) / 1024} kB")
                                             val ext = info.displayName.substringAfterLast('.', "")
-                                            val isBas = ext.equals("bas", true)
-                                            if (ext.uppercase() in setOf("BAS", "BAC", "ABS")) {
+                                            val isBas = info.executableFormat == Abc80ExecutableFormat.BAS
+                                            if (info.executableFormat != null) {
                                                 CassetteIconButton(
                                                     Icons.Default.Download,
                                                     stringResource(Res.string.cassette_load),

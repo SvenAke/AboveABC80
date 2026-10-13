@@ -25,7 +25,7 @@ class CassettePreviewTest {
         try {
             val name = ByteArray(256).apply {
                 fill(-1, 0, 3)
-                "BINARY  BAC".encodeToByteArray().copyInto(this, 3)
+                "BINARY  GRF".encodeToByteArray().copyInto(this, 3)
             }
             val first = block(ByteArray(256).apply {
                 this[3] = 0x82.toByte()
@@ -45,7 +45,8 @@ class CassettePreviewTest {
             }
             for (terminated in listOf(false, true)) {
                 check(Abc80Cassette.import(tape(terminated).inputStream(), "binary.tape"))
-                val file = Abc80Cassette.list().first { it.displayName == "BINARY.BAC" }
+                val file = Abc80Cassette.list().first { it.displayName == "BINARY.GRF" }
+                assertEquals(Abc80ExecutableFormat.BAC, file.executableFormat)
                 Abc80Cassette.forward()
                 val position = Abc80Cassette.list().first { it.current }.position
                 val before = Abc80Cassette.exportBytes()
@@ -55,7 +56,7 @@ class CassettePreviewTest {
                     val error = assertFailsWith<IllegalArgumentException> {
                         Abc80Cassette.validateBacLoad(file)
                     }
-                    assertEquals("BAC file missing end record: BINARY.BAC", error.message)
+                    assertEquals("BAC file missing end record: BINARY.GRF", error.message)
                 }
                 assertContentEquals(before, Abc80Cassette.exportBytes())
                 assertEquals(position, Abc80Cassette.list().first { it.current }.position)
@@ -113,7 +114,7 @@ class CassettePreviewTest {
         try {
             val name = ByteArray(256).apply {
                 fill(-1, 0, 3)
-                "TEST    BAS".encodeToByteArray().copyInto(this, 3)
+                "TEST    GRF".encodeToByteArray().copyInto(this, 3)
             }
             val text = "10 PRINT \"[\\]\"\r20 REM ${"X".repeat(300)}\r"
             val blocks = (text + "\u0000").encodeToByteArray().asList().chunked(252)
@@ -128,7 +129,8 @@ class CassettePreviewTest {
             val tape = block(name) + blocks.flatMap { it.asList() }.toByteArray() +
                 ByteArray(Abc80Program.Block.BYTES)
             check(Abc80Cassette.import(tape.inputStream(), "preview.tape"))
-            val file = Abc80Cassette.list().first { it.displayName == "TEST.BAS" }
+            val file = Abc80Cassette.list().first { it.displayName == "TEST.GRF" }
+            assertEquals(Abc80ExecutableFormat.BAS, file.executableFormat)
             Abc80Cassette.forward()
             val before = Abc80Cassette.exportBytes()
             assertEquals(
