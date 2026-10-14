@@ -93,6 +93,11 @@ class Abc80Floppy : Abc80Bus.BusInterface {
             disks.forEach { (_, layout) -> layout.close() }
         }
 
+        fun closeAndClear() {
+            close()
+            disks.clear()
+        }
+
         private val disks = mutableMapOf<Int, Abc80FloppyLayout>()
     }
 
@@ -148,7 +153,7 @@ class Abc80Floppy : Abc80Bus.BusInterface {
         cancelTransfer(drive)
         if (loaded) {
             mountedNames[drive] = name
-            Abc80Log.diskett("ABC80 DR$drive: mounted $name, format=$format, size=${image.size}")
+            Abc80Log.diskette("ABC80 DR$drive: mounted $name, format=$format, size=${image.size}")
         } else {
             Abc80Log.wtf("ABC80 DR$drive: failed to mount $name")
         }
@@ -162,6 +167,15 @@ class Abc80Floppy : Abc80Bus.BusInterface {
         disks[drive] = Abc80FloppyLayout("abc830", drive).open()
         cancelTransfer(drive)
         mountedNames.remove(drive)
+    }
+
+    @Synchronized
+    fun closeForComputerModelChange() {
+        disks.closeAndClear()
+        mountedNames.clear()
+        drive = 0u
+        stateMachine.state = StateMachine.State.UNINITIALIZED
+        route.clear()
     }
 
     private fun cancelTransfer(drive: Int) {

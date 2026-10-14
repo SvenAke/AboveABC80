@@ -335,13 +335,12 @@ void writeByteInternal(libspectrum_word address, libspectrum_byte b) {
 }
 
 extern "C" {
+void abc800m_clear_text_screen();
+
 void abc800m_set_enabled(bool enabled) {
     g_abc800m_active.store(enabled, std::memory_order_relaxed);
     g_abc800m_video_ram.fill(0);
-    {
-        Abc800Lock lock(g_abc800m_character_ram_lock);
-        g_abc800m_character_ram.fill(0x20);
-    }
+    abc800m_clear_text_screen();
     {
         Abc800Lock lock(g_abc800m_crtc_lock);
         g_abc800m_crtc_registers.fill(0);
@@ -359,6 +358,14 @@ void abc800m_set_enabled(bool enabled) {
     std::memset(g_abc800m_highres_control, 0, sizeof(g_abc800m_highres_control));
     g_abc800m_dart_rx_irq_enabled.store(false, std::memory_order_relaxed);
     g_abc800m_dart_irq_pending.store(false, std::memory_order_relaxed);
+}
+
+void abc800m_clear_text_screen() {
+    Abc800Lock crtc_lock(g_abc800m_crtc_lock);
+    Abc800Lock character_ram_lock(g_abc800m_character_ram_lock);
+    g_abc800m_character_ram.fill(0x20);
+    g_abc800m_crtc_registers[14] = g_abc800m_crtc_registers[12];
+    g_abc800m_crtc_registers[15] = g_abc800m_crtc_registers[13];
 }
 
 std::uint8_t abc800m_read_port(int port) {

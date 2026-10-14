@@ -37,6 +37,7 @@ extern std::uint8_t memory[0x10000];
 extern std::atomic<bool> g_cpu_paused;
 extern std::atomic<bool> g_abc800m_active;
 extern "C" void abc800m_set_enabled(bool enabled);
+extern "C" void abc800m_clear_text_screen();
 extern "C" std::uint8_t abc800m_read_port(int port);
 extern "C" bool abc800m_owns_port_read(int port);
 extern "C" void abc800m_write_port(int port, int value);
@@ -202,6 +203,11 @@ Java_com_aboveware_aboveabc80_NativeLib_getAbc800MCursorPositionNative(JNIEnv *,
 JNIEXPORT void JNICALL
 Java_com_aboveware_aboveabc80_NativeLib_setAbc800MEnabledNative(JNIEnv *, jobject, jboolean enabled) {
     abc800m_set_enabled(enabled == JNI_TRUE);
+}
+
+JNIEXPORT void JNICALL
+Java_com_aboveware_aboveabc80_NativeLib_clearAbc800MTextScreenNative(JNIEnv *, jobject) {
+    abc800m_clear_text_screen();
 }
 
 JNIEXPORT void JNICALL

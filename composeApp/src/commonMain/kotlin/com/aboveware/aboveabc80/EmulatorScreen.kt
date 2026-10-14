@@ -139,6 +139,58 @@ import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.stringResource
 import kotlin.time.Duration.Companion.milliseconds
 
+@OptIn(ExperimentalResourceApi::class)
+private suspend fun restoreDisksForModel(model: ComputerModel, migrateLegacySettings: Boolean = false) {
+    check(TerminalManager.computerModel == model) { "Cannot restore disks for an inactive computer model" }
+    val controller = DiskController.instance
+    var driveZeroLoaded = false
+    for (index in 0 until DiskController.MAX_DRIVES) {
+        val preferenceKey = DiskController.drivePreferenceKey(model, index)
+        val legacyValue = if (migrateLegacySettings) {
+            getPersistedString("drive_$index")
+        } else ""
+        val persistedValue = getPersistedString(preferenceKey)
+        val persistence = persistedValue.ifEmpty { legacyValue }
+        if (persistence.isNotEmpty()) {
+            val source = persistence.substringBefore(":", "LOCAL")
+            val diskName = persistence.substringAfter(":", persistence)
+            val loaded = if (source == DiskController.Source.DRIVE.name) {
+                controller.restoreFromDriveImage(index) != null
+            } else {
+                controller.restoreFromLocal(index, diskName) != null
+            }
+            if (!loaded) Abc80Log.wtf("Could not restore $diskName in DR$index for ${model.displayName}")
+            if (index == 0) driveZeroLoaded = loaded
+            if (loaded && persistedValue.isEmpty() && legacyValue.isNotEmpty()) {
+                setPersistedString(preferenceKey, persistence)
+            }
+        } else {
+            val restoredDrive = controller.restoreFromDriveImage(index)
+            if (restoredDrive != null) {
+                setPersistedString(
+                    preferenceKey,
+                    "${DiskController.Source.DRIVE.name}:$restoredDrive"
+                )
+                if (index == 0) driveZeroLoaded = true
+            }
+        }
+        if (migrateLegacySettings && legacyValue.isNotEmpty()) {
+            setPersistedString("drive_$index", "")
+        }
+    }
+
+    if (!driveZeroLoaded) {
+        if ("SYSTEM.DSK" !in listLocalDisks()) {
+            val image = Res.readBytes("files/system.dsk")
+            check(saveLocalDisk("SYSTEM.DSK", image)) { "Could not save SYSTEM.DSK" }
+        }
+        check(controller.loadFromLocal(0, "SYSTEM.DSK") != null) {
+            "Could not mount SYSTEM.DSK for ${model.displayName}"
+        }
+        setPersistedString(DiskController.drivePreferenceKey(model, 0), "LOCAL:SYSTEM.DSK")
+    }
+}
+
 @Composable
 fun EmulatorScreen(startWithStorageOpen: Boolean = false) {
     val assembler = remember { Assembler.instance }
@@ -438,36 +490,14 @@ fun EmulatorScreen(startWithStorageOpen: Boolean = false) {
         val terminal = TerminalManager.activeTerminal
         terminal.reset()
 
-        withContext(Dispatchers.IO) {
-            var aLoaded = false
-            for (i in 0 until DiskController.MAX_DRIVES) {
-                val persistence = getPersistedString("drive_$i")
-                if (persistence.isNotEmpty()) {
-                    val diskName =
-                        if (persistence.contains(":")) persistence.substringAfter(":") else persistence
-                    val loaded = DiskController.instance.loadFromLocal(i, diskName)
-                    if (i == 0) aLoaded = loaded != null
-                }
+        try {
+            withContext(Dispatchers.IO) {
+                restoreDisksForModel(TerminalManager.computerModel, migrateLegacySettings = true)
             }
-
-            // Auto-create SYSTEM.DSK if Drive A is still empty
-            if (!aLoaded) {
-                val localDisks = listLocalDisks()
-                if (!localDisks.contains("SYSTEM.DSK")) {
-                    try {
-                        @OptIn(ExperimentalResourceApi::class)
-                        val data = Res.readBytes("files/system.dsk")
-                        check(saveLocalDisk("SYSTEM.DSK", data)) { "Could not save SYSTEM.DSK" }
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        Abc80Log.wtf("Failed to create SYSTEM.DSK: ${e.message}")
-                    }
-                }
-                if (DiskController.instance.loadFromLocal(0, "SYSTEM.DSK") != null) {
-                    setPersistedString("drive_0", "LOCAL:SYSTEM.DSK")
-                }
-            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Abc80Log.wtf("Failed to restore disks: ${e.message}")
         }
 
         // Wait for composition to settle then request focus
@@ -1175,17 +1205,35 @@ fun EmulatorScreen(startWithStorageOpen: Boolean = false) {
             onComputerModelChange = { model ->
                 scope.launch {
                     val previousModel = TerminalManager.computerModel
+                    if (previousModel == model) return@launch
                     val wasFrozen = nativeLib.isFrozen()
                     nativeLib.freeze(true)
                     try {
+                        DiskController.instance.closeForComputerModelChange()
                         TerminalManager.computerModel = model
                         assembler.loadRomFiles()
+                        withContext(Dispatchers.IO) {
+                            restoreDisksForModel(model)
+                        }
                         nativeLib.resetCpu()
                     } catch (e: Exception) {
                         TerminalManager.computerModel = previousModel
                         Abc80Log.wtf("Computer model change failed: ${e.message}")
+                        var rollbackError: Exception? = null
+                        try {
+                            DiskController.instance.closeForComputerModelChange()
+                            assembler.loadRomFiles()
+                            withContext(Dispatchers.IO) {
+                                restoreDisksForModel(previousModel)
+                            }
+                            nativeLib.resetCpu()
+                        } catch (restoreError: Exception) {
+                            rollbackError = restoreError
+                            Abc80Log.wtf("Could not restore disks for ${previousModel.displayName}: ${restoreError.message}")
+                        }
                         snackbarHostState.showSnackbar(
-                            listOfNotNull(computerModelChangeFailed, e.message).joinToString(" ")
+                            listOfNotNull(computerModelChangeFailed, e.message, rollbackError?.message)
+                                .joinToString(" ")
                         )
                         return@launch
                     } finally {

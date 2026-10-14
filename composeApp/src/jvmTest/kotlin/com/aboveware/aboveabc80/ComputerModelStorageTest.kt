@@ -2,6 +2,7 @@ package com.aboveware.aboveabc80
 
 import com.aboveware.aboveabc80.terminal.ComputerModel
 import com.aboveware.aboveabc80.terminal.TerminalManager
+import com.aboveware.aboveabc80.core.DiskController
 import java.io.ByteArrayInputStream
 import java.nio.file.Files
 import kotlin.test.Test
@@ -11,6 +12,14 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class ComputerModelStorageTest {
+    @Test
+    fun driveMountPreferencesAreIsolatedByComputerModel() {
+        assertEquals("drive_ABC80_0", DiskController.drivePreferenceKey(ComputerModel.ABC80, 0))
+        assertEquals("drive_ABC800M_0", DiskController.drivePreferenceKey(ComputerModel.ABC800M, 0))
+        assertEquals("drive_ABC800C_0", DiskController.drivePreferenceKey(ComputerModel.ABC800C, 0))
+        assertEquals("drive_ABC800M_1", DiskController.drivePreferenceKey(ComputerModel.ABC800M, 1))
+    }
+
     @Test
     fun diskImagesAndSavedTapesAreIsolatedByComputerModel() {
         val home = Files.createTempDirectory("computer-model-storage").toFile()

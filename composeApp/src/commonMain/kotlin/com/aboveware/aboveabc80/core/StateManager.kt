@@ -3,6 +3,7 @@ package com.aboveware.aboveabc80.core
 import com.aboveware.aboveabc80.NativeLib
 import com.aboveware.aboveabc80.loadLocalDisk
 import com.aboveware.aboveabc80.saveLocalDisk
+import com.aboveware.aboveabc80.setPersistedString
 import com.aboveware.aboveabc80.terminal.TerminalManager
 import com.aboveware.aboveabc80.terminal.TerminalType
 
@@ -97,13 +98,24 @@ object StateManager {
         val lines = mountData.split("\n")
         val controller = DiskController.instance
         for (i in 0 until DiskController.MAX_DRIVES) {
-            if (i < lines.size) {
-                val line = lines[i]
-                if (line != "NONE" && line.contains(":")) {
-                    val parts = line.split(":", limit = 2)
-                    val diskName = parts[1]
-                    controller.loadFromLocal(i, diskName)
+            val line = lines.getOrNull(i)
+            val preferenceKey = DiskController.drivePreferenceKey(TerminalManager.computerModel, i)
+            if (line != null && line != "NONE" && line.contains(":")) {
+                val source = line.substringBefore(":")
+                val diskName = line.substringAfter(":")
+                val loaded = when (source) {
+                    DiskController.Source.DRIVE.name -> controller.restoreFromDriveImage(i) != null
+                    else -> diskName.isNotEmpty() && controller.loadFromLocal(i, diskName) != null
                 }
+                if (loaded) {
+                    setPersistedString(preferenceKey, line)
+                } else {
+                    controller.clearDrive(i)
+                    setPersistedString(preferenceKey, "")
+                }
+            } else {
+                controller.clearDrive(i)
+                setPersistedString(preferenceKey, "")
             }
         }
         controller.currentDriveIndex = driveIndex

@@ -35,6 +35,13 @@ class ABC800MBootSmokeTest {
             val screenText = nativeLib.getAbc800MTextScreen().decodeToString()
             assertTrue(screenText.contains("PRINT"), "ABC800M did not echo keyboard input")
             assertTrue(screenText.contains("2"), "ABC800M BASIC did not evaluate the input")
+
+            nativeLib.freeze(true)
+            Assembler.instance.restart()
+            assertTrue(
+                nativeLib.getAbc800MTextScreen().all { it == ' '.code.toByte() },
+                "ABC800M restart did not clear the text screen"
+            )
         } finally {
             nativeLib.freeze()
             TerminalManager.computerModel = previousModel

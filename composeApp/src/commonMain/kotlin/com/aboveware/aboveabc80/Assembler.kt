@@ -17,6 +17,7 @@ import java.util.TreeSet
 class Assembler {
     fun restart() {
         val lib = NativeLib.getObject()
+        val wasFrozen = lib.isFrozen()
         lib.freeze(true)
         try {
             lib.copyToMemory(0, memory)
@@ -27,8 +28,11 @@ class Assembler {
                 i = 0, r = 0, iff1 = 0, iff2 = 0, im = 0, tStates = 0,
                 holdIntReqCycles = 0, flags = 0, memPtr = 0
             ))
+            if (TerminalManager.computerModel == ComputerModel.ABC800M) {
+                lib.clearAbc800MTextScreen()
+            }
         } finally {
-            lib.freeze(false)
+            if (!wasFrozen) lib.freeze(false)
         }
     }
     @OptIn(ExperimentalResourceApi::class)
@@ -76,7 +80,7 @@ class Assembler {
         LaunchedEffect(Unit) {
             try {
                 loadRomFiles()
-                NativeLib.getObject().enableLogging(true)
+                NativeLib.getObject().enableLogging(false)
                 val cpuSpeedMHz = getPersistedString(
                     "cpu_speed_mhz",
                     TerminalManager.computerModel.defaultCpuSpeedSetting.toString()

@@ -58,6 +58,7 @@ import com.aboveware.aboveabc80.Abc80FloppyLayout
 import com.aboveware.aboveabc80.Abc80Log
 import com.aboveware.aboveabc80.core.DiskController
 import com.aboveware.aboveabc80.core.AbcDiskImage
+import com.aboveware.aboveabc80.terminal.TerminalManager
 import com.aboveware.aboveabc80.core.unzipFile
 import com.aboveware.aboveabc80.createFolder
 import com.aboveware.aboveabc80.deleteFolder
@@ -240,6 +241,8 @@ fun DiskManagerDialog(
                                                             } catch (e: Exception) {
                                                                 null
                                                             }
+                                                            DiskController.Source.DRIVE ->
+                                                                controller.getFloppy(index)?.getRawData()
                                                         }
                                                         try {
                                                             listingDrive = index
@@ -291,7 +294,7 @@ fun DiskManagerDialog(
                                                     targetImportDriveIndex = index
                                                     controller.currentDriveIndex = index
                                                     showCloudImportDialog = true
-                                                }) {
+                                                }, enabled = mounted.source == DiskController.Source.LOCAL) {
                                                     Icon(
                                                         Icons.Default.CloudDownload,
                                                         contentDescription = importCloudLabel
@@ -375,7 +378,10 @@ fun DiskManagerDialog(
                                                 for (i in 0 until DiskController.MAX_DRIVES) {
                                                     if (controller.mountedDisks[i]?.name == diskName) {
                                                         controller.clearDrive(i)
-                                                        setPersistedString("drive_$i", "")
+                                                        setPersistedString(
+                                                            DiskController.drivePreferenceKey(TerminalManager.computerModel, i),
+                                                            ""
+                                                        )
                                                     }
                                                 }
                                             },
@@ -393,7 +399,10 @@ fun DiskManagerDialog(
                                             controller.loadFromLocal(driveIndex, diskName)
                                         if (actualName != null) {
                                             setPersistedString(
-                                                "drive_$driveIndex",
+                                                DiskController.drivePreferenceKey(
+                                                    TerminalManager.computerModel,
+                                                    driveIndex
+                                                ),
                                                 "LOCAL:$actualName"
                                             )
                                             if (actualName != diskName) {
@@ -416,7 +425,13 @@ fun DiskManagerDialog(
                                     },
                                     modifier = Modifier.clickable {
                                         controller.clearDrive(driveIndex)
-                                        setPersistedString("drive_$driveIndex", "")
+                                        setPersistedString(
+                                            DiskController.drivePreferenceKey(
+                                                TerminalManager.computerModel,
+                                                driveIndex
+                                            ),
+                                            ""
+                                        )
                                         selectedDriveIndex = null
                                     }
                                 )
@@ -455,7 +470,13 @@ fun DiskManagerDialog(
                 selectedDriveIndex?.let { driveIndex ->
                     val actualName = controller.loadFromLocal(driveIndex, newName)
                     if (actualName != null) {
-                        setPersistedString("drive_$driveIndex", "LOCAL:$actualName")
+                        setPersistedString(
+                            DiskController.drivePreferenceKey(
+                                TerminalManager.computerModel,
+                                driveIndex
+                            ),
+                            "LOCAL:$actualName"
+                        )
                     }
                     selectedDriveIndex = null
                 }

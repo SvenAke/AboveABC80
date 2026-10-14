@@ -97,7 +97,7 @@ object Abc80Log {
         NativeLib.getObject().enableLogging(true)
     }
 
-    fun diskett(string: String) = log(Abc80LogTag.DISKETTE, string)
+    fun diskette(string: String) = log(Abc80LogTag.DISKETTE, string)
 
     /** Logs cassette storage activity. */
     fun cassette(string: String) = log(Abc80LogTag.CASSETTE, string)

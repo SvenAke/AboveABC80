@@ -16,7 +16,7 @@ object Abc80CloudDiskImport {
         NativeLib.getObject().bus.floppy.updateImage(drive, mounted.name) { image ->
             Abc80FloppyLayout.importFiles(image, records, clear)
         }
-        Abc80Log.diskett("Saved ${files.size} cloud files to DR$drive: ${mounted.name}")
+        Abc80Log.diskette("Saved ${files.size} cloud files to DR$drive: ${mounted.name}")
     }
 
     internal fun prepare(name: String, data: ByteArray): ByteArray {
