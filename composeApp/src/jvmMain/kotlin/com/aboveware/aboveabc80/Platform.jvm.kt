@@ -9,11 +9,12 @@ import java.util.Date
 import java.util.Locale
 import java.util.prefs.Preferences
 import javax.swing.JFileChooser
+import com.aboveware.aboveabc80.terminal.ComputerModel
+import com.aboveware.aboveabc80.terminal.TerminalManager
 
 class JVMPlatform : Platform {
     override val name: String = "Java ${System.getProperty("java.version")}"
-    val disksDir =
-        File(System.getProperty("user.home"), ".aboveabc80/disks").apply { if (!exists()) mkdirs() }
+    val disksDir: File get() = getComputerModelStorageDir("disks")
 }
 
 actual fun getPlatform(): Platform = JVMPlatform()
@@ -22,6 +23,19 @@ actual fun getAppStorageDir(): File {
     val root = File(System.getProperty("user.home") ?: ".", ".aboveabc80")
     if (!root.exists()) root.mkdirs()
     return root
+}
+
+actual fun getComputerModelStorageDir(folder: String): File {
+    val root = getAppStorageDir()
+    val modelRoot = File(root, TerminalManager.computerModel.storageDirectoryName)
+    val directory = File(modelRoot, folder)
+    if (TerminalManager.computerModel == ComputerModel.ABC80) {
+        migrateLegacyDirectory(File(root, folder), directory)
+    }
+    check(directory.isDirectory || directory.mkdirs()) {
+        "Could not create model storage directory ${directory.absolutePath}"
+    }
+    return directory
 }
 
 actual fun setPersistedString(key: String, value: String) {
@@ -94,8 +108,7 @@ actual fun deleteLocalDisk(name: String): Boolean {
 
 actual fun saveLocalFile(folder: String, name: String, data: ByteArray): Boolean {
     return try {
-        val root = (getPlatform() as JVMPlatform).disksDir.parentFile
-        val dir = File(root, folder).apply { if (!exists()) mkdirs() }
+        val dir = getComputerModelStorageDir(folder)
         File(dir, name).writeBytes(data)
         true
     } catch (e: Exception) {
@@ -105,12 +118,11 @@ actual fun saveLocalFile(folder: String, name: String, data: ByteArray): Boolean
 }
 
 actual fun getLocalFileDirectory(folder: String): File =
-    File((getPlatform() as JVMPlatform).disksDir.parentFile, folder)
+    getComputerModelStorageDir(folder)
 
 actual fun loadLocalFile(folder: String, name: String): ByteArray? {
     return try {
-        val root = (getPlatform() as JVMPlatform).disksDir.parentFile
-        val file = File(File(root, folder), name)
+        val file = File(getComputerModelStorageDir(folder), name)
         if (file.exists()) file.readBytes() else null
     } catch (e: Exception) {
         null
@@ -118,15 +130,13 @@ actual fun loadLocalFile(folder: String, name: String): ByteArray? {
 }
 
 actual fun listLocalFiles(folder: String): List<String> {
-    val root = (getPlatform() as JVMPlatform).disksDir.parentFile
-    val dir = File(root, folder)
+    val dir = getComputerModelStorageDir(folder)
     return dir.listFiles { file -> file.isFile }?.map { it.name } ?: emptyList()
 }
 
 actual fun deleteLocalFile(folder: String, name: String): Boolean {
     return try {
-        val root = (getPlatform() as JVMPlatform).disksDir.parentFile
-        val dir = File(root, folder)
+        val dir = getComputerModelStorageDir(folder)
         File(dir, name).delete()
     } catch (e: Exception) {
         false

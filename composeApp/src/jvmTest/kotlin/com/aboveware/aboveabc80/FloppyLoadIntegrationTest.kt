@@ -2,6 +2,8 @@ package com.aboveware.aboveabc80
 
 import aboveabc80.composeapp.generated.resources.Res
 import com.aboveware.aboveabc80.core.DiskController
+import com.aboveware.aboveabc80.terminal.ComputerModel
+import com.aboveware.aboveabc80.terminal.TerminalManager
 import java.nio.file.Files
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
@@ -23,7 +25,9 @@ class FloppyLoadIntegrationTest {
     fun mountingWhileDiskIsReadPreservesEntireImage() {
         val home = Files.createTempDirectory("abc80-floppy-mount-test").toFile()
         val previousHome = System.getProperty("user.home")
+        val previousModel = TerminalManager.computerModel
         System.setProperty("user.home", home.absolutePath)
+        TerminalManager.computerModel = ComputerModel.ABC80
         val floppy = Abc80Floppy()
         val running = AtomicBoolean(true)
         val readFailure = AtomicReference<Throwable?>(null)
@@ -43,11 +47,12 @@ class FloppyLoadIntegrationTest {
             reader.join(5000)
             assertFalse(reader.isAlive)
             assertNull(readFailure.get(), "Mounting must not close a file while a sector is being read")
-            assertContentEquals(image, home.resolve(".aboveabc80/dr/0.dsk").readBytes())
+            assertContentEquals(image, home.resolve(".aboveabc80/abc80/dr/0.dsk").readBytes())
         } finally {
             running.set(false)
             reader.join(5000)
             floppy.disks.close()
+            TerminalManager.computerModel = previousModel
             System.setProperty("user.home", previousHome)
             home.deleteRecursively()
         }
@@ -57,7 +62,9 @@ class FloppyLoadIntegrationTest {
     fun basicLoadsFromBothMountedDisksAndRejectsInvalidImages() = runBlocking {
         val home = Files.createTempDirectory("abc80-floppy-test").toFile()
         val previousHome = System.getProperty("user.home")
+        val previousModel = TerminalManager.computerModel
         System.setProperty("user.home", home.absolutePath)
+        TerminalManager.computerModel = ComputerModel.ABC80
         check(home.resolve(".aboveabc80").resolve("dr").mkdirs())
         var native: NativeLib? = null
         try {
@@ -127,7 +134,7 @@ class FloppyLoadIntegrationTest {
                     command("LOAD DR1:EMPTY.BAS")
                     command("LIST")
                     assertTrue(decodeABC80Screen(lib.getMemory(), false).any { it.contains("10 PRINT 42") }, format)
-                    val saved = home.resolve(".aboveabc80/dr/1.dsk").readBytes()
+                    val saved = home.resolve(".aboveabc80/abc80/dr/1.dsk").readBytes()
                     assertTrue(requireNotNull(Abc80FloppyLayout.list(saved)).any { it.first == "EMPTY.BAS" },
                         "$format must also expose saved files to the dialog")
                     assertTrue(saveLocalDisk("CLOUD.DSK", saved))
@@ -206,6 +213,7 @@ class FloppyLoadIntegrationTest {
             for (drive in 0 until DiskController.MAX_DRIVES) DiskController.instance.clearDrive(drive)
             native?.bus?.floppy?.disks?.close()
             System.setProperty("user.home", previousHome)
+            TerminalManager.computerModel = previousModel
             home.deleteRecursively()
         }
     }

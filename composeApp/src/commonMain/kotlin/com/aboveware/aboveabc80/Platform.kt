@@ -10,6 +10,50 @@ interface Platform {
 
 expect fun getPlatform(): Platform
 expect fun getAppStorageDir(): File
+expect fun getComputerModelStorageDir(folder: String): File
+
+internal fun migrateLegacyDirectory(source: File, destination: File) {
+    if (!source.exists()) return
+    check(source.isDirectory) { "Legacy storage path is not a directory: ${source.absolutePath}" }
+    check(destination.parentFile?.let { it.isDirectory || it.mkdirs() } != false) {
+        "Could not create model storage directory ${destination.parentFile?.absolutePath}"
+    }
+    if (!destination.exists() && source.renameTo(destination)) return
+    check(destination.isDirectory || destination.mkdirs()) {
+        "Could not create model storage directory ${destination.absolutePath}"
+    }
+
+    val conflicts = mutableListOf<String>()
+    fun moveContents(from: File, to: File) {
+        val entries = checkNotNull(from.listFiles()) {
+            "Could not read legacy storage directory ${from.absolutePath}"
+        }
+        entries.forEach { entry ->
+            val target = File(to, entry.name)
+            if (entry.isDirectory) {
+                if (!target.exists() && entry.renameTo(target)) return@forEach
+                check(target.isDirectory || target.mkdirs()) {
+                    "Could not create migrated storage directory ${target.absolutePath}"
+                }
+                moveContents(entry, target)
+                if (entry.list()?.isEmpty() == true) {
+                    check(entry.delete()) { "Could not remove legacy directory ${entry.absolutePath}" }
+                }
+            } else if (target.exists()) {
+                conflicts.add(entry.absolutePath)
+            } else if (!entry.renameTo(target)) {
+                entry.copyTo(target)
+                check(entry.delete()) { "Could not remove legacy file ${entry.absolutePath}" }
+            }
+        }
+    }
+
+    moveContents(source, destination)
+    check(conflicts.isEmpty()) {
+        "Legacy storage files conflict with existing files: ${conflicts.joinToString()}"
+    }
+    check(source.delete()) { "Could not remove legacy directory ${source.absolutePath}" }
+}
 
 // Persisted settings
 expect fun setPersistedString(key: String, value: String)

@@ -152,7 +152,7 @@ class Abc80FloppyLayout(formatName: String, val drive: Int) {
     }
 
     private fun diskPath(): String {
-        val dir = File(getAppStorageDir(), "dr").apply { if (!exists()) mkdirs() }
+        val dir = getComputerModelStorageDir("dr")
         return File(dir, "$drive.dsk").absolutePath
     }
 

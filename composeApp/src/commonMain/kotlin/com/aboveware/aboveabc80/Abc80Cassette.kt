@@ -1,5 +1,7 @@
 package com.aboveware.aboveabc80
 
+import com.aboveware.aboveabc80.terminal.ComputerModel
+import com.aboveware.aboveabc80.terminal.TerminalManager
 import java.io.InputStream
 import java.io.OutputStream
 
@@ -31,10 +33,16 @@ object Abc80Cassette {
     private var position = 0
     private var loaded = false
     private var inserted = false
+    private var loadedModel: ComputerModel? = null
 
     private fun ensureLoaded() {
-        if (loaded) return
+        val model = TerminalManager.computerModel
+        if (loaded && loadedModel == model) return
         loaded = true
+        loadedModel = model
+        inserted = false
+        tape = ByteArray(0)
+        position = 0
         val stored = loadLocalFile(FOLDER, FILE)
         if (stored != null && stored.size >= HEADER) {
             inserted = true
@@ -252,6 +260,7 @@ object Abc80Cassette {
         tape = ByteArray(0)
         position = 0
         loaded = true
+        loadedModel = TerminalManager.computerModel
         inserted = true
         persist()
     }
@@ -323,6 +332,7 @@ object Abc80Cassette {
             tape = bytes
             position = 0
             loaded = true
+            loadedModel = TerminalManager.computerModel
             inserted = true
             persist()
             Abc80CassetteStatus.tapeName = name.substringAfterLast("/")
@@ -348,6 +358,7 @@ object Abc80Cassette {
         tape = ByteArray(0)
         position = 0
         loaded = true
+        loadedModel = TerminalManager.computerModel
         inserted = false
         Abc80CassetteStatus.tapeName = ""
         persist()

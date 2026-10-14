@@ -11,10 +11,12 @@ import java.util.Date
 import java.util.Locale
 import androidx.core.content.edit
 import androidx.core.content.FileProvider
+import com.aboveware.aboveabc80.terminal.ComputerModel
+import com.aboveware.aboveabc80.terminal.TerminalManager
 
 class AndroidPlatform(context: Context) : Platform {
     override val name: String = "Android ${Build.VERSION.SDK_INT}"
-    val disksDir = File(context.filesDir, "disks").apply { if (!exists()) mkdirs() }
+    val disksDir: File get() = getComputerModelStorageDir("disks")
 }
 
 val androidContext: Context? get() = _androidContext
@@ -35,6 +37,26 @@ actual fun getAppStorageDir(): File {
     }
     if (!root.exists()) root.mkdirs()
     return root
+}
+
+actual fun getComputerModelStorageDir(folder: String): File {
+    val context = checkNotNull(androidContext) { "Android storage is not initialized" }
+    val appRoot = getAppStorageDir()
+    val directory = File(
+        File(appRoot, TerminalManager.computerModel.storageDirectoryName),
+        folder
+    )
+    if (TerminalManager.computerModel == ComputerModel.ABC80) {
+        val legacyRoot = when (folder) {
+            "dr" -> appRoot
+            else -> context.filesDir
+        }
+        migrateLegacyDirectory(File(legacyRoot, folder), directory)
+    }
+    check(directory.isDirectory || directory.mkdirs()) {
+        "Could not create model storage directory ${directory.absolutePath}"
+    }
+    return directory
 }
 
 actual fun setPersistedString(key: String, value: String) {
@@ -97,8 +119,7 @@ actual fun deleteLocalDisk(name: String): Boolean {
 
 actual fun saveLocalFile(folder: String, name: String, data: ByteArray): Boolean {
     return try {
-        val root = androidContext?.filesDir ?: return false
-        val dir = File(root, folder).apply { if (!exists()) mkdirs() }
+        val dir = getComputerModelStorageDir(folder)
         File(dir, name).writeBytes(data)
         true
     } catch (e: Exception) {
@@ -108,12 +129,11 @@ actual fun saveLocalFile(folder: String, name: String, data: ByteArray): Boolean
 }
 
 actual fun getLocalFileDirectory(folder: String): File =
-    File(checkNotNull(androidContext) { "Android storage is not initialized" }.filesDir, folder)
+    getComputerModelStorageDir(folder)
 
 actual fun loadLocalFile(folder: String, name: String): ByteArray? {
     return try {
-        val root = androidContext?.filesDir ?: return null
-        val file = File(File(root, folder), name)
+        val file = File(getComputerModelStorageDir(folder), name)
         if (file.exists()) file.readBytes() else null
     } catch (e: Exception) {
         null
@@ -121,15 +141,13 @@ actual fun loadLocalFile(folder: String, name: String): ByteArray? {
 }
 
 actual fun listLocalFiles(folder: String): List<String> {
-    val root = androidContext?.filesDir ?: return emptyList()
-    val dir = File(root, folder)
+    val dir = getComputerModelStorageDir(folder)
     return dir.listFiles { file -> file.isFile }?.map { it.name } ?: emptyList()
 }
 
 actual fun deleteLocalFile(folder: String, name: String): Boolean {
     return try {
-        val root = androidContext?.filesDir ?: return false
-        val dir = File(root, folder)
+        val dir = getComputerModelStorageDir(folder)
         File(dir, name).delete()
     } catch (e: Exception) {
         false

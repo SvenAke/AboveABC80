@@ -2,6 +2,8 @@ package com.aboveware.aboveabc80
 
 import aboveabc80.composeapp.generated.resources.Res
 import com.aboveware.aboveabc80.core.CPU
+import com.aboveware.aboveabc80.terminal.ComputerModel
+import com.aboveware.aboveabc80.terminal.TerminalManager
 import java.nio.file.Files
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicBoolean
@@ -20,7 +22,9 @@ class CassetteLoadIntegrationTest {
     fun cassetteLoadsBasicAndBacWithNonstandardExtension() = runBlocking {
         val home = Files.createTempDirectory("abc80-cassette-extension-test").toFile()
         val previousHome = System.getProperty("user.home")
+        val previousModel = TerminalManager.computerModel
         System.setProperty("user.home", home.absolutePath)
+        TerminalManager.computerModel = ComputerModel.ABC80
         var native: NativeLib? = null
         try {
             check(home.resolve(".aboveabc80").resolve("dr").mkdirs())
@@ -78,6 +82,7 @@ class CassetteLoadIntegrationTest {
             native?.setFastSpeed(false)
             native?.portWrite(128, 0)
             Abc80Cassette.eject()
+            TerminalManager.computerModel = previousModel
             System.setProperty("user.home", previousHome)
             home.deleteRecursively()
         }
@@ -87,7 +92,9 @@ class CassetteLoadIntegrationTest {
     fun basicLoadsNamedProgramAfterAnotherFileOnTape() = runBlocking {
         val home = Files.createTempDirectory("abc80-cassette-test").toFile()
         val previousHome = System.getProperty("user.home")
+        val previousModel = TerminalManager.computerModel
         System.setProperty("user.home", home.absolutePath)
+        TerminalManager.computerModel = ComputerModel.ABC80
         var native: NativeLib? = null
         val bitDelay = AtomicInteger(-1)
         val unexpectedRecording = AtomicBoolean(false)
@@ -276,6 +283,7 @@ class CassetteLoadIntegrationTest {
             native?.removeMemoryReadWatcher(0x0618, readBlockBoundaryWatcher)
             native?.removeMemoryReadWatcher(0x0448, writePulseWatcher)
             Abc80Cassette.eject()
+            TerminalManager.computerModel = previousModel
             System.setProperty("user.home", previousHome)
             home.deleteRecursively()
         }

@@ -2,6 +2,8 @@ package com.aboveware.aboveabc80
 
 import aboveabc80.composeapp.generated.resources.Res
 import com.aboveware.aboveabc80.core.DiskController
+import com.aboveware.aboveabc80.terminal.ComputerModel
+import com.aboveware.aboveabc80.terminal.TerminalManager
 import java.nio.file.Files
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
@@ -16,7 +18,9 @@ class AbsoluteDiskRunIntegrationTest {
     fun playEntersDosAndRunsSpaceWithoutBasicRun() = runBlocking {
         val home = Files.createTempDirectory("abc80-absolute-test").toFile()
         val previousHome = System.getProperty("user.home")
+        val previousModel = TerminalManager.computerModel
         System.setProperty("user.home", home.absolutePath)
+        TerminalManager.computerModel = ComputerModel.ABC80
         var native: NativeLib? = null
         val basicPromptWatcher = object : NativeLib.MemoryReadWatcher {
             override fun onRead(address: Int): Boolean {
@@ -74,6 +78,7 @@ class AbsoluteDiskRunIntegrationTest {
             native?.removeMemoryReadWatcher(0x00db, basicPromptWatcher)
             for (drive in 0 until DiskController.MAX_DRIVES) DiskController.instance.clearDrive(drive)
             native?.bus?.floppy?.disks?.close()
+            TerminalManager.computerModel = previousModel
             System.setProperty("user.home", previousHome)
             home.deleteRecursively()
         }

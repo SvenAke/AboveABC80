@@ -55,6 +55,13 @@ enum class ComputerModel(
     fun isWideScreen(abc80WideScreen: Boolean): Boolean =
         fixedWideScreen ?: abc80WideScreen
 
+    val storageDirectoryName: String
+        get() = when (this) {
+            ABC80 -> "abc80"
+            ABC800M -> "abc800m"
+            ABC800C -> "abc800c"
+        }
+
     fun cpuFrequencyHz(speedSetting: Int): Int =
         if (speedSetting == defaultCpuSpeedSetting) nominalCpuFrequencyHz
         else speedSetting.coerceAtMost(8) * 1_000_000
