@@ -43,6 +43,7 @@ extern "C" bool abc800m_owns_port_read(int port);
 extern "C" void abc800m_write_port(int port, int value);
 extern "C" void abc800m_copy_text_screen(std::uint8_t *destination);
 extern "C" int abc800m_cursor_position();
+extern "C" int abc800m_cursor_raster_range();
 
 std::atomic<bool> g_frozen(false);
 std::atomic<bool> g_enable_logging(true);
@@ -198,6 +199,11 @@ Java_com_aboveware_aboveabc80_NativeLib_getAbc800MTextScreenNative(JNIEnv *env, 
 JNIEXPORT jint JNICALL
 Java_com_aboveware_aboveabc80_NativeLib_getAbc800MCursorPositionNative(JNIEnv *, jobject) {
     return abc800m_cursor_position();
+}
+
+JNIEXPORT jint JNICALL
+Java_com_aboveware_aboveabc80_NativeLib_getAbc800MCursorRasterRangeNative(JNIEnv *, jobject) {
+    return abc800m_cursor_raster_range();
 }
 
 JNIEXPORT void JNICALL

@@ -186,6 +186,18 @@ internal fun decodeABC800MScreen(characterRam: ByteArray): List<String> {
     }
 }
 
+internal fun decodeABC800MCursorRasterRanges(rasterRange: Int): List<IntRange> {
+    val start = rasterRange and 0xff
+    val end = (rasterRange ushr 8) and 0xff
+    if (start > 15) return emptyList()
+    val last = end.coerceAtMost(15)
+    return if (start <= last) {
+        listOf(start..last)
+    } else {
+        listOf(start..15, 0..last)
+    }
+}
+
 /**
  * Composable screen component that renders the simulated ABC80 monitor display.
  *
@@ -218,6 +230,7 @@ internal fun ABC80Screen(
         mutableStateOf(List(ABC80_SCREEN_ROWS) { " ".repeat(screenColumns) })
     }
     var cursor by remember { mutableStateOf<Pair<Int, Int>?>(null) }
+    var cursorRasterRange by remember { mutableStateOf(0x0f00) }
     var blinkOn by remember { mutableStateOf(true) }
     val scope = rememberCoroutineScope()
     var returningToBasic by remember { mutableStateOf(false) }
@@ -228,6 +241,7 @@ internal fun ABC80Screen(
                 rows = decodeABC800MScreen(nativeLib.getAbc800MTextScreen())
                 val cursorPosition = nativeLib.getAbc800MCursorPosition()
                 cursor = if (cursorPosition >= 0) cursorPosition / 80 to cursorPosition % 80 else null
+                cursorRasterRange = nativeLib.getAbc800MCursorRasterRange()
             } else {
                 val memory = nativeLib.getMemory()
                 if (abc80DosPromptVisible(memory)) nativeLib.dosActive = true
@@ -281,7 +295,21 @@ internal fun ABC80Screen(
             val py = size.height / (ABC80_SCREEN_ROWS * ch)
             val pixel = Size(px, py)
             cursor?.takeIf { blinkOn }?.let { (r, c) ->
-                drawRect(model.screenColor, Offset(c * cw * px, r * ch * py), Size(cw * px, ch * py))
+                if (isAbc800M) {
+                    decodeABC800MCursorRasterRanges(cursorRasterRange).forEach { scanlines ->
+                        drawRect(
+                            model.screenColor,
+                            Offset(c * cw * px, (r * ch + scanlines.first) * py),
+                            Size(cw * px, scanlines.count() * py)
+                        )
+                    }
+                } else {
+                    drawRect(
+                        model.screenColor,
+                        Offset(c * cw * px, r * ch * py),
+                        Size(cw * px, ch * py)
+                    )
+                }
             }
             rows.forEachIndexed { r, line ->
                 line.forEachIndexed { c, char ->

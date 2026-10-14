@@ -475,6 +475,13 @@ int abc800m_cursor_position() {
     const int offset = (cursor - start) & 0x7ff;
     return offset < 80 * 24 ? offset : -1;
 }
+
+int abc800m_cursor_raster_range() {
+    Abc800Lock lock(g_abc800m_crtc_lock);
+    const int start = g_abc800m_crtc_registers[10] & 0x1f;
+    const int end = g_abc800m_crtc_registers[11] & 0x1f;
+    return start | (end << 8);
+}
 }
 
 libspectrum_byte readport(libspectrum_word port) {

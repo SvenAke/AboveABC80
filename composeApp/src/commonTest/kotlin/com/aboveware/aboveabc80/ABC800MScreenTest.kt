@@ -27,4 +27,14 @@ class ABC800MScreenTest {
             decodeABC800MScreen(ByteArray(80 * 24 - 1))
         }
     }
+
+    @Test
+    fun cursorUsesTheCrtcRasterRange() {
+        assertEquals(listOf(12..15), decodeABC800MCursorRasterRanges(12 or (15 shl 8)))
+        assertEquals(
+            listOf(13..15, 0..2),
+            decodeABC800MCursorRasterRanges(13 or (2 shl 8))
+        )
+        assertEquals(emptyList(), decodeABC800MCursorRasterRanges(16 or (20 shl 8)))
+    }
 }

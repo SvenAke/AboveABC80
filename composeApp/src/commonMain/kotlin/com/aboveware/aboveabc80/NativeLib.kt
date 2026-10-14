@@ -189,6 +189,8 @@ class NativeLib {
     private external fun clearAbc800MTextScreenNative()
     fun getAbc800MCursorPosition(): Int = getAbc800MCursorPositionNative()
     private external fun getAbc800MCursorPositionNative(): Int
+    fun getAbc800MCursorRasterRange(): Int = getAbc800MCursorRasterRangeNative()
+    private external fun getAbc800MCursorRasterRangeNative(): Int
     fun setAbc800MEnabled(enabled: Boolean) = setAbc800MEnabledNative(enabled)
     private external fun setAbc800MEnabledNative(enabled: Boolean)
     fun resetCpu() = resetCpuNative()
