@@ -25,6 +25,19 @@ class ABC80KeyboardTest {
     }
 
     @Test
+    fun abc800mKeyboardEncodesSwedishCharactersAsMachineBytes() {
+        assertEquals(0x7D, abc800mKeyCode('å'))
+        assertEquals(0x5D, abc800mKeyCode('Å'))
+        assertEquals(0x7B, abc800mKeyCode('ä'))
+        assertEquals(0x5B, abc800mKeyCode('Ä'))
+        assertEquals(0x7C, abc800mKeyCode('ö'))
+        assertEquals(0x5C, abc800mKeyCode('Ö'))
+        assertEquals(0x61, abc800mKeyCode('a'))
+        assertEquals(0x01, abc800mKeyCode('a', control = true))
+        assertEquals(null, abc800mKeyCode('\uD83D'))
+    }
+
+    @Test
     fun codeTableMatchesManualWithCorrectedE() {
         val expected = """
             1 31 21 31 21

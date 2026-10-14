@@ -106,3 +106,20 @@ internal fun abc80CharCode(char: Char, shift: Boolean = false): Int? = when(char
     in ' '..'~' -> char.code
     else -> null
 }
+
+internal fun abc800mKeyCode(char: Char, control: Boolean = false): Int? {
+    val code = if (control) when (val value = char.code) {
+        in 97..122 -> value - 96
+        in 65..90 -> value - 64
+        '['.code -> 0x1b
+        ']'.code -> 0x1d
+        '\\'.code -> 0x1c
+        '^'.code -> 0x1e
+        '_'.code -> 0x1f
+        else -> value
+    } else {
+        char.code
+    }
+    if (code in 0..0x7f) return abc80CharCode(code.toChar())
+    return abc80CharCode(char)
+}

@@ -335,7 +335,7 @@ fun EmulatorScreen(startWithStorageOpen: Boolean = false) {
         val touchCode = ThreadLocal<String>()
         activeTerminal.onKeyInput = { char ->
             if (TerminalManager.computerModel == ComputerModel.ABC800M) {
-                nativeLib.sendKey(char.code)
+                abc800mKeyCode(char)?.let(nativeLib::sendKey)
             } else {
                 val code = if (char.code in 0..31) char.code else abc80CharCode(char)
                 code?.let {
@@ -374,7 +374,7 @@ fun EmulatorScreen(startWithStorageOpen: Boolean = false) {
             if (activeTerminal.isSetupVisible) {
                 activeTerminal.onKeyEvent(char)
             } else if (TerminalManager.computerModel == ComputerModel.ABC800M) {
-                nativeLib.sendKey(char.code)
+                abc800mKeyCode(char)?.let(nativeLib::sendKey)
             } else {
                 abc80CharCode(char)?.let { if (!recallCommand(it)) nativeLib.pressKey(it) }
             }
@@ -1492,18 +1492,7 @@ private fun handleTerminalKeyEvent(
     if (!activeTerminal.isSetupVisible) {
         if (TerminalManager.computerModel == ComputerModel.ABC800M) {
             if (key == Key.Enter || key == Key.NumPadEnter) charValue = '\r'
-            val code = charValue?.let {
-                if (isCtrl) when (val value = it.code) {
-                    in 97..122 -> value - 96
-                    in 65..90 -> value - 64
-                    '['.code -> 0x1b
-                    ']'.code -> 0x1d
-                    '\\'.code -> 0x1c
-                    '^'.code -> 0x1e
-                    '_'.code -> 0x1f
-                    else -> value
-                } else it.code
-            }
+            val code = charValue?.let { abc800mKeyCode(it, isCtrl) }
             if (code != null) {
                 if (shouldForwardABC800MKey(type == KeyEventType.KeyDown, getRepeatCount(event))) {
                     NativeLib.getObject().sendKey(code)
