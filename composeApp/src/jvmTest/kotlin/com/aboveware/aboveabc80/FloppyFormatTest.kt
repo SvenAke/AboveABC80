@@ -47,6 +47,23 @@ class FloppyFormatTest {
     }
 
     @Test
+    fun detectsTheAbc830UserFileDirectoryLayout() {
+        val image = Abc80FloppyLayout("abc830-ufd", 0).create()
+        fun physical(sector: Int) = (sector and 15.inv()) or ((sector * 7) and 15)
+        val bitmap = physical(6) * 256
+        image[bitmap + 239] = 2
+        val entry = physical(16) * 256 + 16
+        image[entry] = 3
+        image[entry + 1] = 0
+        "YRASM   ABS".encodeToByteArray().copyInto(image, entry + 4)
+        image[entry + 15] = 0xFF.toByte()
+        image[physical(24) * 256 + 4] = 0xFF.toByte()
+
+        assertEquals("abc830-ufd", Abc80FloppyLayout.detectFormatName(image))
+        assertEquals(listOf("YRASM.ABS" to 0), Abc80FloppyLayout.list(image))
+    }
+
+    @Test
     fun allEmptyFormatsHaveEmptyDirectoriesAndPhysicalAllocationMaps() {
         for (name in listOf("fd2", "abc830", "fd4d", "abc832")) {
             val layout = Abc80FloppyLayout(name, 0)

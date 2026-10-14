@@ -133,8 +133,7 @@ class Abc80Floppy : Abc80Bus.BusInterface {
     /** Inserts a raw disk image in the given drive. The format is derived from the image size. */
     @Synchronized
     fun mount(drive: Int, image: ByteArray, name: String = ""): Boolean {
-        val format = listOf("fd2", "abc830", "fd4d", "abc832")
-            .firstOrNull { Abc80FloppyLayout(it, drive).format?.sectorFormat?.size == image.size }
+        val format = Abc80FloppyLayout.detectFormatName(image)
             ?: run {
                 Abc80Log.wtf(
                     "ABC80 DR$drive: cannot mount $name (${image.size} bytes). " +

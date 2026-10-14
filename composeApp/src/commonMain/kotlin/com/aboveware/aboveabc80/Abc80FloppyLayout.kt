@@ -44,12 +44,17 @@ class Abc80FloppyLayout(formatName: String, val drive: Int) {
     val format = formats[formatName]
 
     companion object {
-        private val imageFormats = listOf("fd2", "abc830", "fd4d", "abc832")
+        private val imageFormats = listOf("fd2", "abc830", "abc830-ufd", "fd4d", "abc832")
+
+        internal fun detectFormatName(image: ByteArray): String? {
+            val candidates = imageFormats.map { it to Abc80FloppyLayout(it, 0) }
+                .filter { (_, layout) -> layout.format?.sectorFormat?.size == image.size }
+            return candidates.maxByOrNull { (_, layout) -> layout.directoryEntryCount(image) }?.first
+        }
 
         @OptIn(ExperimentalUnsignedTypes::class)
         fun readFile(image: ByteArray, name: String): ByteArray? {
-            val layout = imageFormats.map { Abc80FloppyLayout(it, 0) }
-                .firstOrNull { it.format?.sectorFormat?.size == image.size }
+            val layout = detectFormatName(image)?.let { Abc80FloppyLayout(it, 0) }
                 ?: throw IllegalArgumentException("Diskformatet stöds inte")
             val format = requireNotNull(layout.format)
             val diskName = Abc80CloudDiskImport.encodeText(
@@ -85,8 +90,7 @@ class Abc80FloppyLayout(formatName: String, val drive: Int) {
         }
 
         fun freeSpace(image: ByteArray): Long {
-            val layout = imageFormats.map { Abc80FloppyLayout(it, 0) }
-                .firstOrNull { it.format?.sectorFormat?.size == image.size }
+            val layout = detectFormatName(image)?.let { Abc80FloppyLayout(it, 0) }
                 ?: throw IllegalArgumentException("Diskavbildens storlek stöds inte")
             val diskFormat = requireNotNull(layout.format)
             val bitmap = layout.physicalSector(diskFormat.systemSector) * 256
@@ -102,8 +106,7 @@ class Abc80FloppyLayout(formatName: String, val drive: Int) {
             files: List<Pair<String, ByteArray>>,
             clear: Boolean = false
         ): ByteArray {
-            val layout = imageFormats.map { Abc80FloppyLayout(it, 0) }
-                .firstOrNull { it.format?.sectorFormat?.size == image.size }
+            val layout = detectFormatName(image)?.let { Abc80FloppyLayout(it, 0) }
                 ?: throw IllegalArgumentException("Diskavbildens storlek stöds inte")
             require(layout.format!!.clusterShift == 0) {
                 "Molnimport stöder disketter på 80, 160 och 320 kB"
@@ -115,8 +118,7 @@ class Abc80FloppyLayout(formatName: String, val drive: Int) {
 
         /** Lists "NAME.EXT" and size in bytes for each file on a raw disk image, or null if the size matches no known format. */
         fun list(image: ByteArray): List<Pair<String, Int>>? {
-            val layout = imageFormats.map { Abc80FloppyLayout(it, 0) }
-                .firstOrNull { it.format?.sectorFormat?.size == image.size } ?: return null
+            val layout = detectFormatName(image)?.let { Abc80FloppyLayout(it, 0) } ?: return null
             return layout.dir(image).map { entry ->
                 val (name, length) = entry.split("!")
                 val base = name.take(8).trim()
@@ -124,6 +126,28 @@ class Abc80FloppyLayout(formatName: String, val drive: Int) {
                 (if (ext.isEmpty()) base else "$base.$ext").toAndroid() to length.toInt()
             }
         }
+    }
+
+    private fun directoryEntryCount(image: ByteArray): Int {
+        val usedDirectories = usedDirectorySectors(image)
+        var count = 0
+        for (directoryIndex in usedDirectories.indices) {
+            if (!usedDirectories[directoryIndex]) continue
+            val sectorStart = physicalSector(format!!.directorySectors.a + directoryIndex) * 256
+            for (slot in 1..15) {
+                val entry = sectorStart + slot * 16
+                val firstSector = image[entry].toUByte().toInt()
+                val sectorPart = image[entry + 1].toUByte().toInt()
+                val name = (4..14).map { image[entry + it].toUByte().toInt() }
+                if (firstSector == 0 || firstSector == 0xFF ||
+                    name.any { it !in 0x20..0x7E } ||
+                    name.all { it == ' '.code || it == '@'.code }
+                ) continue
+                val header = offset(firstSector, sectorPart)
+                if (header in 0..image.size - 256) count++
+            }
+        }
+        return count
     }
 
     private var offset = 0
