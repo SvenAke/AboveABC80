@@ -14,9 +14,15 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.Canvas as ImageCanvas
+import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.inset
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.aboveware.aboveabc80.terminal.ComputerModel
 import com.aboveware.aboveabc80.terminal.TerminalManager
@@ -198,6 +204,42 @@ internal fun decodeABC800MCursorRasterRanges(rasterRange: Int): List<IntRange> {
     }
 }
 
+internal const val ABC800M_HIGH_RESOLUTION_WIDTH = 256
+internal const val ABC800M_HIGH_RESOLUTION_HEIGHT = 240
+internal const val ABC800M_HIGH_RESOLUTION_BYTES_PER_ROW = 64
+internal const val ABC800M_RASTER_WIDTH = 768
+internal const val ABC800M_RASTER_HEIGHT = 480
+internal const val ABC800M_TEXT_WIDTH = 80 * 6
+internal const val ABC800M_TEXT_HEIGHT = 24 * 16
+internal const val ABC800M_HIGH_RESOLUTION_DISPLAY_WIDTH =
+    ABC800M_HIGH_RESOLUTION_WIDTH * 2f * ABC800M_TEXT_WIDTH / ABC800M_RASTER_WIDTH
+internal const val ABC800M_HIGH_RESOLUTION_LEFT =
+    115f * ABC800M_TEXT_WIDTH / ABC800M_RASTER_WIDTH
+internal const val ABC800M_HIGH_RESOLUTION_DISPLAY_HEIGHT =
+    ABC800M_HIGH_RESOLUTION_HEIGHT.toFloat() * ABC800M_TEXT_HEIGHT / ABC800M_RASTER_HEIGHT
+internal const val ABC800M_HIGH_RESOLUTION_TOP_SCALE =
+    ABC800M_TEXT_HEIGHT.toFloat() / ABC800M_RASTER_HEIGHT
+
+internal fun decodeABC800MHighResolutionScreen(videoRam: ByteArray): ByteArray {
+    val requiredSize = ABC800M_HIGH_RESOLUTION_BYTES_PER_ROW * ABC800M_HIGH_RESOLUTION_HEIGHT
+    require(videoRam.size >= requiredSize) {
+        "ABC800M high-resolution screen requires $requiredSize video bytes"
+    }
+    return ByteArray(ABC800M_HIGH_RESOLUTION_WIDTH * ABC800M_HIGH_RESOLUTION_HEIGHT).also { pixels ->
+        for (y in 0 until ABC800M_HIGH_RESOLUTION_HEIGHT) {
+            val rowStart = y * ABC800M_HIGH_RESOLUTION_BYTES_PER_ROW
+            val pixelRow = y * ABC800M_HIGH_RESOLUTION_WIDTH
+            for (byteIndex in 0 until ABC800M_HIGH_RESOLUTION_BYTES_PER_ROW) {
+                val packed = videoRam[rowStart + byteIndex].toInt() and 0xff
+                for (pixelIndex in 0 until 4) {
+                    pixels[pixelRow + byteIndex * 4 + pixelIndex] =
+                        ((packed ushr (6 - pixelIndex * 2)) and 0x03).toByte()
+                }
+            }
+        }
+    }
+}
+
 /**
  * Composable screen component that renders the simulated ABC80 monitor display.
  *
@@ -232,17 +274,73 @@ internal fun ABC80Screen(
     var cursor by remember { mutableStateOf<Pair<Int, Int>?>(null) }
     var cursorRasterRange by remember { mutableStateOf(0x0f00) }
     var blinkOn by remember { mutableStateOf(true) }
+    var highResolutionBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
+    var highResolutionControl by remember { mutableStateOf(0) }
     val scope = rememberCoroutineScope()
     var returningToBasic by remember { mutableStateOf(false) }
     LaunchedEffect(nativeLib, model, wideScreen) {
         var ticks = 0
+        var previousHighResolutionVideoRam: ByteArray? = null
         while (true) {
             if (isAbc800M) {
                 rows = decodeABC800MScreen(nativeLib.getAbc800MTextScreen())
                 val cursorPosition = nativeLib.getAbc800MCursorPosition()
                 cursor = if (cursorPosition >= 0) cursorPosition / 80 to cursorPosition % 80 else null
                 cursorRasterRange = nativeLib.getAbc800MCursorRasterRange()
+                val videoRam = nativeLib.getAbc800MHighResolutionScreen()
+                highResolutionControl = nativeLib.getAbc800MHighResolutionControl()
+                if (previousHighResolutionVideoRam?.contentEquals(videoRam) != true) {
+                    previousHighResolutionVideoRam = videoRam
+                    if (videoRam.any { it != 0.toByte() }) {
+                        val pixels = decodeABC800MHighResolutionScreen(videoRam)
+                        val bitmap = ImageBitmap(
+                            ABC800M_HIGH_RESOLUTION_WIDTH,
+                            ABC800M_HIGH_RESOLUTION_HEIGHT
+                        )
+                        val canvas = ImageCanvas(bitmap)
+                        val backgroundPaint = Paint().apply { color = model.screenBackgroundColor }
+                        canvas.drawRect(
+                            Rect(
+                                0f,
+                                0f,
+                                ABC800M_HIGH_RESOLUTION_WIDTH.toFloat(),
+                                ABC800M_HIGH_RESOLUTION_HEIGHT.toFloat()
+                            ),
+                            backgroundPaint
+                        )
+                        val foregroundPaint = Paint().apply { color = model.screenColor }
+                        for (y in 0 until ABC800M_HIGH_RESOLUTION_HEIGHT) {
+                            val rowOffset = y * ABC800M_HIGH_RESOLUTION_WIDTH
+                            var x = 0
+                            while (x < ABC800M_HIGH_RESOLUTION_WIDTH) {
+                                if (pixels[rowOffset + x] == 0.toByte()) {
+                                    x++
+                                    continue
+                                }
+                                val start = x
+                                while (
+                                    x < ABC800M_HIGH_RESOLUTION_WIDTH &&
+                                    pixels[rowOffset + x] != 0.toByte()
+                                ) {
+                                    x++
+                                }
+                                canvas.drawRect(
+                                    start.toFloat(),
+                                    y.toFloat(),
+                                    x.toFloat(),
+                                    (y + 1).toFloat(),
+                                    foregroundPaint
+                                )
+                            }
+                        }
+                        highResolutionBitmap = bitmap
+                    } else {
+                        highResolutionBitmap = null
+                    }
+                }
             } else {
+                highResolutionBitmap = null
+                highResolutionControl = 0
                 val memory = nativeLib.getMemory()
                 if (abc80DosPromptVisible(memory)) nativeLib.dosActive = true
                 rows = decodeABC80ScreenGlyphs(memory, wideScreen)
@@ -294,7 +392,23 @@ internal fun ABC80Screen(
             val px = size.width / (columns * cw)
             val py = size.height / (ABC80_SCREEN_ROWS * ch)
             val pixel = Size(px, py)
-            cursor?.takeIf { blinkOn }?.let { (r, c) ->
+            if (isAbc800M) {
+                highResolutionBitmap?.let { bitmap ->
+                    drawImage(
+                        image = bitmap,
+                        dstOffset = IntOffset(
+                            (ABC800M_HIGH_RESOLUTION_LEFT * px).toInt(),
+                            ((highResolutionControl and 0xff) * ABC800M_HIGH_RESOLUTION_TOP_SCALE * py).toInt()
+                        ),
+                        dstSize = IntSize(
+                            (ABC800M_HIGH_RESOLUTION_DISPLAY_WIDTH * px).toInt(),
+                            (ABC800M_HIGH_RESOLUTION_DISPLAY_HEIGHT * py).toInt()
+                        )
+                    )
+                }
+            }
+            val abc800mTextVisible = !isAbc800M || (highResolutionControl and 0x8000) == 0
+            cursor?.takeIf { blinkOn && abc800mTextVisible }?.let { (r, c) ->
                 if (isAbc800M) {
                     decodeABC800MCursorRasterRanges(cursorRasterRange).forEach { scanlines ->
                         drawRect(
@@ -311,7 +425,7 @@ internal fun ABC80Screen(
                     )
                 }
             }
-            rows.forEachIndexed { r, line ->
+            if (abc800mTextVisible) rows.forEachIndexed { r, line ->
                 line.forEachIndexed { c, char ->
                     val selected = selection.range?.contains(r * columns + c) == true
                     if (selected) drawRect(

@@ -1505,7 +1505,9 @@ private fun handleTerminalKeyEvent(
                 } else it.code
             }
             if (code != null) {
-                if (type == KeyEventType.KeyDown) NativeLib.getObject().sendKey(code)
+                if (shouldForwardABC800MKey(type == KeyEventType.KeyDown, getRepeatCount(event))) {
+                    NativeLib.getObject().sendKey(code)
+                }
                 return true
             }
         }
@@ -1582,6 +1584,9 @@ private fun handleTerminalKeyEvent(
     }
     return false
 }
+
+internal fun shouldForwardABC800MKey(isKeyDown: Boolean, repeatCount: Int): Boolean =
+    isKeyDown && repeatCount == 0
 
 
 @Composable

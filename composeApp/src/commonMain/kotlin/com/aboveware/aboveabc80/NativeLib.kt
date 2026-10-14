@@ -185,6 +185,10 @@ class NativeLib {
     private external fun getMemoryNative(): ByteArray
     fun getAbc800MTextScreen(): ByteArray = getAbc800MTextScreenNative()
     private external fun getAbc800MTextScreenNative(): ByteArray
+    fun getAbc800MHighResolutionScreen(): ByteArray = getAbc800MHighResolutionScreenNative()
+    private external fun getAbc800MHighResolutionScreenNative(): ByteArray
+    fun getAbc800MHighResolutionControl(): Int = getAbc800MHighResolutionControlNative()
+    private external fun getAbc800MHighResolutionControlNative(): Int
     fun clearAbc800MTextScreen() = clearAbc800MTextScreenNative()
     private external fun clearAbc800MTextScreenNative()
     fun getAbc800MCursorPosition(): Int = getAbc800MCursorPositionNative()

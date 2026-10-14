@@ -42,6 +42,8 @@ extern "C" std::uint8_t abc800m_read_port(int port);
 extern "C" bool abc800m_owns_port_read(int port);
 extern "C" void abc800m_write_port(int port, int value);
 extern "C" void abc800m_copy_text_screen(std::uint8_t *destination);
+extern "C" void abc800m_copy_high_resolution_screen(std::uint8_t *destination);
+extern "C" int abc800m_high_resolution_control();
 extern "C" int abc800m_cursor_position();
 extern "C" int abc800m_cursor_raster_range();
 
@@ -194,6 +196,22 @@ Java_com_aboveware_aboveabc80_NativeLib_getAbc800MTextScreenNative(JNIEnv *env, 
     abc800m_copy_text_screen(reinterpret_cast<std::uint8_t *>(text));
     env->SetByteArrayRegion(result, 0, 80 * 24, text);
     return result;
+}
+
+JNIEXPORT jbyteArray JNICALL
+Java_com_aboveware_aboveabc80_NativeLib_getAbc800MHighResolutionScreenNative(JNIEnv *env, jobject) {
+    constexpr jsize size = 64 * 240;
+    jbyteArray result = env->NewByteArray(size);
+    if (!result) return nullptr;
+    jbyte pixels[size];
+    abc800m_copy_high_resolution_screen(reinterpret_cast<std::uint8_t *>(pixels));
+    env->SetByteArrayRegion(result, 0, size, pixels);
+    return result;
+}
+
+JNIEXPORT jint JNICALL
+Java_com_aboveware_aboveabc80_NativeLib_getAbc800MHighResolutionControlNative(JNIEnv *, jobject) {
+    return abc800m_high_resolution_control();
 }
 
 JNIEXPORT jint JNICALL

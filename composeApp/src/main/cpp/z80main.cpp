@@ -35,6 +35,7 @@ static bool g_abc800m_keydtr = true;
 static bool g_abc800m_character_fetch = false;
 static std::atomic_flag g_abc800m_character_ram_lock = ATOMIC_FLAG_INIT;
 static std::atomic_flag g_abc800m_crtc_lock = ATOMIC_FLAG_INIT;
+static std::atomic_flag g_abc800m_video_ram_lock = ATOMIC_FLAG_INIT;
 static std::deque<std::uint8_t> g_abc800m_keyboard;
 static std::uint8_t g_abc800m_dart_register[2][8]{};
 static std::uint8_t g_abc800m_dart_selected[2]{};
@@ -288,7 +289,10 @@ libspectrum_byte readByte(libspectrum_word address) {
     }
     if (g_abc800m_active.load(std::memory_order_relaxed)) {
         if (address < 0x4000 && (!g_abc800m_keydtr || g_abc800m_character_fetch))
+        {
+            Abc800Lock lock(g_abc800m_video_ram_lock);
             return g_abc800m_video_ram[address];
+        }
         if (address >= 0x7800 && address < 0x8000 && !g_abc800m_character_fetch)
             return g_abc800m_character_ram[address - 0x7800];
     }
@@ -304,7 +308,10 @@ libspectrum_byte readByteInternal(libspectrum_word address) {
     if (g_abc800m_active.load(std::memory_order_relaxed)) {
         g_abc800m_character_fetch = address >= 0x7800 && address < 0x8000;
         if (address < 0x4000 && (!g_abc800m_keydtr || g_abc800m_character_fetch))
+        {
+            Abc800Lock lock(g_abc800m_video_ram_lock);
             return g_abc800m_video_ram[address];
+        }
         if (address >= 0x7800 && address < 0x8000 && !g_abc800m_character_fetch)
             return g_abc800m_character_ram[address - 0x7800];
     }
@@ -320,8 +327,10 @@ void writeByteInternal(libspectrum_word address, libspectrum_byte b) {
     check_and_run_write_watcher(address, b);
     if (g_abc800m_active.load(std::memory_order_relaxed)) {
         if (address < 0x4000) {
-            if (!g_abc800m_keydtr || g_abc800m_character_fetch)
+            if (!g_abc800m_keydtr || g_abc800m_character_fetch) {
+                Abc800Lock lock(g_abc800m_video_ram_lock);
                 g_abc800m_video_ram[address] = b;
+            }
             return;
         }
         if (address >= 0x7800 && address < 0x8000) {
@@ -339,7 +348,11 @@ void abc800m_clear_text_screen();
 
 void abc800m_set_enabled(bool enabled) {
     g_abc800m_active.store(enabled, std::memory_order_relaxed);
-    g_abc800m_video_ram.fill(0);
+    {
+        Abc800Lock lock(g_abc800m_video_ram_lock);
+        g_abc800m_video_ram.fill(0);
+        std::memset(g_abc800m_highres_control, 0, sizeof(g_abc800m_highres_control));
+    }
     abc800m_clear_text_screen();
     {
         Abc800Lock lock(g_abc800m_crtc_lock);
@@ -355,7 +368,6 @@ void abc800m_set_enabled(bool enabled) {
     std::memset(g_abc800m_dart_register, 0, sizeof(g_abc800m_dart_register));
     std::memset(g_abc800m_dart_selected, 0, sizeof(g_abc800m_dart_selected));
     std::memset(g_abc800m_dart_expect_register, 0, sizeof(g_abc800m_dart_expect_register));
-    std::memset(g_abc800m_highres_control, 0, sizeof(g_abc800m_highres_control));
     g_abc800m_dart_rx_irq_enabled.store(false, std::memory_order_relaxed);
     g_abc800m_dart_irq_pending.store(false, std::memory_order_relaxed);
 }
@@ -450,6 +462,7 @@ void abc800m_write_port(int port, int value) {
         return;
     }
     if (port == 0x06 || port == 0x07) {
+        Abc800Lock lock(g_abc800m_video_ram_lock);
         g_abc800m_highres_control[port - 0x06] = static_cast<std::uint8_t>(value);
         return;
     }
@@ -463,6 +476,17 @@ void abc800m_copy_text_screen(std::uint8_t *destination) {
                       g_abc800m_crtc_registers[13];
     for (int i = 0; i < 80 * 24; ++i)
         destination[i] = g_abc800m_character_ram[(start + i) & 0x7ff];
+}
+
+void abc800m_copy_high_resolution_screen(std::uint8_t *destination) {
+    Abc800Lock lock(g_abc800m_video_ram_lock);
+    std::memcpy(destination, g_abc800m_video_ram.data(), 64 * 240);
+}
+
+int abc800m_high_resolution_control() {
+    Abc800Lock lock(g_abc800m_video_ram_lock);
+    return static_cast<int>(g_abc800m_highres_control[0]) |
+           (static_cast<int>(g_abc800m_highres_control[1]) << 8);
 }
 
 int abc800m_cursor_position() {
