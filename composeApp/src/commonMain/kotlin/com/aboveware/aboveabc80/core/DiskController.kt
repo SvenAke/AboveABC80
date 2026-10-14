@@ -8,7 +8,6 @@ import androidx.compose.runtime.mutableStateOf
 import com.aboveware.aboveabc80.Abc80Log
 import com.aboveware.aboveabc80.NativeLib
 import com.aboveware.aboveabc80.loadLocalDisk
-import com.aboveware.aboveabc80.saveLocalDisk
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 
 class DiskController {
@@ -56,15 +55,10 @@ class DiskController {
             Abc80Log.wtf("Kunde inte läsa disketten $name: ${e.message}")
             return null
         }
-        val actualName = if (name.endsWith(".imd", true)) name.substringBeforeLast('.') + ".DSK" else name
-        if (actualName != name && !saveLocalDisk(actualName, image)) {
-            Abc80Log.wtf("Kunde inte spara konverterad diskett $actualName")
-            return null
-        }
-        if (!NativeLib.getObject().bus.floppy.mount(index, image, actualName)) return null
-        mountedDisks[index] = MountedDisk(actualName, Source.LOCAL)
-        Abc80Log.diskett("DR$index: mounted $actualName (${image.size} bytes)")
-        return actualName
+        if (!NativeLib.getObject().bus.floppy.mount(index, image, name)) return null
+        mountedDisks[index] = MountedDisk(name, Source.LOCAL)
+        Abc80Log.diskett("DR$index: mounted $name (${image.size} bytes)")
+        return name
     }
 
     fun clearDrive(index: Int) {

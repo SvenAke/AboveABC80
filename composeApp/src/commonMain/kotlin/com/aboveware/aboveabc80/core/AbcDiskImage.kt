@@ -1,21 +1,12 @@
 package com.aboveware.aboveabc80.core
 
 import com.aboveware.aboveabc80.Abc80FloppyLayout
-import com.aboveware.aboveabc80.ImdParser
 
 class AbcDiskImage(private var data: ByteArray) {
     companion object {
         fun createFromData(data: ByteArray): AbcDiskImage {
-            if (!data.take(3).toByteArray().contentEquals("IMD".encodeToByteArray())) return AbcDiskImage(data)
-            val parser = ImdParser(data)
-            val tracks = parser.parseAllTracks()
-            require(tracks.isNotEmpty()) { "IMD-filen saknar spår" }
-            require(tracks.all { it.sectorSize == 256 && it.sectorCount == 16 }) {
-                "IMD-filen har inte ABC80-sektorer (16 x 256 byte)"
-            }
-            val bytes = parser.toRawDsk()
-            requireNotNull(Abc80FloppyLayout.list(bytes)) { "IMD-formatet stöds inte av ABC80" }
-            return AbcDiskImage(bytes)
+            requireNotNull(Abc80FloppyLayout.list(data)) { "Diskformatet stöds inte av ABC80" }
+            return AbcDiskImage(data)
         }
     }
 

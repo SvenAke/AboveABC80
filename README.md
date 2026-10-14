@@ -42,7 +42,7 @@ in your IDE’s toolbar or run it directly from the terminal:
 The application runs ABC80 only. Reset reloads the ABC80 ROMs and resets the
 Z80 registers. The debugger uses the bundled ABC80 ROM disassembly, with
 breakpoints, pause/resume and single stepping. Disk capacity and file export
-use the ABC80 filesystem; IMD import accepts ABC80 sector geometry.
+use the ABC80 filesystem.
 
 Startup restores saved disks on a background dispatcher so file I/O and disk
 parsing do not block Android input handling.

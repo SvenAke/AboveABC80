@@ -7,7 +7,6 @@ import org.jetbrains.compose.resources.ExperimentalResourceApi
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -43,27 +42,6 @@ class AbcDiskImageTest {
             val data = assertNotNull(disk.readFile(entry.filename, entry.extension))
             assertTrue(data.isNotEmpty(), entry.toString())
             assertEquals(0, data.size % 253)
-        }
-    }
-
-    @Test
-    fun imdImportPreservesSectorIdsAndAbc80Image() {
-        val image = Abc80FloppyLayout("fd2", 0).create()
-        val bytes = mutableListOf<Byte>()
-        bytes.addAll("IMD test\u001a".encodeToByteArray().asIterable())
-        val sectorIds = (1..16).reversed()
-        repeat(20) { cylinder ->
-            bytes.addAll(listOf(0, cylinder, 0, 16, 1).map { it.toByte() })
-            bytes.addAll(sectorIds.map { it.toByte() })
-            for (id in sectorIds) {
-                bytes.add(1)
-                val offset = (cylinder * 16 + id - 1) * 256
-                bytes.addAll(image.copyOfRange(offset, offset + 256).asIterable())
-            }
-        }
-        assertContentEquals(image, AbcDiskImage.createFromData(bytes.toByteArray()).getRawData())
-        assertFailsWith<IllegalArgumentException> {
-            AbcDiskImage.createFromData("IMD no tracks\u001a".encodeToByteArray())
         }
     }
 }

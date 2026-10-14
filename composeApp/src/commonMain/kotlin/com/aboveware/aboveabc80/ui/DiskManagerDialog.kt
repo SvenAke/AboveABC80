@@ -108,9 +108,7 @@ fun DiskManagerDialog(
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var arkResult: List<ArchivedFile> by remember { mutableStateOf(emptyList()) }
     var localDisks by remember {
-        mutableStateOf(listLocalDisks().filter {
-            it.lowercase().endsWith(".dsk") || it.lowercase().endsWith(".imd")
-        })
+        mutableStateOf(listLocalDisks().filter { it.lowercase().endsWith(".dsk") })
     }
 
     var listing by remember { mutableStateOf<Pair<String, List<Pair<String, Int>>?>?>(null) }
@@ -157,9 +155,7 @@ fun DiskManagerDialog(
 
     // Refresh list when dialog opens
     LaunchedEffect(Unit) {
-        localDisks = listLocalDisks().filter {
-            it.lowercase().endsWith(".dsk") || it.lowercase().endsWith(".imd")
-        }
+        localDisks = listLocalDisks().filter { it.lowercase().endsWith(".dsk") }
     }
 
     listing?.let { (diskName, files) ->
@@ -375,11 +371,7 @@ fun DiskManagerDialog(
                                             label = deleteLabel,
                                             onClick = {
                                                 deleteLocalDisk(diskName)
-                                                localDisks = listLocalDisks().filter {
-                                                    it.lowercase()
-                                                        .endsWith(".dsk") || it.lowercase()
-                                                        .endsWith(".imd")
-                                                }
+                                                localDisks = listLocalDisks().filter { it.lowercase().endsWith(".dsk") }
                                                 for (i in 0 until DiskController.MAX_DRIVES) {
                                                     if (controller.mountedDisks[i]?.name == diskName) {
                                                         controller.clearDrive(i)
@@ -405,11 +397,7 @@ fun DiskManagerDialog(
                                                 "LOCAL:$actualName"
                                             )
                                             if (actualName != diskName) {
-                                                localDisks = listLocalDisks().filter {
-                                                    it.lowercase()
-                                                        .endsWith(".dsk") || it.lowercase()
-                                                        .endsWith(".imd")
-                                                }
+                                                localDisks = listLocalDisks().filter { it.lowercase().endsWith(".dsk") }
                                             }
                                             selectedDriveIndex = null
                                         } else {
@@ -461,9 +449,7 @@ fun DiskManagerDialog(
         NewDiskDialog(
             onDismiss = { showNewDiskDialog = false },
             onCreated = { newName ->
-                localDisks = listLocalDisks().filter {
-                    it.lowercase().endsWith(".dsk") || it.lowercase().endsWith(".imd")
-                }
+                localDisks = listLocalDisks().filter { it.lowercase().endsWith(".dsk") }
                 showNewDiskDialog = false
                 // Auto-mount if a drive was selected
                 selectedDriveIndex?.let { driveIndex ->

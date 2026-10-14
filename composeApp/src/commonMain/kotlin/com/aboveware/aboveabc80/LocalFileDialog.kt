@@ -27,6 +27,19 @@ import androidx.compose.ui.unit.dp
 import java.io.File
 import org.jetbrains.compose.resources.stringResource
 
+/**
+ * An alert dialog composable that lists saved local files within a specified app storage folder.
+ *
+ * Displays local files in reverse-chronological order (by embedded timestamp), formatting
+ * filenames into readable labels and creation dates. Users can select/open a file or delete unwanted
+ * files from storage.
+ *
+ * @param folder The relative folder name in local app storage (e.g. "cassettes").
+ * @param title Optional title text for the dialog. If `null`, defaults to the localized `local_files_title` string.
+ * @param onDismiss Callback invoked when the user dismisses or closes the dialog.
+ * @param onFileOpened Optional callback invoked when a file item is selected, receiving the filename and [File] handle.
+ * @param onFileSelected Callback invoked when a file is selected if [onFileOpened] is `null`, receiving the filename and binary [ByteArray] contents.
+ */
 @Composable
 fun LocalFileDialog(
     folder: String,
@@ -106,8 +119,10 @@ fun LocalFileDialog(
 }
 
 /**
- * Parses filenames like PREFIX_YYYYMMDD_HHMMSS.TAP into a readable pair.
- * Returns Pair(Prefix/MainName, ReadableTimestamp?)
+ * Formats a filename with a timestamp suffix (e.g., `PREFIX_YYYYMMDD_HHMMSS.TAP`) into a human-readable pair.
+ *
+ * @param filename The raw filename string to format.
+ * @return A [Pair] containing the prefix/main name as [Pair.first], and the formatted date string (`YYYY-MM-DD HH:MM:SS`) as [Pair.second] (or `null` if the timestamp pattern is not matched).
  */
 private fun formatFilename(filename: String): Pair<String, String?> {
     val nameWithoutExt = filename.removeSuffix(".TAP").removeSuffix(".tap")
@@ -134,8 +149,10 @@ private fun formatFilename(filename: String): Pair<String, String?> {
 }
 
 /**
- * Extracts the timestamp part of filenames like PREFIX_YYYYMMDD_HHMMSS.TAP for sorting.
- * Returns the timestamp string or the whole filename if pattern not found.
+ * Extracts the timestamp portion (`YYYYMMDD_HHMMSS`) from a filename for sorting purposes.
+ *
+ * @param filename The raw filename string.
+ * @return The extracted `YYYYMMDD_HHMMSS` timestamp string, or the full original [filename] if no pattern matches.
  */
 private fun extractTimestamp(filename: String): String {
     val nameWithoutExt = filename.removeSuffix(".TAP").removeSuffix(".tap")
