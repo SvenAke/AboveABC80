@@ -144,6 +144,7 @@ private suspend fun restoreDisksForModel(model: ComputerModel, migrateLegacySett
     check(TerminalManager.computerModel == model) { "Cannot restore disks for an inactive computer model" }
     val controller = DiskController.instance
     var driveZeroLoaded = false
+    var driveZeroExplicitlyUnmounted = false
     for (index in 0 until DiskController.MAX_DRIVES) {
         val preferenceKey = DiskController.drivePreferenceKey(model, index)
         val legacyValue = if (migrateLegacySettings) {
@@ -151,7 +152,9 @@ private suspend fun restoreDisksForModel(model: ComputerModel, migrateLegacySett
         } else ""
         val persistedValue = getPersistedString(preferenceKey)
         val persistence = persistedValue.ifEmpty { legacyValue }
-        if (persistence.isNotEmpty()) {
+        if (persistence == DiskController.UNMOUNTED_PREFERENCE) {
+            if (index == 0) driveZeroExplicitlyUnmounted = true
+        } else if (persistence.isNotEmpty()) {
             val source = persistence.substringBefore(":", "LOCAL")
             val diskName = persistence.substringAfter(":", persistence)
             val loaded = if (source == DiskController.Source.DRIVE.name) {
@@ -179,7 +182,7 @@ private suspend fun restoreDisksForModel(model: ComputerModel, migrateLegacySett
         }
     }
 
-    if (!driveZeroLoaded) {
+    if (!driveZeroLoaded && !driveZeroExplicitlyUnmounted) {
         if ("SYSTEM.DSK" !in listLocalDisks()) {
             val image = Res.readBytes("files/system.dsk")
             check(saveLocalDisk("SYSTEM.DSK", image)) { "Could not save SYSTEM.DSK" }

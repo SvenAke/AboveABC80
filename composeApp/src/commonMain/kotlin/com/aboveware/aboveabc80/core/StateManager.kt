@@ -111,11 +111,11 @@ object StateManager {
                     setPersistedString(preferenceKey, line)
                 } else {
                     controller.clearDrive(i)
-                    setPersistedString(preferenceKey, "")
+                    setPersistedString(preferenceKey, DiskController.UNMOUNTED_PREFERENCE)
                 }
             } else {
                 controller.clearDrive(i)
-                setPersistedString(preferenceKey, "")
+                setPersistedString(preferenceKey, DiskController.UNMOUNTED_PREFERENCE)
             }
         }
         controller.currentDriveIndex = driveIndex

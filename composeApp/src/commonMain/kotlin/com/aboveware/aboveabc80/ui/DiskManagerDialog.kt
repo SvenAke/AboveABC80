@@ -380,7 +380,7 @@ fun DiskManagerDialog(
                                                         controller.clearDrive(i)
                                                         setPersistedString(
                                                             DiskController.drivePreferenceKey(TerminalManager.computerModel, i),
-                                                            ""
+                                                            DiskController.UNMOUNTED_PREFERENCE
                                                         )
                                                     }
                                                 }
@@ -430,7 +430,7 @@ fun DiskManagerDialog(
                                                 TerminalManager.computerModel,
                                                 driveIndex
                                             ),
-                                            ""
+                                            DiskController.UNMOUNTED_PREFERENCE
                                         )
                                         selectedDriveIndex = null
                                     }

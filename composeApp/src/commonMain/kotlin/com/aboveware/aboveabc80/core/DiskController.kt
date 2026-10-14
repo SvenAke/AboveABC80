@@ -21,6 +21,7 @@ class DiskController {
     companion object {
         val instance = DiskController()
         const val MAX_DRIVES = 3
+        const val UNMOUNTED_PREFERENCE = "NONE"
 
         fun drivePreferenceKey(model: ComputerModel, index: Int): String {
             require(index in 0 until MAX_DRIVES)
