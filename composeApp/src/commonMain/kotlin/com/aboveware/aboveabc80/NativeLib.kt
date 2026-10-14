@@ -4,6 +4,8 @@
  */
 package com.aboveware.aboveabc80
 
+import com.aboveware.aboveabc80.terminal.ComputerModel
+import com.aboveware.aboveabc80.terminal.TerminalManager
 import com.aboveware.aboveabc80.core.cpu
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -111,8 +113,14 @@ class NativeLib {
 
     fun portRead(port: Int): Int {
         when (port) {
-            0x03 -> { TKN80.setEnabled(false, this); return 0x40 }
-            0x04 -> { TKN80.setEnabled(true, this); return 0x80 }
+            0x03 -> if (TerminalManager.computerModel == ComputerModel.ABC80) {
+                TKN80.setEnabled(false, this)
+                return 0x40
+            }
+            0x04 -> if (TerminalManager.computerModel == ComputerModel.ABC80) {
+                TKN80.setEnabled(true, this)
+                return 0x80
+            }
         }
         return try {
             if (port in 0x39..0x3B) cassettePlayer.read(port) else bus.read(port)
@@ -149,7 +157,7 @@ class NativeLib {
     internal val commandHistory = ABC80CommandHistory()
 
     private fun recordCommand(code: Int) {
-        commandHistory.record(code)
+        if (TerminalManager.computerModel == ComputerModel.ABC80) commandHistory.record(code)
     }
 
     fun sendKey(code: Int) {
@@ -175,6 +183,14 @@ class NativeLib {
 
     fun getMemory(): ByteArray = getMemoryNative()
     private external fun getMemoryNative(): ByteArray
+    fun getAbc800MTextScreen(): ByteArray = getAbc800MTextScreenNative()
+    private external fun getAbc800MTextScreenNative(): ByteArray
+    fun getAbc800MCursorPosition(): Int = getAbc800MCursorPositionNative()
+    private external fun getAbc800MCursorPositionNative(): Int
+    fun setAbc800MEnabled(enabled: Boolean) = setAbc800MEnabledNative(enabled)
+    private external fun setAbc800MEnabledNative(enabled: Boolean)
+    fun resetCpu() = resetCpuNative()
+    private external fun resetCpuNative()
 
     fun getCPU(): ByteArray = getProcessorStateNative()
     private external fun getProcessorStateNative(): ByteArray
@@ -244,8 +260,10 @@ class NativeLib {
 
     fun thaw() = freezeNative(false)
     fun freeze(freezing: Boolean = true) = freezeNative(freezing)
+    fun isFrozen(): Boolean = isFrozenNative()
 
     private external fun freezeNative(freeze: Boolean)
+    private external fun isFrozenNative(): Boolean
 
     fun enableLogging(enable: Boolean) = enableLoggingNative(enable)
     private external fun enableLoggingNative(enable: Boolean)

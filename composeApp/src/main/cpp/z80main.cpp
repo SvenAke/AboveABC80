@@ -8,7 +8,7 @@
 #include <chrono>
 #include <thread>
 #include <deque>
-#include <mutex>
+#include <array>
 
 #ifdef _MSC_VER
 #define GCC_UNUSED
@@ -25,8 +25,26 @@
 
 /* 64Kb of RAM, first 16kb is ROM */
 std::uint8_t memory[0x10000];
+std::atomic<bool> g_abc800m_active{false};
+
+static std::array<std::uint8_t, 0x4000> g_abc800m_video_ram{};
+static std::array<std::uint8_t, 0x800> g_abc800m_character_ram{};
+static std::array<std::uint8_t, 18> g_abc800m_crtc_registers{};
+static std::uint8_t g_abc800m_crtc_address = 0;
+static bool g_abc800m_keydtr = true;
+static bool g_abc800m_character_fetch = false;
+static std::atomic_flag g_abc800m_character_ram_lock = ATOMIC_FLAG_INIT;
+static std::atomic_flag g_abc800m_crtc_lock = ATOMIC_FLAG_INIT;
+static std::deque<std::uint8_t> g_abc800m_keyboard;
+static std::uint8_t g_abc800m_dart_register[2][8]{};
+static std::uint8_t g_abc800m_dart_selected[2]{};
+static bool g_abc800m_dart_expect_register[2]{};
+static std::atomic<bool> g_abc800m_dart_rx_irq_enabled{false};
+static std::atomic<bool> g_abc800m_dart_irq_pending{false};
+static std::uint8_t g_abc800m_highres_control[2]{};
 
 bool running = true;
+std::atomic<bool> g_cpu_paused{false};
 uint64_t g_last_interrupt_tstate = 0;
 static std::atomic<int> runtime_cpu_frequency{3'000'000};
 
@@ -54,6 +72,13 @@ struct KeyLock {
     KeyLock() { while (g_key_lock.test_and_set(std::memory_order_acquire)) std::this_thread::yield(); }
     ~KeyLock() { g_key_lock.clear(std::memory_order_release); }
 };
+struct Abc800Lock {
+    explicit Abc800Lock(std::atomic_flag &lock) : lock_(lock) {
+        while (lock_.test_and_set(std::memory_order_acquire)) std::this_thread::yield();
+    }
+    ~Abc800Lock() { lock_.clear(std::memory_order_release); }
+    std::atomic_flag &lock_;
+};
 struct KeyPress { int code; bool held; };
 static std::deque<KeyPress> g_key_queue;
 static std::atomic<int> g_held_key{-1};
@@ -75,10 +100,22 @@ void abc80_cassette_reti() {
 
 void abc80_send_key(int code) {
     KeyLock lock;
+    if (g_abc800m_active.load(std::memory_order_relaxed)) {
+        if (g_abc800m_keyboard.size() < 64) {
+            g_abc800m_keyboard.push_back(static_cast<std::uint8_t>(code));
+            if (g_abc800m_dart_rx_irq_enabled.load(std::memory_order_relaxed))
+                g_abc800m_dart_irq_pending.store(true, std::memory_order_relaxed);
+        }
+        return;
+    }
     if (g_key_queue.size() < 64) g_key_queue.push_back({code & 0x7F, false});
 }
 
 void abc80_press_key(int code) {
+    if (g_abc800m_active.load(std::memory_order_relaxed)) {
+        abc80_send_key(code);
+        return;
+    }
     KeyLock lock;
     code &= 0x7F;
     if (g_held_key.load() == code) {
@@ -94,12 +131,15 @@ void abc80_press_key(int code) {
 }
 
 void abc80_release_key(int code) {
+    if (g_abc800m_active.load(std::memory_order_relaxed)) return;
     int expected = code & 0x7F;
     g_held_key.compare_exchange_strong(expected, -1);
 }
 
 void abc80_release_all_keys() {
     g_held_key.store(-1);
+    KeyLock lock;
+    g_abc800m_keyboard.clear();
 }
 
 int abc80_read_keyboard() {
@@ -109,6 +149,16 @@ int abc80_read_keyboard() {
 /* Called between instructions; delivers the pending keyboard interrupt once the CPU accepts it. */
 bool abc80_try_keyboard_interrupt() {
     if (!IFF1 || tStates == z80.interrupts_enabled_at) return false;
+    if (g_abc800m_active.load(std::memory_order_relaxed) &&
+        g_abc800m_dart_irq_pending.load(std::memory_order_relaxed)) {
+        const libspectrum_byte previous = g_im2_vector;
+        g_im2_vector = static_cast<libspectrum_byte>(
+                (g_abc800m_dart_register[1][2] & 0xf8) | 0x04);
+        const bool taken = z80_interrupt() != 0;
+        g_im2_vector = previous;
+        if (taken) g_abc800m_dart_irq_pending.store(false, std::memory_order_relaxed);
+        return taken;
+    }
     if (!g_key_irq_pending.load(std::memory_order_relaxed)) {
         const int vector = g_cassette_vector.load(std::memory_order_relaxed);
         if (vector < 0 || g_cassette_in_service.load(std::memory_order_relaxed)) return false;
@@ -164,10 +214,12 @@ int run() {
     int loop_count = 0;
 
     while (running) {
-        if (g_frozen) {
+        if (g_frozen.load(std::memory_order_acquire)) {
+            g_cpu_paused.store(true, std::memory_order_release);
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
             continue;
         }
+        g_cpu_paused.store(false, std::memory_order_release);
 
         if (++loop_count >= 50) { // Every second at 50fps
             logd("PC: %04X, AF: %04X, SP: %04X", PC, AF, SP);
@@ -234,6 +286,12 @@ libspectrum_byte readByte(libspectrum_word address) {
     if (get_patched_byte(address, &value)) {
         return value;
     }
+    if (g_abc800m_active.load(std::memory_order_relaxed)) {
+        if (address < 0x4000 && (!g_abc800m_keydtr || g_abc800m_character_fetch))
+            return g_abc800m_video_ram[address];
+        if (address >= 0x7800 && address < 0x8000 && !g_abc800m_character_fetch)
+            return g_abc800m_character_ram[address - 0x7800];
+    }
     return memory[address];
 }
 
@@ -242,6 +300,13 @@ libspectrum_byte readByteInternal(libspectrum_word address) {
     libspectrum_byte value;
     if (get_patched_byte(address, &value)) {
         return value;
+    }
+    if (g_abc800m_active.load(std::memory_order_relaxed)) {
+        g_abc800m_character_fetch = address >= 0x7800 && address < 0x8000;
+        if (address < 0x4000 && (!g_abc800m_keydtr || g_abc800m_character_fetch))
+            return g_abc800m_video_ram[address];
+        if (address >= 0x7800 && address < 0x8000 && !g_abc800m_character_fetch)
+            return g_abc800m_character_ram[address - 0x7800];
     }
     return memory[address];
 }
@@ -253,7 +318,156 @@ void writeByte(libspectrum_word address, libspectrum_byte b) {
 
 void writeByteInternal(libspectrum_word address, libspectrum_byte b) {
     check_and_run_write_watcher(address, b);
+    if (g_abc800m_active.load(std::memory_order_relaxed)) {
+        if (address < 0x4000) {
+            if (!g_abc800m_keydtr || g_abc800m_character_fetch)
+                g_abc800m_video_ram[address] = b;
+            return;
+        }
+        if (address >= 0x7800 && address < 0x8000) {
+            Abc800Lock lock(g_abc800m_character_ram_lock);
+            g_abc800m_character_ram[address - 0x7800] = b;
+            return;
+        }
+        if (address < 0x8000) return;
+    }
     memory[address] = b;
+}
+
+extern "C" {
+void abc800m_set_enabled(bool enabled) {
+    g_abc800m_active.store(enabled, std::memory_order_relaxed);
+    g_abc800m_video_ram.fill(0);
+    {
+        Abc800Lock lock(g_abc800m_character_ram_lock);
+        g_abc800m_character_ram.fill(0x20);
+    }
+    {
+        Abc800Lock lock(g_abc800m_crtc_lock);
+        g_abc800m_crtc_registers.fill(0);
+        g_abc800m_crtc_address = 0;
+    }
+    g_abc800m_keydtr = true;
+    g_abc800m_character_fetch = false;
+    {
+        KeyLock lock;
+        g_abc800m_keyboard.clear();
+    }
+    std::memset(g_abc800m_dart_register, 0, sizeof(g_abc800m_dart_register));
+    std::memset(g_abc800m_dart_selected, 0, sizeof(g_abc800m_dart_selected));
+    std::memset(g_abc800m_dart_expect_register, 0, sizeof(g_abc800m_dart_expect_register));
+    std::memset(g_abc800m_highres_control, 0, sizeof(g_abc800m_highres_control));
+    g_abc800m_dart_rx_irq_enabled.store(false, std::memory_order_relaxed);
+    g_abc800m_dart_irq_pending.store(false, std::memory_order_relaxed);
+}
+
+std::uint8_t abc800m_read_port(int port) {
+    port &= 0xff;
+    if (port >= 0x20 && port <= 0x2f) {
+        const int offset = port & 3;
+        const int channel = offset >= 2 ? 1 : 0;
+        if ((offset & 1) == 0) {
+            KeyLock lock;
+            if (channel == 1 && !g_abc800m_keyboard.empty()) {
+                const auto code = g_abc800m_keyboard.front();
+                g_abc800m_keyboard.pop_front();
+                if (!g_abc800m_keyboard.empty() &&
+                    g_abc800m_dart_rx_irq_enabled.load(std::memory_order_relaxed))
+                    g_abc800m_dart_irq_pending.store(true, std::memory_order_relaxed);
+                return code;
+            }
+            return 0;
+        }
+        const auto selected = g_abc800m_dart_selected[channel];
+        if (selected == 0) {
+            KeyLock lock;
+            const int receive_ready = channel == 1 && !g_abc800m_keyboard.empty();
+            return static_cast<std::uint8_t>(0x04 | static_cast<int>(receive_ready));
+        }
+        const auto value = g_abc800m_dart_register[channel][selected];
+        g_abc800m_dart_selected[channel] = 0;
+        return value;
+    }
+    if (port == 0x31 || port == 0x35 || port == 0x39 || port == 0x3d) {
+        Abc800Lock lock(g_abc800m_crtc_lock);
+        return g_abc800m_crtc_registers[g_abc800m_crtc_address % g_abc800m_crtc_registers.size()];
+    }
+    if (port >= 0x60 && port <= 0x6f) return 0;
+    if (port == 0x05) return 0xff;
+    return 0xff;
+}
+
+bool abc800m_owns_port_read(int port) {
+    port &= 0xff;
+    return (port >= 0x20 && port <= 0x2f) ||
+           port == 0x31 || port == 0x35 || port == 0x39 || port == 0x3d ||
+           (port >= 0x60 && port <= 0x6f) || port == 0x05 || port == 0x06;
+}
+
+void abc800m_write_port(int port, int value) {
+    port &= 0xff;
+    value &= 0xff;
+    if (port >= 0x20 && port <= 0x2f) {
+        const int offset = port & 3;
+        const int channel = offset >= 2 ? 1 : 0;
+        if ((offset & 1) == 0) return;
+        if (g_abc800m_dart_expect_register[channel]) {
+            const auto selected = g_abc800m_dart_selected[channel];
+            g_abc800m_dart_register[channel][selected] = static_cast<std::uint8_t>(value);
+            g_abc800m_dart_expect_register[channel] = false;
+            g_abc800m_dart_selected[channel] = 0;
+            if (channel == 1 && selected == 5) g_abc800m_keydtr = (value & 0x80) != 0;
+            if (channel == 1 && selected == 1) {
+                const bool rx_irq_enabled = ((value >> 3) & 3) != 0;
+                g_abc800m_dart_rx_irq_enabled.store(rx_irq_enabled, std::memory_order_relaxed);
+                KeyLock lock;
+                if (rx_irq_enabled && !g_abc800m_keyboard.empty())
+                    g_abc800m_dart_irq_pending.store(true, std::memory_order_relaxed);
+            }
+        } else {
+            const auto selected = static_cast<std::uint8_t>(value & 7);
+            g_abc800m_dart_selected[channel] = selected;
+            g_abc800m_dart_expect_register[channel] = selected != 0;
+        }
+        return;
+    }
+    if (port == 0x38 || port == 0x3c) {
+        Abc800Lock lock(g_abc800m_crtc_lock);
+        g_abc800m_crtc_address = static_cast<std::uint8_t>(value & 0x1f);
+        return;
+    }
+    if (port == 0x39 || port == 0x3d) {
+        Abc800Lock lock(g_abc800m_crtc_lock);
+        if (g_abc800m_crtc_address < g_abc800m_crtc_registers.size())
+            g_abc800m_crtc_registers[g_abc800m_crtc_address] = static_cast<std::uint8_t>(value);
+        return;
+    }
+    if (port == 0x06 || port == 0x07) {
+        g_abc800m_highres_control[port - 0x06] = static_cast<std::uint8_t>(value);
+        return;
+    }
+    if (port >= 0x60 && port <= 0x6f) return;
+}
+
+void abc800m_copy_text_screen(std::uint8_t *destination) {
+    Abc800Lock crtc_lock(g_abc800m_crtc_lock);
+    Abc800Lock lock(g_abc800m_character_ram_lock);
+    const int start = ((g_abc800m_crtc_registers[12] & 0x3f) << 8) |
+                      g_abc800m_crtc_registers[13];
+    for (int i = 0; i < 80 * 24; ++i)
+        destination[i] = g_abc800m_character_ram[(start + i) & 0x7ff];
+}
+
+int abc800m_cursor_position() {
+    Abc800Lock lock(g_abc800m_crtc_lock);
+    if (g_abc800m_crtc_registers[10] & 0x20) return -1;
+    const int start = ((g_abc800m_crtc_registers[12] & 0x3f) << 8) |
+                      g_abc800m_crtc_registers[13];
+    const int cursor = ((g_abc800m_crtc_registers[14] & 0x3f) << 8) |
+                       g_abc800m_crtc_registers[15];
+    const int offset = (cursor - start) & 0x7ff;
+    return offset < 80 * 24 ? offset : -1;
+}
 }
 
 libspectrum_byte readport(libspectrum_word port) {

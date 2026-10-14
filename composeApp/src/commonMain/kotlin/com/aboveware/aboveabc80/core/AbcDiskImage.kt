@@ -2,6 +2,7 @@ package com.aboveware.aboveabc80.core
 
 import com.aboveware.aboveabc80.Abc80FloppyLayout
 
+@OptIn(ExperimentalUnsignedTypes::class)
 class AbcDiskImage(private var data: ByteArray) {
     companion object {
         fun createFromData(data: ByteArray): AbcDiskImage {

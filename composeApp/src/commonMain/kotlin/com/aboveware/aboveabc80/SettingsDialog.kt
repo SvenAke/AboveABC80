@@ -54,6 +54,7 @@ import com.aboveware.aboveabc80.printer.Diablo630ConfigView
 import com.aboveware.aboveabc80.printer.Mx80ConfigView
 import com.aboveware.aboveabc80.printer.PrinterManager
 import com.aboveware.aboveabc80.printer.PrinterType
+import com.aboveware.aboveabc80.terminal.ComputerModel
 import com.aboveware.aboveabc80.terminal.TerminalManager
 import com.aboveware.aboveabc80.ui.TooltipIconButton
 import kotlin.math.roundToInt
@@ -66,6 +67,7 @@ fun SettingsDialog(
     onCpuAndFpsVisibilityChange: (Boolean) -> Unit,
     cpuSpeedSetting: Int,
     onCpuSpeedChange: (Int) -> Unit,
+    onComputerModelChange: (ComputerModel) -> Unit,
     onDismiss: () -> Unit
 ) {
     val scope = rememberCoroutineScope()
@@ -135,6 +137,43 @@ fun SettingsDialog(
                         Text(stringResource(Res.string.settings_load_state))
                     }
                 }
+
+                HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
+
+                Text(
+                    stringResource(Res.string.settings_computer_model),
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
+                Column(modifier = Modifier.selectableGroup()) {
+                    ComputerModel.entries.forEach { model ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp)
+                                .selectable(
+                                    selected = TerminalManager.computerModel == model,
+                                    onClick = { onComputerModelChange(model) },
+                                    role = Role.RadioButton
+                                ),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = TerminalManager.computerModel == model,
+                                onClick = null
+                            )
+                            Text(
+                                text = model.displayName,
+                                style = MaterialTheme.typography.bodyLarge,
+                                modifier = Modifier.padding(start = 16.dp)
+                            )
+                        }
+                    }
+                }
+                Text(
+                    stringResource(Res.string.settings_computer_model_notice),
+                    style = MaterialTheme.typography.bodySmall
+                )
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
 
@@ -271,7 +310,7 @@ fun SettingsDialog(
                         if (cpuSpeedSetting == 9) {
                             stringResource(Res.string.settings_cpu_max)
                         } else {
-                            "$cpuSpeedSetting MHz"
+                            TerminalManager.computerModel.cpuSpeedLabel(cpuSpeedSetting)
                         },
                         modifier = Modifier.padding(start = 12.dp)
                     )

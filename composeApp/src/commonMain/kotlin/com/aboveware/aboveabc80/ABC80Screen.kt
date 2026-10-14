@@ -18,6 +18,8 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.inset
 import androidx.compose.ui.unit.dp
+import com.aboveware.aboveabc80.terminal.ComputerModel
+import com.aboveware.aboveabc80.terminal.TerminalManager
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -33,12 +35,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.input.pointer.pointerInput
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.ExperimentalResourceApi
+import aboveabc80.composeapp.generated.resources.Res
 
 /** The ABC80 computer case color (beige/tan) rendered around the monitor display. */
 internal val ABC80_CASE_COLOR = Color(0xFFDFAD75)
-
-/** The cyan phosphor foreground color of the ABC80 monitor display. */
-internal val ABC80_SCREEN_COLOR = Color(0xFF57C6F8)
 
 private val BEZEL_WIDTH = 10.dp
 
@@ -166,6 +167,20 @@ internal fun decodeABC80ScreenGlyphs(memory: ByteArray, wide: Boolean = TKN80.en
                     )
                     else -> append(' ')
                 }
+
+            }
+        }
+    }
+}
+
+internal fun decodeABC800MScreen(characterRam: ByteArray): List<String> {
+    require(characterRam.size >= 80 * ABC80_SCREEN_ROWS) {
+        "ABC800M screen requires 1920 character bytes"
+    }
+    return List(ABC80_SCREEN_ROWS) { row ->
+        buildString(80) {
+            for (column in 0 until 80) {
+                append((characterRam[row * 80 + column].toInt() and 0x7f).toChar())
             }
         }
     }
@@ -182,7 +197,7 @@ internal fun decodeABC80ScreenGlyphs(memory: ByteArray, wide: Boolean = TKN80.en
  * @param selection State holder for the active screen text selection range.
  * @param onRequestFocus Callback triggered when the user interacts with the screen to request input focus.
  */
-@OptIn(ExperimentalUnsignedTypes::class)
+@OptIn(ExperimentalUnsignedTypes::class, ExperimentalResourceApi::class)
 @Composable
 internal fun ABC80Screen(
     nativeLib: NativeLib,
@@ -191,28 +206,48 @@ internal fun ABC80Screen(
     onRequestFocus: () -> Unit = {}
 ) {
     val charMap = remember { Abc80MonitorCharacterMap() }
-    var rows by remember { mutableStateOf(List(ABC80_SCREEN_ROWS) { " ".repeat(ABC80_SCREEN_COLUMNS) }) }
+    val model = TerminalManager.computerModel
+    val isAbc800M = model == ComputerModel.ABC800M
+    val wideScreen = model.isWideScreen(TKN80.enabled)
+    val screenColumns = if (wideScreen) 80 else ABC80_SCREEN_COLUMNS
+    var abc800Font by remember { mutableStateOf<ByteArray?>(null) }
+    LaunchedEffect(isAbc800M) {
+        abc800Font = if (isAbc800M) Res.readBytes("files/font800.bin") else null
+    }
+    var rows by remember(model) {
+        mutableStateOf(List(ABC80_SCREEN_ROWS) { " ".repeat(screenColumns) })
+    }
     var cursor by remember { mutableStateOf<Pair<Int, Int>?>(null) }
     var blinkOn by remember { mutableStateOf(true) }
     val scope = rememberCoroutineScope()
     var returningToBasic by remember { mutableStateOf(false) }
-    LaunchedEffect(nativeLib) {
+    LaunchedEffect(nativeLib, model, wideScreen) {
         var ticks = 0
         while (true) {
-            val memory = nativeLib.getMemory()
-            if (abc80DosPromptVisible(memory)) nativeLib.dosActive = true
-            rows = decodeABC80ScreenGlyphs(memory)
-            cursor = decodeABC80Cursor(memory, visible = nativeLib.screenCursorVisible)
+            if (isAbc800M) {
+                rows = decodeABC800MScreen(nativeLib.getAbc800MTextScreen())
+                val cursorPosition = nativeLib.getAbc800MCursorPosition()
+                cursor = if (cursorPosition >= 0) cursorPosition / 80 to cursorPosition % 80 else null
+            } else {
+                val memory = nativeLib.getMemory()
+                if (abc80DosPromptVisible(memory)) nativeLib.dosActive = true
+                rows = decodeABC80ScreenGlyphs(memory, wideScreen)
+                cursor = decodeABC80Cursor(
+                    memory,
+                    columns = screenColumns,
+                    visible = nativeLib.screenCursorVisible
+                )
+            }
             if (++ticks % 10 == 0) blinkOn = !blinkOn
             delay(50)
         }
     }
-    val cw = charMap.charWidth
-    val ch = charMap.charHeight
+    val cw = if (isAbc800M) 6 else charMap.charWidth
+    val ch = if (isAbc800M) 16 else charMap.charHeight
     val columns = rows.first().length
     LaunchedEffect(columns) { selection.clear() }
     Box(
-        modifier.fillMaxSize().background(ABC80_CASE_COLOR).padding(BEZEL_WIDTH),
+        modifier.fillMaxSize().background(model.caseColor).padding(BEZEL_WIDTH),
         contentAlignment = Alignment.Center
     ) {
         Box(Modifier.aspectRatio((columns * cw).toFloat() / (ABC80_SCREEN_ROWS * ch))
@@ -220,7 +255,7 @@ internal fun ABC80Screen(
         Canvas(Modifier
             .fillMaxSize()
             .drawBehind { drawRecessedBezel(BEZEL_WIDTH.toPx()) }
-            .background(Color.Black)
+            .background(model.screenBackgroundColor)
             .pointerInput(columns) {
                 fun cell(position: Offset): Int {
                     val m = SCREEN_MARGIN.toPx()
@@ -246,29 +281,43 @@ internal fun ABC80Screen(
             val py = size.height / (ABC80_SCREEN_ROWS * ch)
             val pixel = Size(px, py)
             cursor?.takeIf { blinkOn }?.let { (r, c) ->
-                drawRect(ABC80_SCREEN_COLOR, Offset(c * cw * px, r * ch * py), Size(cw * px, ch * py))
+                drawRect(model.screenColor, Offset(c * cw * px, r * ch * py), Size(cw * px, ch * py))
             }
             rows.forEachIndexed { r, line ->
                 line.forEachIndexed { c, char ->
                     val selected = selection.range?.contains(r * columns + c) == true
                     if (selected) drawRect(
-                        ABC80_SCREEN_COLOR, Offset(c * cw * px, r * ch * py), Size(cw * px, ch * py)
+                        model.screenColor, Offset(c * cw * px, r * ch * py), Size(cw * px, ch * py)
                     )
                     if (char == ' ') return@forEachIndexed
-                    charMap.forEach(char.code) { bits, y ->
-                        charMap.forEachBit(bits.toInt()) { on, x ->
-                            if (on) drawRect(
-                                if (selected) Color.Black else ABC80_SCREEN_COLOR,
-                                Offset((c * cw + x) * px, (r * ch + y) * py),
-                                pixel
-                            )
+                    if (isAbc800M) {
+                        val font = abc800Font ?: return@forEachIndexed
+                        for (y in 0 until 16) {
+                            val bits = font[(char.code and 0x7f) * 16 + y].toInt() and 0x3f
+                            for (x in 0 until 6) {
+                                if (bits and (1 shl (5 - x)) != 0) drawRect(
+                                    if (selected) model.screenBackgroundColor else model.screenColor,
+                                    Offset((c * cw + x) * px, (r * ch + y) * py),
+                                    pixel
+                                )
+                            }
                         }
+                    } else {
+                        charMap.forEach(char.code) { bits, y ->
+                            charMap.forEachBit(bits.toInt()) { on, x ->
+                                if (on) drawRect(
+                                    if (selected) model.screenBackgroundColor else model.screenColor,
+                                    Offset((c * cw + x) * px, (r * ch + y) * py),
+                                    pixel
+                                )
+                            }
                         }
                     }
                 }
             }
             }
-            if (nativeLib.dosActive) {
+        }
+            if (!isAbc800M && nativeLib.dosActive) {
                 TextButton(
                     modifier = Modifier.align(Alignment.BottomEnd),
                     enabled = !returningToBasic,

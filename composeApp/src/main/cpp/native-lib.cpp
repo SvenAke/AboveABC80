@@ -4,6 +4,7 @@
 #include <map>
 #include <atomic>
 #include <thread>
+#include <chrono>
 #include <cstring>
 #include <cstdint>
 #include <algorithm>
@@ -33,6 +34,14 @@
 int run();
 
 extern std::uint8_t memory[0x10000];
+extern std::atomic<bool> g_cpu_paused;
+extern std::atomic<bool> g_abc800m_active;
+extern "C" void abc800m_set_enabled(bool enabled);
+extern "C" std::uint8_t abc800m_read_port(int port);
+extern "C" bool abc800m_owns_port_read(int port);
+extern "C" void abc800m_write_port(int port, int value);
+extern "C" void abc800m_copy_text_screen(std::uint8_t *destination);
+extern "C" int abc800m_cursor_position();
 
 std::atomic<bool> g_frozen(false);
 std::atomic<bool> g_enable_logging(true);
@@ -88,6 +97,18 @@ static jmethodID g_port_write_method = nullptr;
 
 int onReadPort(int port, int hi) {
     int port8 = port & 0xFF;
+    if (g_abc800m_active.load(std::memory_order_relaxed)) {
+        if (abc800m_owns_port_read(port8)) return abc800m_read_port(port8);
+        if (port8 <= 4 || port8 == 7) {
+            if (g_native_lib_object && g_port_read_method && g_vm) {
+                JNIEnv *env = nullptr;
+                if (attach_current_thread(&env) == JNI_OK)
+                    return env->CallIntMethod(g_native_lib_object, g_port_read_method, port8) & 0xFF;
+            }
+            return 0xFF;
+        }
+        return 0xFF;
+    }
     // Keyboard PIO data port: bit 7 is the key strobe, 0 means "no key pressed".
     if (port8 == 0x38) return abc80_read_keyboard();
     // Cassette PIO (port B data/control, port A control) is handled in Kotlin.
@@ -109,6 +130,20 @@ int onReadPort(int port, int hi) {
 
 void onWritePort(int port, int value) {
     int port8 = port & 0xFF;
+    if (g_abc800m_active.load(std::memory_order_relaxed)) {
+        if ((port8 >= 0x20 && port8 <= 0x2f) || port8 == 0x38 || port8 == 0x39 ||
+            port8 == 0x3c || port8 == 0x3d || port8 == 0x06 || port8 == 0x07 ||
+            (port8 >= 0x60 && port8 <= 0x6f)) {
+            abc800m_write_port(port8, value);
+            return;
+        }
+        if (port8 <= 5 && g_native_lib_object && g_port_write_method && g_vm) {
+            JNIEnv *env = nullptr;
+            if (attach_current_thread(&env) == JNI_OK)
+                env->CallVoidMethod(g_native_lib_object, g_port_write_method, port8, value & 0xFF);
+        }
+        return;
+    }
     if (port8 == 0x06) {
         abc80_write_sound(value & 0xFF);
         return;
@@ -147,6 +182,34 @@ Java_com_aboveware_aboveabc80_NativeLib_getMemoryNative(JNIEnv *env, jobject) {
     jbyteArray result = env->NewByteArray(0x10000);
     env->SetByteArrayRegion(result, 0, 0x10000, (jbyte *) memory);
     return result;
+}
+
+JNIEXPORT jbyteArray JNICALL
+Java_com_aboveware_aboveabc80_NativeLib_getAbc800MTextScreenNative(JNIEnv *env, jobject) {
+    jbyteArray result = env->NewByteArray(80 * 24);
+    if (!result) return nullptr;
+    jbyte text[80 * 24];
+    abc800m_copy_text_screen(reinterpret_cast<std::uint8_t *>(text));
+    env->SetByteArrayRegion(result, 0, 80 * 24, text);
+    return result;
+}
+
+JNIEXPORT jint JNICALL
+Java_com_aboveware_aboveabc80_NativeLib_getAbc800MCursorPositionNative(JNIEnv *, jobject) {
+    return abc800m_cursor_position();
+}
+
+JNIEXPORT void JNICALL
+Java_com_aboveware_aboveabc80_NativeLib_setAbc800MEnabledNative(JNIEnv *, jobject, jboolean enabled) {
+    abc800m_set_enabled(enabled == JNI_TRUE);
+}
+
+JNIEXPORT void JNICALL
+Java_com_aboveware_aboveabc80_NativeLib_resetCpuNative(JNIEnv *, jobject) {
+    z80_reset(true);
+    tStates = 0;
+    TOTAL_CYCLES = 0;
+    g_last_interrupt_tstate = 0;
 }
 
 JNIEXPORT void JNICALL
@@ -423,7 +486,21 @@ Java_com_aboveware_aboveabc80_NativeLib_setOnExecuteForListenerNative(JNIEnv *en
 
 JNIEXPORT void JNICALL
 Java_com_aboveware_aboveabc80_NativeLib_freezeNative(JNIEnv *env, jobject, jboolean freeze) {
-    g_frozen = (freeze == JNI_TRUE);
+    const bool should_freeze = freeze == JNI_TRUE;
+    if (should_freeze && g_emulator_running.load(std::memory_order_acquire))
+        g_cpu_paused.store(false, std::memory_order_release);
+    g_frozen.store(should_freeze, std::memory_order_release);
+    if (should_freeze && g_emulator_running.load(std::memory_order_acquire)) {
+        while (!g_cpu_paused.load(std::memory_order_acquire)) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
+    } else if (!should_freeze) {
+        g_cpu_paused.store(false, std::memory_order_release);
+    }
+}
+JNIEXPORT jboolean JNICALL
+Java_com_aboveware_aboveabc80_NativeLib_isFrozenNative(JNIEnv *env, jobject) {
+    return g_frozen.load(std::memory_order_acquire) ? JNI_TRUE : JNI_FALSE;
 }
 JNIEXPORT void JNICALL
 Java_com_aboveware_aboveabc80_NativeLib_enableLoggingNative(JNIEnv *env, jobject, jboolean enable) {

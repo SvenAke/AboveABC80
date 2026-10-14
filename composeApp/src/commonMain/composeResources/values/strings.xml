@@ -74,6 +74,9 @@
     <string name="settings_system_snapshots">Systemögonblicksbilder</string>
     <string name="settings_save_state">Spara tillstånd</string>
     <string name="settings_load_state">Läs in tillstånd</string>
+    <string name="settings_computer_model">Datormodell</string>
+    <string name="settings_computer_model_notice">ABC800M-emuleringen är experimentell. Diskettstationer, seriella enheter och högupplöst grafik emuleras inte. ABC800C stöds ännu inte.</string>
+    <string name="settings_computer_model_change_failed">Kunde inte byta datormodell.</string>
     <string name="settings_terminal_color">Terminalfärg</string>
     <string name="settings_color_green">Grön</string>
     <string name="settings_color_amber">Bärnsten</string>

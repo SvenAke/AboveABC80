@@ -3,6 +3,8 @@ package com.aboveware.aboveabc80
 import aboveabc80.composeapp.generated.resources.Res
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import com.aboveware.aboveabc80.terminal.ComputerModel
+import com.aboveware.aboveabc80.terminal.TerminalManager
 import com.aboveware.aboveabc80.Assembler.Companion.opcodeList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -31,15 +33,38 @@ class Assembler {
     }
     @OptIn(ExperimentalResourceApi::class)
     suspend fun loadRomFiles() = withContext(Dispatchers.Default) {
+        val previousMemory = memory.copyOf()
         try {
+            val model = TerminalManager.computerModel
+            require(model != ComputerModel.ABC800C) {
+                "ABC800C hardware emulation is not implemented"
+            }
             memory.fill(0)
-            loadRom("files/prom.rom", 0x0000)
-            loadRom("files/dos.rom", 0x6000)
-            loadRom("files/printer.rom", 0x7800)
-            patchPrinterColumnTracking()
+            val nativeLib = NativeLib.getObject()
+            if (model == ComputerModel.ABC800M) {
+                loadRom("files/basic800.rom", 0x0000, 0x6000)
+                loadRom("files/dos800.rom", 0x6000, 0x1000)
+                loadRom("files/opt800.rom", 0x7000, 0x1000)
+                require(Res.readBytes("files/font800.bin").size == 0x800) {
+                    "ABC800M character ROM must be 2048 bytes"
+                }
+            } else {
+                loadRom("files/prom.rom", 0x0000)
+                loadRom("files/dos.rom", 0x6000)
+                loadRom("files/printer.rom", 0x7800)
+                patchPrinterColumnTracking()
+            }
             opcodeList = Res.readBytes("files/opcode.lst").decodeToString().lines().toTypedArray()
-            NativeLib.getObject().copyToMemory(0, memory)
+            TKN80.setEnabled(
+                model.isWideScreen(getPersistedString("tkn80_start", "false").toBoolean()),
+                nativeLib,
+                patchAbc80Rom = model == ComputerModel.ABC80
+            )
+            nativeLib.cassettePlayer.setEnabled(model == ComputerModel.ABC80)
+            nativeLib.setAbc800MEnabled(model == ComputerModel.ABC800M)
+            nativeLib.copyToMemory(0, memory)
         } catch (e: Exception) {
+            previousMemory.copyInto(memory)
             Abc80Log.wtf("Kunde inte ladda ROM-filer: ${e.message}")
             throw e
         }
@@ -54,10 +79,13 @@ class Assembler {
                 NativeLib.getObject().enableLogging(true)
                 val cpuSpeedMHz = getPersistedString(
                     "cpu_speed_mhz",
-                    (Constants.CPU_FREQUENCY / 1_000_000).toString()
-                ).toIntOrNull()?.coerceIn(1, 9) ?: (Constants.CPU_FREQUENCY / 1_000_000)
+                    TerminalManager.computerModel.defaultCpuSpeedSetting.toString()
+                ).toIntOrNull()?.coerceIn(1, 9)
+                    ?: TerminalManager.computerModel.defaultCpuSpeedSetting
                 NativeLib.getObject().setFastSpeed(cpuSpeedMHz == 9)
-                NativeLib.getObject().startEmulator(cpuSpeedMHz.coerceAtMost(8) * 1_000_000)
+                NativeLib.getObject().startEmulator(
+                    TerminalManager.computerModel.cpuFrequencyHz(cpuSpeedMHz)
+                )
             } catch (e: Exception) {
                 Abc80Log.wtf("Kunde inte starta emulatorn: ${e.message}")
             }
@@ -163,8 +191,11 @@ class Assembler {
         }
     }
     @OptIn(ExperimentalResourceApi::class)
-    private suspend fun loadRom(resourcePath: String, startAddress: Int) {
+    private suspend fun loadRom(resourcePath: String, startAddress: Int, expectedSize: Int? = null) {
         val bytes = Res.readBytes(resourcePath)
+        require(expectedSize == null || bytes.size == expectedSize) {
+            "ROM $resourcePath must be $expectedSize bytes; received ${bytes.size}"
+        }
         require(startAddress >= 0 && bytes.size <= memory.size - startAddress) {
             "ROM $resourcePath (${bytes.size} bytes) does not fit at address 0x${startAddress.toString(16)}"
         }

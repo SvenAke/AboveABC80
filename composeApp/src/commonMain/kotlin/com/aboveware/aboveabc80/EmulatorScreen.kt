@@ -120,6 +120,7 @@ import com.aboveware.aboveabc80.printer.VirtualPrinter
 import com.aboveware.aboveabc80.printer.VirtualPrinterView
 import com.aboveware.aboveabc80.tape.TapeController
 import com.aboveware.aboveabc80.tape.TapeView
+import com.aboveware.aboveabc80.terminal.ComputerModel
 import com.aboveware.aboveabc80.terminal.TerminalManager
 import com.aboveware.aboveabc80.ui.Abc80DebuggerView
 import com.aboveware.aboveabc80.ui.CassetteDialog
@@ -143,10 +144,11 @@ fun EmulatorScreen(startWithStorageOpen: Boolean = false) {
     val assembler = remember { Assembler.instance }
     val nativeLib = remember { NativeLib.getObject() }
     val keyboard = remember { Keyboard.instance }
+    val initialModel = TerminalManager.computerModel
     var cpuSpeedSetting by remember {
         mutableIntStateOf(
-            getPersistedString("cpu_speed_mhz", (Constants.CPU_FREQUENCY / 1_000_000).toString())
-                .toIntOrNull()?.coerceIn(1, 9) ?: (Constants.CPU_FREQUENCY / 1_000_000)
+            getPersistedString("cpu_speed_mhz", initialModel.defaultCpuSpeedSetting.toString())
+                .toIntOrNull()?.coerceIn(1, 9) ?: initialModel.defaultCpuSpeedSetting
         )
     }
     val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
@@ -161,6 +163,7 @@ fun EmulatorScreen(startWithStorageOpen: Boolean = false) {
     DisposableEffect(nativeLib) {
         val watcher = object : NativeLib.MemoryReadWatcher {
             override fun onRead(address: Int): Boolean {
+                if (TerminalManager.computerModel != ComputerModel.ABC80) return false
                 nativeLib.commandHistory.atPrompt = true
                 nativeLib.dosActive = false
                 return false
@@ -187,7 +190,7 @@ fun EmulatorScreen(startWithStorageOpen: Boolean = false) {
     }
     var fps by remember { mutableIntStateOf(0) }
     var currentCpuMHz by remember {
-        mutableStateOf(if (cpuSpeedSetting == 9) "MAX" else "$cpuSpeedSetting.0 MHz")
+        mutableStateOf(initialModel.cpuSpeedLabel(cpuSpeedSetting))
     }
     var showCpuAndFps by remember {
         mutableStateOf(getPersistedString("show_cpu_and_fps", "true").toBoolean())
@@ -196,11 +199,13 @@ fun EmulatorScreen(startWithStorageOpen: Boolean = false) {
 
     val snackbarHostState = remember { SnackbarHostState() }
     val soundPlaybackFailed = stringResource(Res.string.sound_playback_failed)
+    val computerModelChangeFailed = stringResource(Res.string.settings_computer_model_change_failed)
     val scope = rememberCoroutineScope()
     @Suppress("DEPRECATION")
     val clipboardManager = LocalClipboardManager.current
     var recallingCommand by remember { mutableStateOf(false) }
     fun recallCommand(code: Int): Boolean {
+        if (TerminalManager.computerModel == ComputerModel.ABC800M) return false
         if (code != 10 && code != 11) return false
         if (!nativeLib.commandHistory.atPrompt || TerminalManager.activeTerminal.isSetupVisible) return false
         if (recallingCommand) return true
@@ -274,17 +279,21 @@ fun EmulatorScreen(startWithStorageOpen: Boolean = false) {
         val touchKeys = java.util.concurrent.ConcurrentHashMap<String, Int>()
         val touchCode = ThreadLocal<String>()
         activeTerminal.onKeyInput = { char ->
-            val code = if (char.code in 0..31) char.code else abc80CharCode(char)
-            code?.let {
-                if (recallCommand(it)) return@let
-                val source = touchCode.get()
-                if (source != null) {
-                    touchKeys[source] = it
-                    nativeLib.pressKey(it)
-                } else if (it in touchKeys.values) {
-                    nativeLib.pressKey(it)
-                } else {
-                    nativeLib.sendKey(it)
+            if (TerminalManager.computerModel == ComputerModel.ABC800M) {
+                nativeLib.sendKey(char.code)
+            } else {
+                val code = if (char.code in 0..31) char.code else abc80CharCode(char)
+                code?.let {
+                    if (recallCommand(it)) return@let
+                    val source = touchCode.get()
+                    if (source != null) {
+                        touchKeys[source] = it
+                        nativeLib.pressKey(it)
+                    } else if (it in touchKeys.values) {
+                        nativeLib.pressKey(it)
+                    } else {
+                        nativeLib.sendKey(it)
+                    }
                 }
             }
         }
@@ -309,13 +318,16 @@ fun EmulatorScreen(startWithStorageOpen: Boolean = false) {
         keyboard.onCharacter = { char ->
             if (activeTerminal.isSetupVisible) {
                 activeTerminal.onKeyEvent(char)
+            } else if (TerminalManager.computerModel == ComputerModel.ABC800M) {
+                nativeLib.sendKey(char.code)
             } else {
                 abc80CharCode(char)?.let { if (!recallCommand(it)) nativeLib.pressKey(it) }
             }
             activeTerminal.triggerClick()
         }
         keyboard.onCharacterReleased = { char ->
-            abc80CharCode(char)?.let { nativeLib.releaseKey(it) }
+            if (TerminalManager.computerModel != ComputerModel.ABC800M)
+                abc80CharCode(char)?.let { nativeLib.releaseKey(it) }
         }
 
         activeTerminal.onKeyClick = {
@@ -382,7 +394,7 @@ fun EmulatorScreen(startWithStorageOpen: Boolean = false) {
         currentCpuMHz = if (lastFastMode) {
             "MAX"
         } else {
-            "${cpuSpeedSetting.coerceAtMost(8)}.0 MHz"
+            TerminalManager.computerModel.cpuSpeedLabel(cpuSpeedSetting)
         }
         TerminalManager.cpuSpeed = currentCpuMHz
 
@@ -394,7 +406,7 @@ fun EmulatorScreen(startWithStorageOpen: Boolean = false) {
                 currentCpuMHz = if (currentFastMode) {
                     "MAX"
                 } else {
-                    "${cpuSpeedSetting.coerceAtMost(8)}.0 MHz"
+                    TerminalManager.computerModel.cpuSpeedLabel(cpuSpeedSetting)
                 }
                 TerminalManager.cpuSpeed = currentCpuMHz
                 lastFastMode = currentFastMode
@@ -1153,11 +1165,39 @@ fun EmulatorScreen(startWithStorageOpen: Boolean = false) {
             onCpuSpeedChange = {
                 cpuSpeedSetting = it
                 setPersistedString("cpu_speed_mhz", it.toString())
-                val frequency = it.coerceAtMost(8) * 1_000_000
+                val model = TerminalManager.computerModel
+                val frequency = model.cpuFrequencyHz(it)
                 nativeLib.setFastSpeed(it == 9)
                 nativeLib.setCpuFrequency(frequency)
-                currentCpuMHz = if (it == 9) "MAX" else "$it.0 MHz"
+                currentCpuMHz = model.cpuSpeedLabel(it)
                 TerminalManager.cpuSpeed = currentCpuMHz
+            },
+            onComputerModelChange = { model ->
+                scope.launch {
+                    val previousModel = TerminalManager.computerModel
+                    val wasFrozen = nativeLib.isFrozen()
+                    nativeLib.freeze(true)
+                    try {
+                        TerminalManager.computerModel = model
+                        assembler.loadRomFiles()
+                        nativeLib.resetCpu()
+                    } catch (e: Exception) {
+                        TerminalManager.computerModel = previousModel
+                        Abc80Log.wtf("Computer model change failed: ${e.message}")
+                        snackbarHostState.showSnackbar(
+                            listOfNotNull(computerModelChangeFailed, e.message).joinToString(" ")
+                        )
+                        return@launch
+                    } finally {
+                        if (!wasFrozen) nativeLib.freeze(false)
+                    }
+                    cpuSpeedSetting = model.defaultCpuSpeedSetting
+                    setPersistedString("cpu_speed_mhz", cpuSpeedSetting.toString())
+                    nativeLib.setFastSpeed(false)
+                    nativeLib.setCpuFrequency(model.cpuFrequencyHz(cpuSpeedSetting))
+                    currentCpuMHz = model.cpuSpeedLabel(cpuSpeedSetting)
+                    TerminalManager.cpuSpeed = currentCpuMHz
+                }
             },
             onDismiss = {
                 showCpuAndFps = getPersistedString("show_cpu_and_fps", "true").toBoolean()
@@ -1399,6 +1439,25 @@ private fun handleTerminalKeyEvent(
     }
 
     if (!activeTerminal.isSetupVisible) {
+        if (TerminalManager.computerModel == ComputerModel.ABC800M) {
+            if (key == Key.Enter || key == Key.NumPadEnter) charValue = '\r'
+            val code = charValue?.let {
+                if (isCtrl) when (val value = it.code) {
+                    in 97..122 -> value - 96
+                    in 65..90 -> value - 64
+                    '['.code -> 0x1b
+                    ']'.code -> 0x1d
+                    '\\'.code -> 0x1c
+                    '^'.code -> 0x1e
+                    '_'.code -> 0x1f
+                    else -> value
+                } else it.code
+            }
+            if (code != null) {
+                if (type == KeyEventType.KeyDown) NativeLib.getObject().sendKey(code)
+                return true
+            }
+        }
         val upperCase = activeTerminal.keyboard.leds["upper_case"]?.isOn == true
         val code = abc80KeyCode(key, charValue, isShift || upperCase, isCtrl)
         if (code != null) {

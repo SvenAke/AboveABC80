@@ -1,5 +1,8 @@
 package com.aboveware.aboveabc80
 
+import com.aboveware.aboveabc80.terminal.ComputerModel
+import com.aboveware.aboveabc80.terminal.TerminalManager
+
 /** The ABC80 cassette recorder: PIO port B on I/O ports 0x39-0x3B plus hooks into the monitor ROM. */
 @OptIn(ExperimentalUnsignedTypes::class)
 class Abc80CassettePlayer {
@@ -33,6 +36,7 @@ class Abc80CassettePlayer {
     private fun hook(address: Int, action: () -> Unit) {
         NativeLib.getObject().addMemoryReadWatcher(address, object : NativeLib.MemoryReadWatcher {
             override fun onRead(address: Int): Boolean {
+                if (TerminalManager.computerModel != ComputerModel.ABC80) return false
                 action()
                 return false
             }
@@ -52,11 +56,16 @@ class Abc80CassettePlayer {
         hook(0x04e2) { tape.found() }
         hook(0x04e5) { tape.found() }
         hook(0x053f) { lib.setZeroFlag(Abc80CassetteStatus.cancelled) }
-        // Shortens the bit delay when loading to nothing
-        lib.patchMemory(5 * 256 + 159, 0x01)
+        setEnabled(TerminalManager.computerModel == ComputerModel.ABC80)
+    }
+
+    fun setEnabled(enabled: Boolean) {
+        // Shortens the bit delay when loading to nothing on the ABC80 only.
+        NativeLib.getObject().patchMemory(5 * 256 + 159, if (enabled) 0x01 else -1)
     }
 
     fun write(port: Int, data: Int) {
+        if (TerminalManager.computerModel != ComputerModel.ABC80) return
         when (port) {
             portControlB -> pioB.write(data.toUByte())
             portControlA -> {}
@@ -75,7 +84,7 @@ class Abc80CassettePlayer {
     }
 
     fun read(port: Int): Int =
-        if (port == portData) {
+        if (TerminalManager.computerModel == ComputerModel.ABC80 && port == portData) {
             if (reading && pioB.isInterruptEnabled) tape.read().toInt() else pioB.data.toInt()
         } else 0xFF
 }
