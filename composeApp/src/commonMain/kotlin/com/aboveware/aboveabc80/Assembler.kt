@@ -28,7 +28,7 @@ class Assembler {
                 i = 0, r = 0, iff1 = 0, iff2 = 0, im = 0, tStates = 0,
                 holdIntReqCycles = 0, flags = 0, memPtr = 0
             ))
-            if (TerminalManager.computerModel == ComputerModel.ABC800M) {
+            if (TerminalManager.computerModel.isAbc800) {
                 lib.clearAbc800MTextScreen()
             }
         } finally {
@@ -40,13 +40,13 @@ class Assembler {
         val previousMemory = memory.copyOf()
         try {
             val model = TerminalManager.computerModel
-            require(model != ComputerModel.ABC800C) {
-                "ABC800C hardware emulation is not implemented"
-            }
             memory.fill(0)
             val nativeLib = NativeLib.getObject()
-            if (model == ComputerModel.ABC800M) {
+            if (model.isAbc800) {
                 loadRom("files/basic800.rom", 0x0000, 0x6000)
+                if (model == ComputerModel.ABC800C) {
+                    loadRom("files/basic800c.rom", 0x0000, 0x1000)
+                }
                 loadRom("files/dos800.rom", 0x6000, 0x1000)
                 loadRom("files/opt800.rom", 0x7000, 0x1000)
                 require(Res.readBytes("files/font800.bin").size == 0x800) {
@@ -66,6 +66,9 @@ class Assembler {
             )
             nativeLib.cassettePlayer.setEnabled(model == ComputerModel.ABC80)
             nativeLib.setAbc800MEnabled(model == ComputerModel.ABC800M)
+            if (model == ComputerModel.ABC800C) {
+                nativeLib.setAbc800CEnabled(true)
+            }
             nativeLib.copyToMemory(0, memory)
         } catch (e: Exception) {
             previousMemory.copyInto(memory)

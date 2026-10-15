@@ -26,6 +26,7 @@
 /* 64Kb of RAM, first 16kb is ROM */
 std::uint8_t memory[0x10000];
 std::atomic<bool> g_abc800m_active{false};
+static std::atomic<bool> g_abc800c_active{false};
 
 static std::array<std::uint8_t, 0x4000> g_abc800m_video_ram{};
 static std::array<std::uint8_t, 0x800> g_abc800m_character_ram{};
@@ -43,6 +44,10 @@ static bool g_abc800m_dart_expect_register[2]{};
 static std::atomic<bool> g_abc800m_dart_rx_irq_enabled{false};
 static std::atomic<bool> g_abc800m_dart_irq_pending{false};
 static std::uint8_t g_abc800m_highres_control[2]{};
+
+static inline std::size_t abc800_character_ram_mask() {
+    return g_abc800c_active.load(std::memory_order_relaxed) ? 0x3ff : 0x7ff;
+}
 
 bool running = true;
 std::atomic<bool> g_cpu_paused{false};
@@ -294,7 +299,7 @@ libspectrum_byte readByte(libspectrum_word address) {
             return g_abc800m_video_ram[address];
         }
         if (address >= 0x7800 && address < 0x8000 && !g_abc800m_character_fetch)
-            return g_abc800m_character_ram[address - 0x7800];
+            return g_abc800m_character_ram[(address - 0x7800) & abc800_character_ram_mask()];
     }
     return memory[address];
 }
@@ -313,7 +318,7 @@ libspectrum_byte readByteInternal(libspectrum_word address) {
             return g_abc800m_video_ram[address];
         }
         if (address >= 0x7800 && address < 0x8000 && !g_abc800m_character_fetch)
-            return g_abc800m_character_ram[address - 0x7800];
+            return g_abc800m_character_ram[(address - 0x7800) & abc800_character_ram_mask()];
     }
     return memory[address];
 }
@@ -335,7 +340,7 @@ void writeByteInternal(libspectrum_word address, libspectrum_byte b) {
         }
         if (address >= 0x7800 && address < 0x8000) {
             Abc800Lock lock(g_abc800m_character_ram_lock);
-            g_abc800m_character_ram[address - 0x7800] = b;
+            g_abc800m_character_ram[(address - 0x7800) & abc800_character_ram_mask()] = b;
             return;
         }
         if (address < 0x8000) return;
@@ -346,8 +351,9 @@ void writeByteInternal(libspectrum_word address, libspectrum_byte b) {
 extern "C" {
 void abc800m_clear_text_screen();
 
-void abc800m_set_enabled(bool enabled) {
+static void abc800_set_enabled(bool enabled, bool color_model) {
     g_abc800m_active.store(enabled, std::memory_order_relaxed);
+    g_abc800c_active.store(enabled && color_model, std::memory_order_relaxed);
     {
         Abc800Lock lock(g_abc800m_video_ram_lock);
         g_abc800m_video_ram.fill(0);
@@ -370,6 +376,14 @@ void abc800m_set_enabled(bool enabled) {
     std::memset(g_abc800m_dart_expect_register, 0, sizeof(g_abc800m_dart_expect_register));
     g_abc800m_dart_rx_irq_enabled.store(false, std::memory_order_relaxed);
     g_abc800m_dart_irq_pending.store(false, std::memory_order_relaxed);
+}
+
+void abc800m_set_enabled(bool enabled) {
+    abc800_set_enabled(enabled, false);
+}
+
+void abc800c_set_enabled(bool enabled) {
+    abc800_set_enabled(enabled, true);
 }
 
 void abc800m_clear_text_screen() {
@@ -407,7 +421,8 @@ std::uint8_t abc800m_read_port(int port) {
         g_abc800m_dart_selected[channel] = 0;
         return value;
     }
-    if (port == 0x31 || port == 0x35 || port == 0x39 || port == 0x3d) {
+    if (!g_abc800c_active.load(std::memory_order_relaxed) &&
+        (port == 0x31 || port == 0x35 || port == 0x39 || port == 0x3d)) {
         Abc800Lock lock(g_abc800m_crtc_lock);
         return g_abc800m_crtc_registers[g_abc800m_crtc_address % g_abc800m_crtc_registers.size()];
     }
@@ -419,7 +434,8 @@ std::uint8_t abc800m_read_port(int port) {
 bool abc800m_owns_port_read(int port) {
     port &= 0xff;
     return (port >= 0x20 && port <= 0x2f) ||
-           port == 0x31 || port == 0x35 || port == 0x39 || port == 0x3d ||
+           (!g_abc800c_active.load(std::memory_order_relaxed) &&
+            (port == 0x31 || port == 0x35 || port == 0x39 || port == 0x3d)) ||
            (port >= 0x60 && port <= 0x6f) || port == 0x05 || port == 0x06;
 }
 
@@ -450,12 +466,14 @@ void abc800m_write_port(int port, int value) {
         }
         return;
     }
-    if (port == 0x38 || port == 0x3c) {
+    if (!g_abc800c_active.load(std::memory_order_relaxed) &&
+        (port == 0x38 || port == 0x3c)) {
         Abc800Lock lock(g_abc800m_crtc_lock);
         g_abc800m_crtc_address = static_cast<std::uint8_t>(value & 0x1f);
         return;
     }
-    if (port == 0x39 || port == 0x3d) {
+    if (!g_abc800c_active.load(std::memory_order_relaxed) &&
+        (port == 0x39 || port == 0x3d)) {
         Abc800Lock lock(g_abc800m_crtc_lock);
         if (g_abc800m_crtc_address < g_abc800m_crtc_registers.size())
             g_abc800m_crtc_registers[g_abc800m_crtc_address] = static_cast<std::uint8_t>(value);
@@ -476,6 +494,18 @@ void abc800m_copy_text_screen(std::uint8_t *destination) {
                       g_abc800m_crtc_registers[13];
     for (int i = 0; i < 80 * 24; ++i)
         destination[i] = g_abc800m_character_ram[(start + i) & 0x7ff];
+}
+
+void abc800c_copy_text_screen(std::uint8_t *destination) {
+    Abc800Lock lock(g_abc800m_character_ram_lock);
+    for (int row = 0; row < 24; ++row) {
+        for (int column = 0; column < 40; ++column) {
+            int offset = ((row & 0x07) * 0x80) + column;
+            if (row & 0x08) offset += 0x28;
+            if (row & 0x10) offset += 0x50;
+            destination[row * 40 + column] = g_abc800m_character_ram[offset & 0x3ff];
+        }
+    }
 }
 
 void abc800m_copy_high_resolution_screen(std::uint8_t *destination) {

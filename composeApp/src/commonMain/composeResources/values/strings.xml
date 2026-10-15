@@ -75,7 +75,7 @@
     <string name="settings_save_state">Spara tillstånd</string>
     <string name="settings_load_state">Läs in tillstånd</string>
     <string name="settings_computer_model">Datormodell</string>
-    <string name="settings_computer_model_notice">ABC800M-emuleringen är experimentell. Diskettstationer, seriella enheter och högupplöst grafik emuleras inte. ABC800C stöds ännu inte.</string>
+    <string name="settings_computer_model_notice">ABC800M-emuleringen är experimentell. ABC800C har experimentellt stöd för BASIC, diskettåtkomst och grundläggande färggrafik. Spelet Laborantens dilemma ingår inte på den inbyggda systemdisketten; montera en diskett som innehåller spelet. Fullständig färgemulering och seriella enheter stöds inte.</string>
     <string name="settings_computer_model_change_failed">Kunde inte byta datormodell.</string>
     <string name="settings_terminal_color">Terminalfärg</string>
     <string name="settings_color_green">Grön</string>

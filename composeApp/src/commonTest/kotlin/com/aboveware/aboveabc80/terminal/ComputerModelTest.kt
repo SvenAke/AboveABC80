@@ -11,6 +11,9 @@ class ComputerModelTest {
         assertFalse(ComputerModel.ABC80.isWideScreen(false))
         assertTrue(ComputerModel.ABC800M.isWideScreen(false))
         assertFalse(ComputerModel.ABC800C.isWideScreen(true))
+        assertFalse(ComputerModel.ABC80.isAbc800)
+        assertTrue(ComputerModel.ABC800M.isAbc800)
+        assertTrue(ComputerModel.ABC800C.isAbc800)
 
         assertEquals(3_000_000, ComputerModel.ABC80.cpuFrequencyHz(3))
         assertEquals(3_580_000, ComputerModel.ABC800M.cpuFrequencyHz(4))

@@ -185,6 +185,8 @@ class NativeLib {
     private external fun getMemoryNative(): ByteArray
     fun getAbc800MTextScreen(): ByteArray = getAbc800MTextScreenNative()
     private external fun getAbc800MTextScreenNative(): ByteArray
+    fun getAbc800CTextScreen(): ByteArray = getAbc800CTextScreenNative()
+    private external fun getAbc800CTextScreenNative(): ByteArray
     fun getAbc800MHighResolutionScreen(): ByteArray = getAbc800MHighResolutionScreenNative()
     private external fun getAbc800MHighResolutionScreenNative(): ByteArray
     fun getAbc800MHighResolutionControl(): Int = getAbc800MHighResolutionControlNative()
@@ -197,6 +199,8 @@ class NativeLib {
     private external fun getAbc800MCursorRasterRangeNative(): Int
     fun setAbc800MEnabled(enabled: Boolean) = setAbc800MEnabledNative(enabled)
     private external fun setAbc800MEnabledNative(enabled: Boolean)
+    fun setAbc800CEnabled(enabled: Boolean) = setAbc800CEnabledNative(enabled)
+    private external fun setAbc800CEnabledNative(enabled: Boolean)
     fun resetCpu() = resetCpuNative()
     private external fun resetCpuNative()
 

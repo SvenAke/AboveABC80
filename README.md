@@ -39,7 +39,11 @@ in your IDE’s toolbar or run it directly from the terminal:
 
 ### Startup
 
-The application runs ABC80 only. Reset reloads the ABC80 ROMs and resets the
+The application supports ABC80, ABC800M and ABC800C. ABC800C uses the C-12
+model-specific BASIC ROM (`basic800c.rom`, 4 KB at 0x0000), together with the
+shared revision-12 BASIC blocks at 0x1000-0x5FFF from `basic800.rom`.
+ABC800M uses `basic800.rom` unchanged. The models share the DOS and option ROMs.
+Reset reloads the selected model's ROMs and resets the
 Z80 registers. The debugger uses the bundled ABC80 ROM disassembly, with
 breakpoints, pause/resume and single stepping. Disk capacity and file export
 use the ABC80 filesystem.

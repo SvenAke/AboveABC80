@@ -32,11 +32,7 @@ class ABC800MScreenResetTest {
         } finally {
             nativeLib.freeze()
             TerminalManager.computerModel = previousModel
-            if (previousModel == ComputerModel.ABC800C) {
-                nativeLib.setAbc800MEnabled(false)
-            } else {
-                Assembler.instance.loadRomFiles()
-            }
+            Assembler.instance.loadRomFiles()
             nativeLib.resetCpu()
             nativeLib.freeze(false)
         }

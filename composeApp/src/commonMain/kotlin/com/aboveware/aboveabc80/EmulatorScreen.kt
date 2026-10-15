@@ -260,7 +260,7 @@ fun EmulatorScreen(startWithStorageOpen: Boolean = false) {
     val clipboardManager = LocalClipboardManager.current
     var recallingCommand by remember { mutableStateOf(false) }
     fun recallCommand(code: Int): Boolean {
-        if (TerminalManager.computerModel == ComputerModel.ABC800M) return false
+        if (TerminalManager.computerModel.isAbc800) return false
         if (code != 10 && code != 11) return false
         if (!nativeLib.commandHistory.atPrompt || TerminalManager.activeTerminal.isSetupVisible) return false
         if (recallingCommand) return true
@@ -334,7 +334,7 @@ fun EmulatorScreen(startWithStorageOpen: Boolean = false) {
         val touchKeys = java.util.concurrent.ConcurrentHashMap<String, Int>()
         val touchCode = ThreadLocal<String>()
         activeTerminal.onKeyInput = { char ->
-            if (TerminalManager.computerModel == ComputerModel.ABC800M) {
+            if (TerminalManager.computerModel.isAbc800) {
                 abc800mKeyCode(char)?.let(nativeLib::sendKey)
             } else {
                 val code = if (char.code in 0..31) char.code else abc80CharCode(char)
@@ -373,7 +373,7 @@ fun EmulatorScreen(startWithStorageOpen: Boolean = false) {
         keyboard.onCharacter = { char ->
             if (activeTerminal.isSetupVisible) {
                 activeTerminal.onKeyEvent(char)
-            } else if (TerminalManager.computerModel == ComputerModel.ABC800M) {
+            } else if (TerminalManager.computerModel.isAbc800) {
                 abc800mKeyCode(char)?.let(nativeLib::sendKey)
             } else {
                 abc80CharCode(char)?.let { if (!recallCommand(it)) nativeLib.pressKey(it) }
@@ -381,7 +381,7 @@ fun EmulatorScreen(startWithStorageOpen: Boolean = false) {
             activeTerminal.triggerClick()
         }
         keyboard.onCharacterReleased = { char ->
-            if (TerminalManager.computerModel != ComputerModel.ABC800M)
+            if (!TerminalManager.computerModel.isAbc800)
                 abc80CharCode(char)?.let { nativeLib.releaseKey(it) }
         }
 
@@ -1490,7 +1490,7 @@ private fun handleTerminalKeyEvent(
     }
 
     if (!activeTerminal.isSetupVisible) {
-        if (TerminalManager.computerModel == ComputerModel.ABC800M) {
+        if (TerminalManager.computerModel.isAbc800) {
             if (key == Key.Enter || key == Key.NumPadEnter) charValue = '\r'
             val code = charValue?.let { abc800mKeyCode(it, isCtrl) }
             if (code != null) {

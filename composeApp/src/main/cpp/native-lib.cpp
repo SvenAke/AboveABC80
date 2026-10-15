@@ -37,11 +37,13 @@ extern std::uint8_t memory[0x10000];
 extern std::atomic<bool> g_cpu_paused;
 extern std::atomic<bool> g_abc800m_active;
 extern "C" void abc800m_set_enabled(bool enabled);
+extern "C" void abc800c_set_enabled(bool enabled);
 extern "C" void abc800m_clear_text_screen();
 extern "C" std::uint8_t abc800m_read_port(int port);
 extern "C" bool abc800m_owns_port_read(int port);
 extern "C" void abc800m_write_port(int port, int value);
 extern "C" void abc800m_copy_text_screen(std::uint8_t *destination);
+extern "C" void abc800c_copy_text_screen(std::uint8_t *destination);
 extern "C" void abc800m_copy_high_resolution_screen(std::uint8_t *destination);
 extern "C" int abc800m_high_resolution_control();
 extern "C" int abc800m_cursor_position();
@@ -199,6 +201,16 @@ Java_com_aboveware_aboveabc80_NativeLib_getAbc800MTextScreenNative(JNIEnv *env, 
 }
 
 JNIEXPORT jbyteArray JNICALL
+Java_com_aboveware_aboveabc80_NativeLib_getAbc800CTextScreenNative(JNIEnv *env, jobject) {
+    jbyteArray result = env->NewByteArray(40 * 24);
+    if (!result) return nullptr;
+    jbyte text[40 * 24];
+    abc800c_copy_text_screen(reinterpret_cast<std::uint8_t *>(text));
+    env->SetByteArrayRegion(result, 0, 40 * 24, text);
+    return result;
+}
+
+JNIEXPORT jbyteArray JNICALL
 Java_com_aboveware_aboveabc80_NativeLib_getAbc800MHighResolutionScreenNative(JNIEnv *env, jobject) {
     constexpr jsize size = 64 * 240;
     jbyteArray result = env->NewByteArray(size);
@@ -227,6 +239,11 @@ Java_com_aboveware_aboveabc80_NativeLib_getAbc800MCursorRasterRangeNative(JNIEnv
 JNIEXPORT void JNICALL
 Java_com_aboveware_aboveabc80_NativeLib_setAbc800MEnabledNative(JNIEnv *, jobject, jboolean enabled) {
     abc800m_set_enabled(enabled == JNI_TRUE);
+}
+
+JNIEXPORT void JNICALL
+Java_com_aboveware_aboveabc80_NativeLib_setAbc800CEnabledNative(JNIEnv *, jobject, jboolean enabled) {
+    abc800c_set_enabled(enabled == JNI_TRUE);
 }
 
 JNIEXPORT void JNICALL

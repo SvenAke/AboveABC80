@@ -49,11 +49,14 @@ enum class ComputerModel(
         4,
         Color(0xFF57C6F8),
         Color.Black,
-        Color(0xFFDFAD75)
+        Color(0xFFB17C45)
     );
 
     fun isWideScreen(abc80WideScreen: Boolean): Boolean =
         fixedWideScreen ?: abc80WideScreen
+
+    val isAbc800: Boolean
+        get() = this != ABC80
 
     val storageDirectoryName: String
         get() = when (this) {
