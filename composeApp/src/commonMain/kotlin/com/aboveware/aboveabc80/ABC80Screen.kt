@@ -35,6 +35,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.Alignment
@@ -244,6 +245,7 @@ internal const val ABC800C_HIGH_RESOLUTION_WIDTH = 240
 internal const val ABC800C_HIGH_RESOLUTION_HEIGHT = 240
 internal const val ABC800C_TEXT_CELL_WIDTH = 12
 internal const val ABC800C_TEXT_CELL_HEIGHT = 20
+internal const val ABC800C_DISPLAY_ASPECT_RATIO = 4f / 3f
 
 internal val ABC800C_PALETTE = listOf(
     Color.Black,
@@ -274,12 +276,13 @@ private fun expandABC800CSixBitRow(bits: Int): Int {
 
 private fun abc800CGlyphRow(font: ByteArray, code: Int, rasterRow: Int, doubleHeight: Boolean, bottomHalf: Boolean): Int {
     if (rasterRow !in 0 until ABC800C_TEXT_CELL_HEIGHT) return 0
-    val sourceRow = if (doubleHeight) {
-        val teletextRow = rasterRow / 2 + if (bottomHalf) 10 else 0
-        (teletextRow * 16) / ABC800C_TEXT_CELL_HEIGHT
-    } else {
-        (rasterRow * 16) / ABC800C_TEXT_CELL_HEIGHT
-    }.coerceIn(0, 15)
+    val teletextRow = if (doubleHeight) {
+        rasterRow / 2 + if (bottomHalf) 10 else 0
+    } else rasterRow
+    // VUM SE has nine glyph rows followed by padding, not sixteen glyph rows.
+    // Fit those rows below one blank row in the ten-row teletext character cell.
+    val sourceRow = teletextRow / 2 - 1
+    if (sourceRow !in 0..8) return 0
     val bits = font[(code and 0x7f) * 16 + sourceRow].toInt() and 0x3f
     return expandABC800CSixBitRow(bits)
 }
@@ -318,7 +321,7 @@ private fun abc800CGraphicsRow(code: Int, rasterRow: Int, separated: Boolean): I
     return rowBits
 }
 
-private fun renderABC800CTextBitmap(characterRam: ByteArray, font: ByteArray, flashVisible: Boolean): ImageBitmap {
+internal fun renderABC800CTextBitmap(characterRam: ByteArray, font: ByteArray, flashVisible: Boolean): ImageBitmap {
     require(characterRam.size >= 40 * ABC80_SCREEN_ROWS) {
         "ABC800C screen requires 960 character bytes"
     }
@@ -537,6 +540,7 @@ internal fun ABC80Screen(
         var previousHighResolutionVideoRam: ByteArray? = null
         var previousABC800CControl: Int? = null
         var previousABC800CCharacterRam: ByteArray? = null
+        var previousABC800CFlashVisible: Boolean? = null
         while (true) {
             if (isAbc800M) {
                 abc800cTextBitmap = null
@@ -608,9 +612,10 @@ internal fun ABC80Screen(
                 if (abc800Font != null &&
                     (previousABC800CCharacterRam?.contentEquals(characterRam) != true ||
                         abc800cTextBitmap == null ||
-                        ticks % 60 == 0)
+                        previousABC800CFlashVisible != flashVisible)
                 ) {
                     previousABC800CCharacterRam = characterRam
+                    previousABC800CFlashVisible = flashVisible
                     abc800cTextBitmap = renderABC800CTextBitmap(characterRam, abc800Font!!, flashVisible)
                 }
                 if (previousHighResolutionVideoRam?.contentEquals(videoRam) != true ||
@@ -686,7 +691,10 @@ internal fun ABC80Screen(
         modifier.fillMaxSize().background(model.caseColor).padding(BEZEL_WIDTH),
         contentAlignment = Alignment.Center
     ) {
-        Box(Modifier.aspectRatio((columns * cw).toFloat() / (ABC80_SCREEN_ROWS * ch))
+        // The ABC800C's 480x480 raster uses non-square pixels on a 4:3 monitor.
+        val displayAspectRatio = if (isAbc800C) ABC800C_DISPLAY_ASPECT_RATIO
+            else (columns * cw).toFloat() / (ABC80_SCREEN_ROWS * ch)
+        Box(Modifier.aspectRatio(displayAspectRatio)
             .fillMaxSize()) {
         Canvas(Modifier
             .fillMaxSize()
@@ -749,7 +757,7 @@ internal fun ABC80Screen(
                     )
                 }
             }
-            if (abc800TextVisible && isAbc800C && selection.range == null) {
+            if (abc800TextVisible && isAbc800C) {
                 abc800cTextBitmap?.let { bitmap ->
                     drawImage(
                         image = bitmap,
@@ -757,6 +765,16 @@ internal fun ABC80Screen(
                             (columns * cw * px).toInt(),
                             (ABC80_SCREEN_ROWS * ch * py).toInt()
                         )
+                    )
+                }
+                selection.range?.forEach { cell ->
+                    val row = cell / columns
+                    val column = cell % columns
+                    drawRect(
+                        color = Color.White,
+                        topLeft = Offset(column * cw * px, row * ch * py),
+                        size = Size(cw * px, ch * py),
+                        blendMode = BlendMode.Difference
                     )
                 }
             } else if (abc800TextVisible) rows.forEachIndexed { r, line ->
@@ -775,18 +793,6 @@ internal fun ABC80Screen(
                                     if (selected) model.screenBackgroundColor else model.screenColor,
                                     Offset((c * cw + x) * px, (r * ch + y) * py),
                                     pixel
-                                )
-                            }
-                        }
-                    } else if (isAbc800C) {
-                        val font = abc800Font ?: return@forEachIndexed
-                        for (y in 0 until 16) {
-                            val bits = font[(char.code and 0x7f) * 16 + y].toInt() and 0x3f
-                            for (x in 0 until 6) {
-                                if (bits and (1 shl (5 - x)) != 0) drawRect(
-                                    if (selected) model.screenBackgroundColor else model.screenColor,
-                                    Offset((c * cw + x * 2) * px, (r * ch + y * 1.25f) * py),
-                                    Size(2 * px, 1.25f * py)
                                 )
                             }
                         }

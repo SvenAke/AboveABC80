@@ -78,6 +78,7 @@ class ABC800MScreenTest {
     fun ABC800CTextCellsMatchIts480By480DisplayRaster() {
         assertEquals(480, 40 * ABC800C_TEXT_CELL_WIDTH)
         assertEquals(480, 24 * ABC800C_TEXT_CELL_HEIGHT)
+        assertEquals(4f / 3f, ABC800C_DISPLAY_ASPECT_RATIO)
     }
 
     @Test

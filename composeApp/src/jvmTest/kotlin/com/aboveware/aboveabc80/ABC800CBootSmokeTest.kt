@@ -58,6 +58,27 @@ class ABC800CBootSmokeTest {
                 inputRows[commandRow + 1].startsWith("Error"),
                 "ABC800C did not show a BASIC error after Return:\n${inputRows.joinToString("\n")}"
             )
+            "ddd".forEach {
+                nativeLib.sendKey(it.code)
+                delay(50)
+            }
+            suspend fun cursorPhases(samples: Int): Set<Int> {
+                val cursorCodes = mutableSetOf<Int>()
+                repeat(samples) {
+                    val screen = nativeLib.getAbc800CTextScreen()
+                    val rows = decodeABC800CScreen(screen)
+                    val row = rows.indexOfFirst { it.startsWith("ddd") }
+                    assertTrue(row >= 0, "ABC800C did not echo ddd")
+                    assertEquals("ddd", rows[row].take(3))
+                    cursorCodes.add(screen[row * 40 + 3].toInt() and 0xff)
+                    delay(50)
+                }
+                return cursorCodes
+            }
+            assertEquals(setOf(0x20, 0xa0), cursorPhases(60), "ABC800C cursor did not initially blink")
+            // C-12 deliberately stops blinking after its idle blink counter expires.
+            delay(12_000)
+            assertEquals(setOf(0xa0), cursorPhases(40), "ABC800C did not preserve the ROM's steady idle cursor")
         } finally {
             nativeLib.freeze(true)
             TerminalManager.computerModel = previousModel

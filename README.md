@@ -43,6 +43,15 @@ The application supports ABC80, ABC800M and ABC800C. ABC800C uses the C-12
 model-specific BASIC ROM (`basic800c.rom`, 4 KB at 0x0000), together with the
 shared revision-12 BASIC blocks at 0x1000-0x5FFF from `basic800.rom`.
 ABC800M uses `basic800.rom` unchanged. The models share the DOS and option ROMs.
+ABC800C's 480x480 text raster is displayed at 4:3 with non-square pixels.
+Its cursor is the firmware-controlled inverse character in screen RAM, not
+a separately positioned UI cursor. Selection preserves that rendering path.
+The C-12 firmware initially blinks the cursor, then leaves it steadily visible
+after its idle blink counter expires; the emulator preserves this behavior.
+The C-model glyphs still approximate the SAA5052 using the VUM SE font;
+its nine glyph rows are doubled below a blank row in the ten-row teletext
+cell, excluding VUM SE's trailing padding. They are not yet an accurate
+SAA5052 character set.
 Reset reloads the selected model's ROMs and resets the
 Z80 registers. The debugger uses the bundled ABC80 ROM disassembly, with
 breakpoints, pause/resume and single stepping. Disk capacity and file export
