@@ -28,7 +28,7 @@ class ABC80 : Terminal {
     override var autoRepeatMode: Boolean by mutableStateOf(true)
     override var holdScreen: Boolean by mutableStateOf(false)
     override val backgroundColor: Color = Color(0xFF6D9BC3)
-    override val keyboardXmlResId: Int get() = ABC80_LAYOUT_ID
+    override val keyboardXmlResId: Int get() = TerminalManager.computerModel.keyboardLayoutId
     override val keyboard: TerminalKeyboard = ABC80TerminalKeyboard(this)
     override val tabulator: Tabulator = Tabulator()
     override val conformanceLevel: Int = 0

@@ -39,6 +39,13 @@ in your IDE’s toolbar or run it directly from the terminal:
 
 ### Startup
 
+Android on-screen keyboards use model-selected XML resources:
+`composeApp/src/androidMain/res/xml/abc80.xml` for ABC80 and
+`composeApp/src/androidMain/res/xml/abc800.xml` shared by ABC800M/C.
+The ABC800 XML is currently a placeholder preserving the existing keys and
+codes, ready for its own hardware layout. Changing models reloads the keyboard.
+This separation does not change physical keyboard mappings.
+
 The application supports ABC80, ABC800M and ABC800C. ABC800C uses the C-12
 model-specific BASIC ROM (`basic800c.rom`, 4 KB at 0x0000), together with the
 shared revision-12 BASIC blocks at 0x1000-0x5FFF from `basic800.rom`.

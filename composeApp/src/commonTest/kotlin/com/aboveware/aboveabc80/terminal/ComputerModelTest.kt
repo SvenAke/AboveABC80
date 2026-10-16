@@ -4,8 +4,17 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import kotlin.test.assertNotEquals
 
 class ComputerModelTest {
+    @Test
+    fun keyboardLayoutsSeparateAbc80FromTheAbc800Family() {
+        assertEquals(ABC80_LAYOUT_ID, ComputerModel.ABC80.keyboardLayoutId)
+        assertEquals(ABC800_LAYOUT_ID, ComputerModel.ABC800M.keyboardLayoutId)
+        assertEquals(ComputerModel.ABC800M.keyboardLayoutId, ComputerModel.ABC800C.keyboardLayoutId)
+        assertNotEquals(ComputerModel.ABC80.keyboardLayoutId, ComputerModel.ABC800C.keyboardLayoutId)
+    }
+
     @Test
     fun modelProfilesProvideTheirTextWidthsAndClocks() {
         assertFalse(ComputerModel.ABC80.isWideScreen(false))

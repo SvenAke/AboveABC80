@@ -33,6 +33,18 @@ class KeyboardLayoutTest {
 
     private lateinit var context: Context
 
+    @Test
+    fun abc800PlaceholderLoadsWithTheExistingKeyCodes() {
+        val abc80 = KeyboardViewController(context, R.xml.abc80)
+        val abc800 = KeyboardViewController(context, R.xml.abc800)
+        assertTrue(abc800.keys.isNotEmpty())
+        assertTrue(abc800.minWidth > 0)
+        assertTrue(abc800.height > 0)
+        assertEquals(abc80.keys.map { it.codes }, abc800.keys.map { it.codes })
+        assertEquals(abc80.minWidth, abc800.minWidth)
+        assertEquals(abc80.height, abc800.height)
+    }
+
     @Before
     fun setup() {
         context = ApplicationProvider.getApplicationContext()
