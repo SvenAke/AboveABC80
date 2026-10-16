@@ -52,6 +52,11 @@ The C-model glyphs still approximate the SAA5052 using the VUM SE font;
 its nine glyph rows are doubled below a blank row in the ten-row teletext
 cell, excluding VUM SE's trailing padding. They are not yet an accurate
 SAA5052 character set.
+ABC800C high-resolution graphics use the bundled HRU-II PROM (`hru800c.bin`)
+for all four pixel values in the selected palette. PROM bit 3 preserves
+non-black text pixels; when cleared, the graphics color covers text.
+Graphics color zero leaves the text layer unchanged. The scanline offset
+and text-disable bit are applied when composing the 480x480 display.
 Reset reloads the selected model's ROMs and resets the
 Z80 registers. The debugger uses the bundled ABC80 ROM disassembly, with
 breakpoints, pause/resume and single stepping. Disk capacity and file export

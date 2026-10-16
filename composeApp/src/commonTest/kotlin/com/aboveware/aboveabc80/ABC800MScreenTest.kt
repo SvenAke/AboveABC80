@@ -82,20 +82,29 @@ class ABC800MScreenTest {
     }
 
     @Test
-    fun decodesABC800CGraphicsWithTheSelectedPaletteColor() {
+    fun decodesABC800CGraphicsWithPromColorsAndPriority() {
         val videoRam = ByteArray(64 * 240)
         videoRam[0] = 0b00_01_10_11.toByte()
+        val prom = ByteArray(512)
+        byteArrayOf(0, 9, 10, 12).copyInto(prom, 2 * 4)
 
-        val pixels = decodeABC800CHighResolutionScreen(videoRam, 2 shl 8)
+        val pixels = decodeABC800CHighResolutionScreen(videoRam, 2 shl 8, prom)
 
         assertEquals(240 * 240, pixels.size)
-        assertEquals(listOf(0, 2, 2, 2), (0..3).map { pixels[it].toInt() })
+        assertEquals(listOf(0, 9, 10, 12), (0..3).map { pixels[it].toInt() })
     }
 
     @Test
     fun rejectsShortABC800CGraphicsMemory() {
         assertFailsWith<IllegalArgumentException> {
-            decodeABC800CHighResolutionScreen(ByteArray(64 * 240 - 1), 0)
+            decodeABC800CHighResolutionScreen(ByteArray(64 * 240 - 1), 0, ByteArray(512))
+        }
+    }
+
+    @Test
+    fun rejectsWrongABC800CColorPromSize() {
+        assertFailsWith<IllegalArgumentException> {
+            decodeABC800CHighResolutionScreen(ByteArray(64 * 240), 0, ByteArray(511))
         }
     }
 

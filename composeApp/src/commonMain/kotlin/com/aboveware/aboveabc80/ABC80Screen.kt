@@ -17,6 +17,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.graphics.Canvas as ImageCanvas
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -474,12 +475,13 @@ internal fun decodeABC800CScreen(characterRam: ByteArray): List<String> {
     }
 }
 
-internal fun decodeABC800CHighResolutionScreen(videoRam: ByteArray, control: Int): ByteArray {
+internal fun decodeABC800CHighResolutionScreen(videoRam: ByteArray, control: Int, colorProm: ByteArray): ByteArray {
     val requiredSize = ABC800M_HIGH_RESOLUTION_BYTES_PER_ROW * ABC800C_HIGH_RESOLUTION_HEIGHT
     require(videoRam.size >= requiredSize) {
         "ABC800C high-resolution screen requires $requiredSize video bytes"
     }
-    val color = (control ushr 8 and 0x07).takeIf { it != 0 } ?: 7
+    require(colorProm.size == 512) { "ABC800C graphics color PROM must be 512 bytes" }
+    val paletteOffset = ((control ushr 8) and 0x7f) * 4
     return ByteArray(ABC800C_HIGH_RESOLUTION_WIDTH * ABC800C_HIGH_RESOLUTION_HEIGHT).also { pixels ->
         for (y in 0 until ABC800C_HIGH_RESOLUTION_HEIGHT) {
             val rowStart = y * ABC800M_HIGH_RESOLUTION_BYTES_PER_ROW
@@ -487,10 +489,49 @@ internal fun decodeABC800CHighResolutionScreen(videoRam: ByteArray, control: Int
                 val packed = videoRam[rowStart + x / 4].toInt() and 0xff
                 val sourcePixel = (packed ushr (6 - (x % 4) * 2)) and 0x03
                 pixels[y * ABC800C_HIGH_RESOLUTION_WIDTH + x] =
-                    (if (sourcePixel == 0) 0 else color).toByte()
+                    (colorProm[paletteOffset + sourcePixel].toInt() and 0x0f).toByte()
             }
         }
     }
+}
+
+internal fun renderABC800CDisplay(
+    text: ImageBitmap,
+    videoRam: ByteArray,
+    control: Int,
+    colorProm: ByteArray
+): ImageBitmap {
+    require(text.width == 480 && text.height == 480) { "ABC800C text raster must be 480x480" }
+    val graphics = decodeABC800CHighResolutionScreen(videoRam, control, colorProm)
+    val textVisible = control and 0x8000 == 0
+    val textPixels = if (textVisible) text.toPixelMap() else null
+    val bitmap = ImageBitmap(480, 480)
+    val canvas = ImageCanvas(bitmap)
+    val paint = Paint().apply { color = Color.Black }
+    canvas.drawRect(Rect(0f, 0f, 480f, 480f), paint)
+    if (textVisible) canvas.drawImage(text, Offset.Zero, Paint())
+    val firstLine = control and 0xff
+    for (y in firstLine until minOf(480, firstLine + 480)) {
+        val sourceRow = (y - firstLine) / 2
+        fun overlayColor(x: Int): Int {
+            val entry = graphics[sourceRow * ABC800C_HIGH_RESOLUTION_WIDTH + x / 2].toInt()
+            val color = entry and 7
+            if (color == 0) return 0
+            // HRU-II bit 3 preserves non-black text; cleared bit 3 makes graphics opaque.
+            return if (entry and 8 == 0 || textPixels == null || textPixels[x, y] == Color.Black) color else 0
+        }
+        var x = 0
+        while (x < 480) {
+            val color = overlayColor(x)
+            val start = x++
+            while (x < 480 && overlayColor(x) == color) x++
+            if (color != 0) {
+                paint.color = ABC800C_PALETTE[color]
+                canvas.drawRect(Rect(start.toFloat(), y.toFloat(), x.toFloat(), (y + 1).toFloat()), paint)
+            }
+        }
+    }
+    return bitmap
 }
 
 /**
@@ -520,8 +561,10 @@ internal fun ABC80Screen(
     val wideScreen = model.isWideScreen(TKN80.enabled)
     val screenColumns = if (wideScreen) 80 else ABC80_SCREEN_COLUMNS
     var abc800Font by remember { mutableStateOf<ByteArray?>(null) }
-    LaunchedEffect(isAbc800) {
+    var abc800CColorProm by remember { mutableStateOf<ByteArray?>(null) }
+    LaunchedEffect(model) {
         abc800Font = if (isAbc800) Res.readBytes("files/font800.bin") else null
+        abc800CColorProm = if (isAbc800C) Res.readBytes("files/hru800c.bin") else null
     }
     var rows by remember(model) {
         mutableStateOf(List(ABC80_SCREEN_ROWS) { " ".repeat(screenColumns) })
@@ -531,7 +574,7 @@ internal fun ABC80Screen(
     var blinkOn by remember { mutableStateOf(true) }
     var highResolutionBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
     var abc800cTextBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
-    var abc800cHighResolutionBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
+    var abc800cDisplayBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
     var highResolutionControl by remember { mutableStateOf(0) }
     val scope = rememberCoroutineScope()
     var returningToBasic by remember { mutableStateOf(false) }
@@ -541,10 +584,11 @@ internal fun ABC80Screen(
         var previousABC800CControl: Int? = null
         var previousABC800CCharacterRam: ByteArray? = null
         var previousABC800CFlashVisible: Boolean? = null
+        var previousABC800CTextBitmap: ImageBitmap? = null
         while (true) {
             if (isAbc800M) {
                 abc800cTextBitmap = null
-                abc800cHighResolutionBitmap = null
+                abc800cDisplayBitmap = null
                 rows = decodeABC800MScreen(nativeLib.getAbc800MTextScreen())
                 val cursorPosition = nativeLib.getAbc800MCursorPosition()
                 cursor = if (cursorPosition >= 0) cursorPosition / 80 to cursorPosition % 80 else null
@@ -619,48 +663,23 @@ internal fun ABC80Screen(
                     abc800cTextBitmap = renderABC800CTextBitmap(characterRam, abc800Font!!, flashVisible)
                 }
                 if (previousHighResolutionVideoRam?.contentEquals(videoRam) != true ||
-                    previousABC800CControl != control
+                    previousABC800CControl != control ||
+                    previousABC800CTextBitmap !== abc800cTextBitmap ||
+                    abc800cDisplayBitmap == null
                 ) {
-                    previousHighResolutionVideoRam = videoRam
-                    previousABC800CControl = control
-                    abc800cHighResolutionBitmap = if (videoRam.any { it != 0.toByte() }) {
-                        val pixels = decodeABC800CHighResolutionScreen(videoRam, control)
-                        ImageBitmap(ABC800C_HIGH_RESOLUTION_WIDTH, ABC800C_HIGH_RESOLUTION_HEIGHT)
-                            .also { bitmap ->
-                                val canvas = ImageCanvas(bitmap)
-                                val paint = Paint().apply {
-                                    color = ABC800C_PALETTE[(control ushr 8 and 0x07)
-                                        .takeIf { it != 0 } ?: 7]
-                                }
-                                for (y in 0 until ABC800C_HIGH_RESOLUTION_HEIGHT) {
-                                    var x = 0
-                                    while (x < ABC800C_HIGH_RESOLUTION_WIDTH) {
-                                        if (pixels[y * ABC800C_HIGH_RESOLUTION_WIDTH + x] == 0.toByte()) {
-                                            x++
-                                            continue
-                                        }
-                                        val start = x
-                                        while (
-                                            x < ABC800C_HIGH_RESOLUTION_WIDTH &&
-                                            pixels[y * ABC800C_HIGH_RESOLUTION_WIDTH + x] != 0.toByte()
-                                        ) {
-                                            x++
-                                        }
-                                        canvas.drawRect(
-                                            Rect(start.toFloat(), y.toFloat(), x.toFloat(), (y + 1).toFloat()),
-                                            paint
-                                        )
-                                    }
-                                }
-                            }
-                    } else {
-                        null
+                    val text = abc800cTextBitmap
+                    val prom = abc800CColorProm
+                    if (text != null && prom != null) {
+                        abc800cDisplayBitmap = renderABC800CDisplay(text, videoRam, control, prom)
+                        previousHighResolutionVideoRam = videoRam
+                        previousABC800CControl = control
+                        previousABC800CTextBitmap = text
                     }
                 }
             } else {
                 highResolutionBitmap = null
                 abc800cTextBitmap = null
-                abc800cHighResolutionBitmap = null
+                abc800cDisplayBitmap = null
                 highResolutionControl = 0
                 val memory = nativeLib.getMemory()
                 if (abc80DosPromptVisible(memory)) nativeLib.dosActive = true
@@ -757,8 +776,8 @@ internal fun ABC80Screen(
                     )
                 }
             }
-            if (abc800TextVisible && isAbc800C) {
-                abc800cTextBitmap?.let { bitmap ->
+            if (isAbc800C) {
+                abc800cDisplayBitmap?.let { bitmap ->
                     drawImage(
                         image = bitmap,
                         dstSize = IntSize(
@@ -807,21 +826,6 @@ internal fun ABC80Screen(
                             }
                         }
                     }
-                }
-            }
-            if (isAbc800C) {
-                abc800cHighResolutionBitmap?.let { bitmap ->
-                    drawImage(
-                        image = bitmap,
-                        dstOffset = IntOffset(
-                            0,
-                            ((highResolutionControl and 0xff) * py).toInt()
-                        ),
-                        dstSize = IntSize(
-                            (ABC800C_HIGH_RESOLUTION_WIDTH * 2 * px).toInt(),
-                            (ABC800C_HIGH_RESOLUTION_HEIGHT * 2 * py).toInt()
-                        )
-                    )
                 }
             }
         }
