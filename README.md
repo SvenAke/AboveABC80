@@ -42,9 +42,11 @@ in your IDE’s toolbar or run it directly from the terminal:
 Android on-screen keyboards use model-selected XML resources:
 `composeApp/src/androidMain/res/xml/abc80.xml` for ABC80 and
 `composeApp/src/androidMain/res/xml/abc800.xml` shared by ABC800M/C.
-The ABC800 XML is currently a placeholder preserving the existing keys and
-codes, ready for its own hardware layout. Changing models reloads the keyboard.
-This separation does not change physical keyboard mappings.
+The ABC800 layout follows the original keyboard with cream character keys,
+orange special keys, a two-column PF1-PF8 block and a separate numeric keypad
+(wide zero and tall Return). PF keys support Shift and Ctrl using the
+[ABC800 manual's codes](https://www.devili.iki.fi/Computers/Luxor/Manuals/ABC800/Kayttoohje/sivu_44.html).
+Changing models reloads the keyboard. Physical keyboard mappings are unchanged.
 
 The application supports ABC80, ABC800M and ABC800C. ABC800C uses the C-12
 model-specific BASIC ROM (`basic800c.rom`, 4 KB at 0x0000), together with the

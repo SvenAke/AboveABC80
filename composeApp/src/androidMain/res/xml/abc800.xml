@@ -1,10 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- ABC800M/C layout placeholder: retains the existing keys until the hardware layout is supplied. -->
 <Keyboard xmlns:app="http://schemas.android.com/apk/res-auto"
-    app:keyBackground="@drawable/abc80_key"
-    app:keyHeight="10%p"
-    app:keyWidth="7%p">
-    <Row app:initialIndent="5%p">
+    app:keyBackground="@drawable/abc800_key"
+    app:keyHeight="48dp"
+    app:keyWidth="4.5%p">
+    <Row app:initialIndent="2.25%p">
         <Key app:codes="abc80:1" app:keyLabel="!" app:secondKeyLabel="1" />
         <Key app:codes="abc80:2" app:keyLabel="&quot;" app:secondKeyLabel="2" />
         <Key app:codes="abc80:3" app:keyLabel="#" app:secondKeyLabel="3" />
@@ -18,10 +17,17 @@
         <Key app:codes="abc80:11" app:keyLabel="\?" app:secondKeyLabel="+" />
         <Key app:codes="abc80:12" app:keyLabel="É" />
         <Key app:codes="abc80:13" app:keyLabel="&gt;" app:secondKeyLabel="&lt;" />
+        <Key app:codes="abc800:pf1" app:keyLabel="PF1" app:horizontalGap="5.75%p"
+            app:keyBackground="@drawable/abc800_orange_key" />
+        <Key app:codes="abc800:pf2" app:keyLabel="PF2" app:keyBackground="@drawable/abc800_orange_key" />
+        <Key app:codes="55" app:keyLabel="7" app:horizontalGap="1.25%p" />
+        <Key app:codes="56" app:keyLabel="8" />
+        <Key app:codes="57" app:keyLabel="9" />
+        <Key app:codes="24" app:keyLabel="CE" app:keyBackground="@drawable/abc800_orange_key" />
     </Row>
     <Row>
-        <Key app:codes="27" app:keyBackground="@drawable/red_key" app:keyLabel="Upper"
-            app:secondKeyLabel="Case" app:keyLedId="upper_case" app:ledColor="#FFFF0000" />
+        <Key app:codes="27" app:keyBackground="@drawable/abc800_orange_key" app:keyLabel="CAPS"
+            app:secondKeyLabel="LOCK" app:keyLedId="upper_case" app:ledColor="#FFFF0000" />
         <Key app:codes="abc80:20" app:keyLabel="Q" />
         <Key app:codes="abc80:21" app:keyLabel="W" />
         <Key app:codes="abc80:22" app:keyLabel="E" />
@@ -34,28 +40,43 @@
         <Key app:codes="abc80:29" app:keyLabel="P" />
         <Key app:codes="abc80:30" app:keyLabel="Å" />
         <Key app:codes="abc80:31" app:keyLabel="Ü" />
-        <Key app:codes="abc80:32" app:keyCustomBitmap="@drawable/red_key"
-            app:keyLabel="RETURN" app:keyWidth="10.7%p" />
+        <Key app:codes="abc80:32" app:keyBackground="@drawable/abc800_orange_key"
+            app:keyLabel="RETURN" app:keyWidth="6.75%p" />
+        <Key app:codes="abc800:pf3" app:keyLabel="PF3" app:horizontalGap="1.25%p" app:keyAttachTo="abc800:pf1"
+            app:keyBackground="@drawable/abc800_orange_key" />
+        <Key app:codes="abc800:pf4" app:keyLabel="PF4" app:keyBackground="@drawable/abc800_orange_key" />
+        <Key app:codes="52" app:keyLabel="4" app:horizontalGap="1.25%p" app:keyAttachTo="55" />
+        <Key app:codes="53" app:keyLabel="5" />
+        <Key app:codes="54" app:keyLabel="6" />
+        <Key app:codes="45" app:keyLabel="-" app:keyBackground="@drawable/abc800_orange_key" />
     </Row>
-    <Row app:initialIndent="2%p">
-        <Key app:codes="7,1" app:isSticky="true" app:keyBackground="@drawable/red_key" app:keyLabel="CTRL" />
+    <Row app:initialIndent="1.125%p">
+        <Key app:codes="7,1" app:isSticky="true" app:keyBackground="@drawable/abc800_orange_key" app:keyLabel="CTRL" />
         <Key app:codes="abc80:38" app:keyLabel="A" />
         <Key app:codes="abc80:39" app:keyLabel="S" />
         <Key app:codes="abc80:40" app:keyLabel="D" />
         <Key app:codes="abc80:41" app:keyLabel="F" />
         <Key app:codes="abc80:42" app:keyLabel="G" />
-        <Key app:codes="abc80:43" app:sixthKeyLabel="H" />
-        <Key app:codes="abc80:44" app:sixthKeyLabel="J" />
-        <Key app:codes="abc80:45" app:sixthKeyLabel="K" />
-        <Key app:codes="abc80:46" app:sixthKeyLabel="L" />
-        <Key app:codes="abc80:47" app:sixthKeyLabel="Ö" />
-        <Key app:codes="abc80:48" app:sixthKeyLabel="Ä" />
+        <Key app:codes="abc80:43" app:keyLabel="H" />
+        <Key app:codes="abc80:44" app:keyLabel="J" />
+        <Key app:codes="abc80:45" app:keyLabel="K" />
+        <Key app:codes="abc80:46" app:keyLabel="L" />
+        <Key app:codes="abc80:47" app:keyLabel="Ö" />
+        <Key app:codes="abc80:48" app:keyLabel="Ä" />
         <Key app:codes="abc80:49" app:keyLabel="*" app:secondKeyLabel="'" />
-        <Key app:codes="abc80:50" app:keyBackground="@drawable/red_key" app:keyIcon="@drawable/arrow_left" />
+        <Key app:codes="abc80:50" app:keyBackground="@drawable/abc800_orange_key" app:keyIcon="@drawable/arrow_left" />
+        <Key app:codes="abc800:pf5" app:keyLabel="PF5" app:horizontalGap="2.375%p" app:keyAttachTo="abc800:pf1"
+            app:keyBackground="@drawable/abc800_orange_key" />
+        <Key app:codes="abc800:pf6" app:keyLabel="PF6" app:keyBackground="@drawable/abc800_orange_key" />
+        <Key app:codes="49" app:keyLabel="1" app:horizontalGap="1.25%p" app:keyAttachTo="55" />
+        <Key app:codes="50" app:keyLabel="2" />
+        <Key app:codes="51" app:keyLabel="3" />
+        <Key app:codes="13" app:keyLabel="RETURN" app:keyHeight="96dp"
+            app:keyBackground="@drawable/abc800_orange_key" />
     </Row>
-    <Row>
-        <Key app:codes="0,0" app:isSticky="true" app:keyAttachTo="7"
-            app:keyCustomBitmap="@drawable/red_key" app:keyLabel="SHIFT" app:keyWidth="10.7%p" />
+    <Row app:initialIndent="1.125%p">
+        <Key app:codes="0,0" app:isSticky="true"
+            app:keyBackground="@drawable/abc800_orange_key" app:keyLabel="SHIFT" app:keyWidth="6.75%p" />
         <Key app:codes="abc80:56" app:keyLabel="Z" />
         <Key app:codes="abc80:57" app:keyLabel="X" />
         <Key app:codes="abc80:58" app:keyLabel="C" />
@@ -66,12 +87,16 @@
         <Key app:codes="abc80:63" app:keyLabel=";" app:secondKeyLabel="," />
         <Key app:codes="abc80:64" app:keyLabel=":" app:secondKeyLabel="." />
         <Key app:codes="abc80:65" app:keyLabel="_" app:secondKeyLabel="-" />
-        <Key app:codes="0,0" app:isSticky="true" app:keyEdgeFlags="right"
-            app:keyCustomBitmap="@drawable/red_key" app:keyLabel="SHIFT" app:keyWidth="10.7%p" />
-        <Key app:codes="abc80:67" app:keyBackground="@drawable/red_key" app:keyIcon="@drawable/arrow_right" />
+        <Key app:codes="0,0" app:isSticky="true"
+            app:keyBackground="@drawable/abc800_orange_key" app:keyLabel="SHIFT" app:keyWidth="6.75%p" />
+        <Key app:codes="abc80:67" app:keyBackground="@drawable/abc800_orange_key" app:keyIcon="@drawable/arrow_right" />
+        <Key app:codes="abc800:pf7" app:keyLabel="PF7" app:horizontalGap="2.375%p" app:keyAttachTo="abc800:pf1"
+            app:keyBackground="@drawable/abc800_orange_key" />
+        <Key app:codes="abc800:pf8" app:keyLabel="PF8" app:keyBackground="@drawable/abc800_orange_key" />
+        <Key app:codes="48" app:keyLabel="0" app:horizontalGap="1.25%p" app:keyAttachTo="55" app:keyWidth="8.5%p" />
+        <Key app:codes="46" app:keyLabel="." app:keyAttachTo="51" />
     </Row>
-    <Row>
-        <Key app:codes="abc80:74" app:keyAttachTo="abc80:57" app:keyCustomBitmap="@drawable/abc80_key"
-            app:keyLabel=" " app:keyWidth="55%p" />
+    <Row app:initialIndent="11.25%p">
+        <Key app:codes="abc80:74" app:keyLabel=" " app:keyWidth="36%p" />
     </Row>
 </Keyboard>

@@ -335,7 +335,9 @@ fun EmulatorScreen(startWithStorageOpen: Boolean = false) {
         val touchCode = ThreadLocal<String>()
         activeTerminal.onKeyInput = { char ->
             if (TerminalManager.computerModel.isAbc800) {
-                abc800mKeyCode(char)?.let(nativeLib::sendKey)
+                // XML key dispatch already supplies machine bytes, including 8-bit PF codes.
+                val code = if (touchCode.get() != null) char.code else abc800mKeyCode(char)
+                code?.let(nativeLib::sendKey)
             } else {
                 val code = if (char.code in 0..31) char.code else abc80CharCode(char)
                 code?.let {

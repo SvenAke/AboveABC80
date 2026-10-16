@@ -7,6 +7,33 @@ import com.aboveware.aboveabc80.terminal.ABC80
 
 class ABC80KeyboardTest {
     @Test
+    fun abc800FunctionKeysUseAllFourManualCodeRanges() {
+        val terminal = ABC80()
+        val sent = mutableListOf<Int>()
+        terminal.onKeyInput = { sent.add(it.code) }
+        val keyboard = terminal.keyboard
+        for (number in 1..8) {
+            for ((shift, control, base) in listOf(
+                Triple(false, false, 192),
+                Triple(true, false, 208),
+                Triple(false, true, 224),
+                Triple(true, true, 240)
+            )) {
+                if (shift) keyboard.handleKeyEvent("0,0")
+                if (control) keyboard.handleKeyEvent("7,1")
+                keyboard.handleKeyEvent("abc800:pf$number")
+                assertEquals(base + number - 1, sent.last())
+                keyboard.handleKeyRelease("0,0")
+                keyboard.handleKeyRelease("7,1")
+            }
+        }
+        assertEquals(32, sent.size)
+        keyboard.setLed(1, true)
+        keyboard.handleKeyEvent("abc800:pf1")
+        assertEquals(192, sent.last(), "Caps Lock must not act as Shift on PF keys")
+    }
+
+    @Test
     fun controlCharactersRetainTheirKeyboardCodes() {
         assertEquals(3, abc80CharCode('\u0003'))
         assertEquals(9, abc80CharCode('\t'))

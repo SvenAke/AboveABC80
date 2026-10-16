@@ -620,11 +620,13 @@ class KeyboardView(
         paint.textSize = 100f
         val number = key.codes.removePrefix("abc80:").toIntOrNull()
         val separatePunctuation = key.codes == "abc80:63" || key.codes == "abc80:64"
-        val referenceKey = if (key.codes.startsWith("abc80:") &&
-            (number in 1..11 || number == 13 || number == 65)
-        ) {
-            keyboardViewController.keys.firstOrNull { it.codes == "abc80:4" }
-        } else null
+        val referenceKey = when {
+            keyboardXmlResId == R.xml.abc800 && (key.codes == "45" || key.codes == "46") ->
+                keyboardViewController.keys.firstOrNull { it.codes == "55" }
+            key.codes.startsWith("abc80:") && (number in 1..11 || number == 13 || number == 65) ->
+                keyboardViewController.keys.firstOrNull { it.codes == "abc80:4" }
+            else -> null
+        }
         val sizingLabels = if (referenceKey != null) {
             listOfNotNull(referenceKey.label, referenceKey.secondLabel)
                 .filter { it.isNotBlank() }
@@ -640,6 +642,9 @@ class KeyboardView(
             (if (referenceKey != null) referenceKey.height * 0.58f / sizingLabels.size else rowHeight) *
                 0.78f / maxHeight
         )
+        if (keyboardXmlResId == R.xml.abc800 && key.codes.toIntOrNull() in 48..57) {
+            paint.textSize *= 0.85f
+        }
         if (labels.all { it.length == 1 && it[0].isLetter() }) {
             paint.textSize *= 0.9f
         }

@@ -32,6 +32,16 @@ class ABC80TerminalKeyboard(private val terminal: Terminal) : TerminalKeyboard {
             "0,0" -> { shift = true; return }
             "7,1" -> { control = true; return }
         }
+        if (codes.startsWith("abc800:pf")) {
+            val number = codes.removePrefix("abc800:pf").toIntOrNull()
+            if (number == null || number !in 1..8) {
+                Abc80Log.wtf("Unknown ABC800 function key: $codes")
+                return
+            }
+            val code = 0xC0 + number - 1 + (if (shift) 0x10 else 0) + (if (control) 0x20 else 0)
+            terminal.onKeyEvent(code.toChar())
+            return
+        }
         if (codes.startsWith("abc80:")) {
             val number = codes.removePrefix("abc80:").toIntOrNull()
             val code = number?.let {

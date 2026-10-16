@@ -3,6 +3,7 @@ package com.aboveware.aboveabc80.keyboard
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.graphics.Rect
 import android.os.SystemClock
 import android.view.MotionEvent
 import android.view.View
@@ -34,15 +35,109 @@ class KeyboardLayoutTest {
     private lateinit var context: Context
 
     @Test
-    fun abc800PlaceholderLoadsWithTheExistingKeyCodes() {
+    fun abc800LayoutHasSeparateFunctionAndNumericBlocks() {
         val abc80 = KeyboardViewController(context, R.xml.abc80)
         val abc800 = KeyboardViewController(context, R.xml.abc800)
-        assertTrue(abc800.keys.isNotEmpty())
-        assertTrue(abc800.minWidth > 0)
-        assertTrue(abc800.height > 0)
-        assertEquals(abc80.keys.map { it.codes }, abc800.keys.map { it.codes })
-        assertEquals(abc80.minWidth, abc800.minWidth)
-        assertEquals(abc80.height, abc800.height)
+        assertEquals(abc80.keys.size + 22, abc800.keys.size)
+        assertTrue(abc800.keys.map { it.codes }.containsAll(abc80.keys.map { it.codes }))
+        val functionKeys = abc800.keys.filter { it.codes.startsWith("abc800:pf") }
+        assertEquals((1..8).map { "abc800:pf$it" }, functionKeys.map { it.codes })
+        val keypad = abc800.keys.filter { it.codes.toIntOrNull() in 32..57 }
+        assertEquals(
+            listOf("7", "8", "9", "4", "5", "6", "-", "1", "2", "3", "0", "."),
+            keypad.map { it.secondLabel.toString() }
+        )
+        val zero = abc800.keys.single { it.codes == "48" }
+        val one = abc800.keys.single { it.codes == "49" }
+        val enter = abc800.keys.single { it.codes == "13" }
+        assertTrue(zero.width > one.width * 1.8)
+        assertEquals(one.height * 2, enter.height)
+        assertEquals(setOf("CAPS", "LOCK"), abc800.keys.single { it.ledId == "upper_case" }.let {
+            setOf(it.label.toString(), it.secondLabel.toString())
+        })
+    }
+
+    @Test
+    fun abc800LayoutFitsWithoutOverlappingKeysAfterResize() {
+        for (width in listOf(480, 1080, 2400)) {
+            val layout = KeyboardViewController(context, R.xml.abc800)
+            layout.resize(width)
+            for ((index, key) in layout.keys.withIndex()) {
+                assertTrue(key.x >= 0 && key.y >= 0, "Negative key position: ${key.codes}")
+                assertTrue(key.x + key.width <= width, "Key outside width $width: ${key.codes}")
+                assertTrue(key.y + key.height <= layout.height, "Key outside height: ${key.codes}")
+                val bounds = Rect(key.x, key.y, key.x + key.width, key.y + key.height)
+                for (other in layout.keys.drop(index + 1)) {
+                    assertFalse(Rect.intersects(bounds, Rect(
+                        other.x, other.y, other.x + other.width, other.y + other.height
+                    )), "Overlapping keys at width $width: ${key.codes} / ${other.codes}")
+                }
+            }
+            val pf1 = layout.keys.single { it.codes == "abc800:pf1" }
+            for (number in listOf(3, 5, 7)) {
+                assertEquals(pf1.x, layout.keys.single { it.codes == "abc800:pf$number" }.x)
+            }
+        }
+    }
+
+    @Test
+    fun abc800KeypadAndFunctionKeysDeliverMachineCodes() {
+        val terminal = MockTerminal()
+        val keyboard = ABC80TerminalKeyboard(terminal)
+        val layout = KeyboardViewController(context, R.xml.abc800)
+        for (key in layout.keys.filter { it.codes.startsWith("abc800:pf") || it.codes.toIntOrNull() != null }) {
+            keyboard.handleKeyEvent(key.codes)
+            val expected = if (key.codes.startsWith("abc800:pf")) {
+                191 + key.codes.removePrefix("abc800:pf").toInt()
+            } else {
+                key.codes.toInt()
+            }
+            assertEquals(expected, terminal.sentChars.last().code, key.codes)
+        }
+    }
+
+    @Test
+    fun abc800KeyboardDrawsCreamAndOrangeKeys() {
+        InstrumentationRegistry.getInstrumentation().runOnMainSync {
+            val view = KeyboardView(context, null, 0, 0).apply {
+                keyboardXmlResId = R.xml.abc800
+                measure(
+                    View.MeasureSpec.makeMeasureSpec(1600, View.MeasureSpec.EXACTLY),
+                    View.MeasureSpec.makeMeasureSpec(800, View.MeasureSpec.AT_MOST)
+                )
+                layout(0, 0, measuredWidth, measuredHeight)
+            }
+            val bitmap = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
+            try {
+                view.draw(Canvas(bitmap))
+                fun backgroundPixel(codes: String): Int {
+                    val key = view.keyboardViewController.keys.single { it.codes == codes }
+                    return bitmap.getPixel(key.x + key.width / 2, key.y + key.height * 3 / 4)
+                }
+                val cream = backgroundPixel("abc80:38")
+                val orange = backgroundPixel("abc800:pf1")
+                assertTrue(android.graphics.Color.green(cream) > 150)
+                assertTrue(android.graphics.Color.red(orange) > android.graphics.Color.green(orange) * 1.5)
+                assertTrue(android.graphics.Color.green(cream) > android.graphics.Color.green(orange))
+                for (codes in listOf("45", "46")) {
+                    val key = view.keyboardViewController.keys.single { it.codes == codes }
+                    val inkRows = (key.height / 8 until key.height * 3 / 4).count { y ->
+                        (key.width / 4 until key.width * 3 / 4).any { x ->
+                            val pixel = bitmap.getPixel(key.x + x, key.y + y)
+                            android.graphics.Color.red(pixel) < 45 &&
+                                android.graphics.Color.green(pixel) < 45 &&
+                                android.graphics.Color.blue(pixel) < 45
+                        }
+                    }
+                    assertTrue(inkRows in 1..key.height / 3, "Oversized keypad punctuation: $codes")
+                }
+                context.cacheDir.resolve("abc800-keyboard.png").outputStream().use {
+                    assertTrue(bitmap.compress(Bitmap.CompressFormat.PNG, 100, it))
+                }
+            } finally {
+                bitmap.recycle()
+            }
+        }
     }
 
     @Before
