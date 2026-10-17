@@ -4056,6 +4056,7 @@ void z80_do_opcodes(void) {
                         IFF1 = IFF2;
                         RET();
                         z80_retn();
+                        if (current_opcode2 == 0x4d) abc800_ctc_reti();
                         break;
                     case 0x46:
                     case 0x4e:

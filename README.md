@@ -54,6 +54,11 @@ The application supports ABC80, ABC800M and ABC800C. ABC800C uses the C-12
 model-specific BASIC ROM (`basic800c.rom`, 4 KB at 0x0000), together with the
 shared revision-12 BASIC blocks at 0x1000-0x5FFF from `basic800.rom`.
 ABC800M uses `basic800.rom` unchanged. The models share the DOS and option ROMs.
+ABC800M/C memory banking follows the active-low DART /DTRB signal.
+The CTC supports automatically started CPU-clock timers with 16/256-cycle
+prescalers, counter readback, software reset and prioritized IM2 interrupts.
+RETI releases the channel's interrupt-in-service state. External counter
+inputs and externally triggered timers are not yet emulated.
 ABC800C's 480x480 text raster is displayed at 4:3 with non-square pixels.
 Its cursor is the firmware-controlled inverse character in screen RAM, not
 a separately positioned UI cursor. Selection preserves that rendering path.

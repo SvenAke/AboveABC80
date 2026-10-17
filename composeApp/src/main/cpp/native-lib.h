@@ -61,6 +61,7 @@ int onReadPort(int port, int value);
 int abc80_read_keyboard();
 void abc80_request_cassette_interrupt(int vector);
 void abc80_cassette_reti();
+void abc800_ctc_reti();
 void abc80_send_key(int code);
 void abc80_press_key(int code);
 void abc80_release_key(int code);

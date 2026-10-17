@@ -45,6 +45,64 @@ static std::atomic<bool> g_abc800m_dart_rx_irq_enabled{false};
 static std::atomic<bool> g_abc800m_dart_irq_pending{false};
 static std::uint8_t g_abc800m_highres_control[2]{};
 
+struct Abc800CtcChannel {
+    std::uint8_t control = 0x03;
+    unsigned constant = 256;
+    unsigned counter = 256;
+    unsigned prescaler_cycles = 0;
+    bool waiting_constant = false;
+    bool running = false;
+    bool pending = false;
+    bool in_service = false;
+};
+static std::array<Abc800CtcChannel, 4> g_abc800m_ctc{};
+static std::uint8_t g_abc800m_ctc_vector = 0;
+static std::uint64_t g_abc800m_ctc_cycles = 0;
+
+static void abc800_ctc_advance() {
+    const auto now = TOTAL_CYCLES;
+    const auto elapsed = now >= g_abc800m_ctc_cycles ? now - g_abc800m_ctc_cycles : 0;
+    g_abc800m_ctc_cycles = now;
+    for (auto &channel : g_abc800m_ctc) {
+        if (!channel.running || (channel.control & 0x40)) continue;
+        const unsigned divisor = (channel.control & 0x20) ? 256 : 16;
+        const auto cycles = channel.prescaler_cycles + elapsed;
+        auto ticks = cycles / divisor;
+        channel.prescaler_cycles = static_cast<unsigned>(cycles % divisor);
+        if (ticks >= channel.counter) {
+            ticks -= channel.counter;
+            if (channel.control & 0x80) channel.pending = true;
+            channel.counter = channel.constant - static_cast<unsigned>(ticks % channel.constant);
+        } else {
+            channel.counter -= static_cast<unsigned>(ticks);
+        }
+    }
+}
+
+static void abc800_ctc_write(int index, std::uint8_t value) {
+    abc800_ctc_advance();
+    auto &channel = g_abc800m_ctc[index];
+    if (channel.waiting_constant) {
+        channel.constant = value ? value : 256;
+        channel.counter = channel.constant;
+        channel.prescaler_cycles = 0;
+        channel.waiting_constant = false;
+        channel.control &= ~0x02;
+        channel.running = (channel.control & 0x48) == 0;
+    } else if (value & 1) {
+        channel.control = value;
+        channel.waiting_constant = (value & 0x04) != 0;
+        if (value & 0x02) {
+            channel.running = false;
+            channel.prescaler_cycles = 0;
+            channel.pending = false;
+        }
+        if (!(value & 0x80)) channel.pending = false;
+    } else if (index == 0) {
+        g_abc800m_ctc_vector = value & 0xf8;
+    }
+}
+
 static inline std::size_t abc800_character_ram_mask() {
     return g_abc800c_active.load(std::memory_order_relaxed) ? 0x3ff : 0x7ff;
 }
@@ -104,6 +162,16 @@ void abc80_cassette_reti() {
     g_cassette_in_service.store(false, std::memory_order_relaxed);
 }
 
+void abc800_ctc_reti() {
+    if (!g_abc800m_active.load(std::memory_order_relaxed)) return;
+    for (auto &channel : g_abc800m_ctc) {
+        if (channel.in_service) {
+            channel.in_service = false;
+            break;
+        }
+    }
+}
+
 void abc80_send_key(int code) {
     KeyLock lock;
     if (g_abc800m_active.load(std::memory_order_relaxed)) {
@@ -154,7 +222,24 @@ int abc80_read_keyboard() {
 
 /* Called between instructions; delivers the pending keyboard interrupt once the CPU accepts it. */
 bool abc80_try_keyboard_interrupt() {
+    if (g_abc800m_active.load(std::memory_order_relaxed)) abc800_ctc_advance();
     if (!IFF1 || tStates == z80.interrupts_enabled_at) return false;
+    if (g_abc800m_active.load(std::memory_order_relaxed)) {
+        for (unsigned i = 0; i < g_abc800m_ctc.size(); ++i) {
+            auto &channel = g_abc800m_ctc[i];
+            if (channel.in_service) return false;
+            if (!channel.pending) continue;
+            const auto previous = g_im2_vector;
+            g_im2_vector = static_cast<libspectrum_byte>(g_abc800m_ctc_vector | (i << 1));
+            const bool taken = z80_interrupt() != 0;
+            g_im2_vector = previous;
+            if (taken) {
+                channel.pending = false;
+                channel.in_service = true;
+            }
+            return taken;
+        }
+    }
     if (g_abc800m_active.load(std::memory_order_relaxed) &&
         g_abc800m_dart_irq_pending.load(std::memory_order_relaxed)) {
         const libspectrum_byte previous = g_im2_vector;
@@ -376,6 +461,9 @@ static void abc800_set_enabled(bool enabled, bool color_model) {
     std::memset(g_abc800m_dart_expect_register, 0, sizeof(g_abc800m_dart_expect_register));
     g_abc800m_dart_rx_irq_enabled.store(false, std::memory_order_relaxed);
     g_abc800m_dart_irq_pending.store(false, std::memory_order_relaxed);
+    g_abc800m_ctc = {};
+    g_abc800m_ctc_vector = 0;
+    g_abc800m_ctc_cycles = TOTAL_CYCLES;
 }
 
 void abc800m_set_enabled(bool enabled) {
@@ -426,7 +514,10 @@ std::uint8_t abc800m_read_port(int port) {
         Abc800Lock lock(g_abc800m_crtc_lock);
         return g_abc800m_crtc_registers[g_abc800m_crtc_address % g_abc800m_crtc_registers.size()];
     }
-    if (port >= 0x60 && port <= 0x6f) return 0;
+    if (port >= 0x60 && port <= 0x7f) {
+        abc800_ctc_advance();
+        return static_cast<std::uint8_t>(g_abc800m_ctc[port & 3].counter);
+    }
     if (port == 0x05) return 0xff;
     return 0xff;
 }
@@ -436,7 +527,7 @@ bool abc800m_owns_port_read(int port) {
     return (port >= 0x20 && port <= 0x2f) ||
            (!g_abc800c_active.load(std::memory_order_relaxed) &&
             (port == 0x31 || port == 0x35 || port == 0x39 || port == 0x3d)) ||
-           (port >= 0x60 && port <= 0x6f) || port == 0x05 || port == 0x06;
+           (port >= 0x60 && port <= 0x7f) || port == 0x05 || port == 0x06;
 }
 
 void abc800m_write_port(int port, int value) {
@@ -451,7 +542,10 @@ void abc800m_write_port(int port, int value) {
             g_abc800m_dart_register[channel][selected] = static_cast<std::uint8_t>(value);
             g_abc800m_dart_expect_register[channel] = false;
             g_abc800m_dart_selected[channel] = 0;
-            if (channel == 1 && selected == 5) g_abc800m_keydtr = (value & 0x80) != 0;
+            if (channel == 1 && selected == 5) {
+                // DART /DTRB drives KEYDTR: asserting WR5 bit 7 selects video RAM.
+                g_abc800m_keydtr = (value & 0x80) == 0;
+            }
             if (channel == 1 && selected == 1) {
                 const bool rx_irq_enabled = ((value >> 3) & 3) != 0;
                 g_abc800m_dart_rx_irq_enabled.store(rx_irq_enabled, std::memory_order_relaxed);
@@ -484,7 +578,10 @@ void abc800m_write_port(int port, int value) {
         g_abc800m_highres_control[port - 0x06] = static_cast<std::uint8_t>(value);
         return;
     }
-    if (port >= 0x60 && port <= 0x6f) return;
+    if (port >= 0x60 && port <= 0x7f) {
+        abc800_ctc_write(port & 3, static_cast<std::uint8_t>(value));
+        return;
+    }
 }
 
 void abc800m_copy_text_screen(std::uint8_t *destination) {

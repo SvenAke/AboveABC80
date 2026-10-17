@@ -139,7 +139,7 @@ void onWritePort(int port, int value) {
     if (g_abc800m_active.load(std::memory_order_relaxed)) {
         if ((port8 >= 0x20 && port8 <= 0x2f) || port8 == 0x38 || port8 == 0x39 ||
             port8 == 0x3c || port8 == 0x3d || port8 == 0x06 || port8 == 0x07 ||
-            (port8 >= 0x60 && port8 <= 0x6f)) {
+            (port8 >= 0x60 && port8 <= 0x7f)) {
             abc800m_write_port(port8, value);
             return;
         }
