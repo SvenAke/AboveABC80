@@ -528,7 +528,10 @@ fun DiskManagerDialog(
     if (showCloudImportDialog) {
         StorageFileDialog(
             targetDriveIndex = targetImportDriveIndex,
-            onDismiss = { showCloudImportDialog = false },
+            onDismiss = {
+                localDisks = listLocalDisks().filter { it.endsWith(".dsk", ignoreCase = true) }
+                showCloudImportDialog = false
+            },
             onFilesSelected = { selectedFiles, clearBeforeDownload ->
                 clearCloudImportTarget = clearBeforeDownload
                 cloudImportTargetCleared = false

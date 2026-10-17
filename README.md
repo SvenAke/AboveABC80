@@ -112,7 +112,16 @@ Android uses an internal WebView with scripts, local-file access and network
 loads disabled. Only the downloaded HTML file is supplied; linked assets are
 not downloaded by the app.
 
-Cloud downloads of all file types are saved to the active
+Cloud `.dsk` downloads (case-insensitive) are saved byte-for-byte to the selected
+computer model's local disk library, regardless of the cloud folder. They are
+not imported as text or as a file inside the mounted disk. After downloading,
+each image is mounted on the selected DR drive (or the active drive in the
+general cloud browser), and the model-specific drive preference is saved.
+If multiple images are downloaded, the last one processed remains mounted.
+Mount failures are reported and do not save a successful drive preference.
+Downloads use a temporary file and preserve an existing image if transfer fails.
+The disk manager refreshes its local list when the cloud browser closes.
+Other cloud downloads are saved to the active
 ABC80 disk (or the drive whose cloud-import button was selected). Both direct
 downloads and files selected from archives use the ABC80 directory, allocation
 bitmap and 253-byte data records. BAC and ABS files
@@ -216,9 +225,10 @@ The top-row `<` key intentionally differs from the manual: Shift sends `>`
 
 ### Cassette cloud downloads
 
-Downloading files from the cloud in the cassette dialog saves all selected files
+Downloading files from the cloud in the cassette dialog saves selected files
 to the app's internal saved-tapes storage without importing them into the current
-tape. Use **Saved tapes** to open and import a downloaded file explicitly.
+tape, except `.dsk` images, which go to the model's disk library.
+Use **Saved tapes** to open and import a downloaded tape explicitly.
 
 Cloud cassette WAV files are streamed directly to internal storage with a
 64 KiB buffer, rather than loaded into memory or cached in the diskette importer.

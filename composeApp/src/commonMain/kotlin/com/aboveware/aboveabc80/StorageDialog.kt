@@ -719,7 +719,11 @@ fun StorageFileDialog(
                 Column(modifier = Modifier.fillMaxWidth()) {
                     val activeFloppy =
                         controller.getFloppy(targetDriveIndex ?: controller.currentDriveIndex)
-                    if (activeFloppy != null && rootPath == "abc80/" && destinationFolder == null) {
+                    val onlyDiskImagesSelected = selectedNodes.isNotEmpty() &&
+                        selectedNodes.all { it.name.endsWith(".dsk", ignoreCase = true) }
+                    if (activeFloppy != null && rootPath == "abc80/" && destinationFolder == null &&
+                        !onlyDiskImagesSelected
+                    ) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -774,6 +778,7 @@ fun StorageFileDialog(
                             TextButton(
                                 enabled = selectedNodes.isNotEmpty() && !isDownloading,
                                 onClick = {
+                                    val downloadDrive = targetDriveIndex ?: controller.currentDriveIndex
                                     scope.launch {
                                         isDownloading = true
                                         errorMessage = null
@@ -784,13 +789,23 @@ fun StorageFileDialog(
                                             for (node in selectedNodes) {
                                                 downloadingFileName = node.displayName
                                                 downloadedBytes = 0
-                                                if (destinationFolder != null) {
+                                                val fileDestinationFolder = cloudDownloadFolder(
+                                                    pathStack.last(), downloadFolder, node.name
+                                                )
+                                                if (fileDestinationFolder != null) {
                                                     provider.downloadToFile(
                                                         node.fullName,
-                                                        File(getLocalFileDirectory(destinationFolder), node.name),
+                                                        File(getLocalFileDirectory(fileDestinationFolder), node.name),
                                                         node.size
                                                     ) { received ->
                                                         downloadedBytes = received
+                                                    }
+                                                    if (fileDestinationFolder == "disks" &&
+                                                        node.name.endsWith(".dsk", ignoreCase = true)
+                                                    ) {
+                                                        withContext(Dispatchers.IO) {
+                                                            mountDownloadedCloudDisk(node.name, downloadDrive)
+                                                        }
                                                     }
                                                     savedNames.add(node.name)
                                                     continue
@@ -812,13 +827,13 @@ fun StorageFileDialog(
                                         } catch (e: Exception) {
                                             allOk = false
                                             Abc80Log.wtf("Could not download $downloadingFileName: ${e.message}")
-                                            errorMessage = fileDownloadFailedMessage
+                                            errorMessage = e.message ?: fileDownloadFailedMessage
                                         } finally {
                                             isDownloading = false
                                         }
                                         if (allOk && savedNames.isNotEmpty()) {
                                             onFilesDownloaded?.invoke(savedNames)
-                                            onDismiss()
+                                            if (results.isEmpty()) onDismiss()
                                         }
                                         if (allOk && results.isNotEmpty()) {
                                             handleFilesSelection(results)
