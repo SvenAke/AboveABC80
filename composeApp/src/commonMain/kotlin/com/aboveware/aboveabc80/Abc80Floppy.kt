@@ -1,6 +1,7 @@
 package com.aboveware.aboveabc80
 
 import com.aboveware.aboveabc80.core.DiskController
+import com.aboveware.aboveabc80.terminal.TerminalManager
 @ExperimentalUnsignedTypes
 @OptIn(ExperimentalUnsignedTypes::class, ExperimentalStdlibApi::class)
 class Abc80Floppy : Abc80Bus.BusInterface {
@@ -141,7 +142,7 @@ class Abc80Floppy : Abc80Bus.BusInterface {
         val format = Abc80FloppyLayout.detectFormatName(image)
             ?: run {
                 Abc80Log.wtf(
-                    "ABC80 DR$drive: cannot mount $name (${image.size} bytes). " +
+                    "${TerminalManager.computerModel.displayName} DR$drive: cannot mount $name (${image.size} bytes). " +
                         "Supported raw image sizes: 81920, 163840, 327680, 655360 bytes."
                 )
                 return false
@@ -153,9 +154,9 @@ class Abc80Floppy : Abc80Bus.BusInterface {
         cancelTransfer(drive)
         if (loaded) {
             mountedNames[drive] = name
-            Abc80Log.diskette("ABC80 DR$drive: mounted $name, format=$format, size=${image.size}")
+            Abc80Log.diskette("${TerminalManager.computerModel.displayName} DR$drive: mounted $name, format=$format, size=${image.size}")
         } else {
-            Abc80Log.wtf("ABC80 DR$drive: failed to mount $name")
+            Abc80Log.wtf("${TerminalManager.computerModel.displayName} DR$drive: failed to mount $name")
         }
         return loaded
     }

@@ -96,8 +96,9 @@ fun DiskManagerDialog(
     val importCloudLabel = stringResource(Res.string.disk_import_cloud)
     val deleteLabel = stringResource(Res.string.disk_delete)
     val copyFailedMessage = stringResource(Res.string.disk_copy_failed)
-    val mountFailedMessage = stringResource(Res.string.disk_mount_failed)
-    val listingFailedMessage = stringResource(Res.string.disk_listing_failed)
+    val modelName = TerminalManager.computerModel.displayName
+    val mountFailedMessage = stringResource(Res.string.disk_mount_failed, modelName)
+    val listingFailedMessage = stringResource(Res.string.disk_listing_failed, modelName)
     var selectedDriveIndex by remember { mutableStateOf<Int?>(null) }
     var showNewDiskDialog by remember { mutableStateOf(false) }
     var showCloudImportDialog by remember { mutableStateOf(false) }
@@ -255,10 +256,10 @@ fun DiskManagerDialog(
                                                             }.toMap()
                                                             listing = mounted.name to files
                                                         } catch (e: IllegalArgumentException) {
-                                                            Abc80Log.wtf("Invalid ABC80 directory in ${mounted.name}: ${e.message}")
+                                                            Abc80Log.wtf("Invalid $modelName directory in ${mounted.name}: ${e.message}")
                                                             errorMessage = "${mounted.name}: $listingFailedMessage"
                                                         } catch (e: IllegalStateException) {
-                                                            Abc80Log.wtf("Could not read ABC80 files in ${mounted.name}: ${e.message}")
+                                                            Abc80Log.wtf("Could not read $modelName files in ${mounted.name}: ${e.message}")
                                                             errorMessage = "${mounted.name}: $listingFailedMessage"
                                                         }
                                                     }

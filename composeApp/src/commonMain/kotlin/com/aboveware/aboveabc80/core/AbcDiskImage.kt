@@ -6,7 +6,7 @@ import com.aboveware.aboveabc80.Abc80FloppyLayout
 class AbcDiskImage(private var data: ByteArray) {
     companion object {
         fun createFromData(data: ByteArray): AbcDiskImage {
-            requireNotNull(Abc80FloppyLayout.list(data)) { "Diskformatet stöds inte av ABC80" }
+            requireNotNull(Abc80FloppyLayout.list(data)) { "Diskavbildens format stöds inte" }
             return AbcDiskImage(data)
         }
     }

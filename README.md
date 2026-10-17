@@ -77,8 +77,11 @@ parsing do not block Android input handling.
 Disk mounting and ABC80 disk-port access share a lock so a live read cannot
 seek or close the disk file while an image is being copied. A disk is shown as
 mounted only after the ABC80 controller accepts it; the log records its DR
-number, format and byte size. Raw ABC80 images must be 81920, 163840, 327680 or
-655360 bytes. The bundled system disk contains `COPY.ABS` (not `COPY.BAS`).
+number, format and byte size. Raw ABC80/ABC800 images must be 81920, 163840, 327680 or
+655360 bytes. A matching size and `.dsk` extension alone do not make a file a
+disk image; for example, a renamed TAR archive cannot be mounted as a floppy.
+Mount and directory error messages identify the selected computer model.
+The bundled system disk contains `COPY.ABS` (not `COPY.BAS`).
 
 New empty disks are formatted in the controller's physical 7:1 sector order,
 including allocation maps and empty main/backup directories. The creation
