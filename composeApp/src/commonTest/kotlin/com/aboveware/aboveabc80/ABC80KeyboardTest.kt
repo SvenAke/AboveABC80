@@ -7,6 +7,25 @@ import com.aboveware.aboveabc80.terminal.ABC80
 
 class ABC80KeyboardTest {
     @Test
+    fun desktopFunctionKeysMapToAllAbc800PfCodeRanges() {
+        val keys = listOf(Key.F1, Key.F2, Key.F3, Key.F4, Key.F5, Key.F6, Key.F7, Key.F8)
+        for ((index, key) in keys.withIndex()) {
+            for ((shift, control, base) in listOf(
+                Triple(false, false, 192),
+                Triple(true, false, 208),
+                Triple(false, true, 224),
+                Triple(true, true, 240)
+            )) {
+                assertEquals(base + index, abc800PhysicalKeyCode(key, null, shift, control))
+                assertEquals(base + index, abc800PhysicalKeyCode(key, '\u0000', shift, control))
+            }
+        }
+        assertEquals(null, abc800PhysicalKeyCode(Key.F9, null, false, false))
+        assertEquals(97, abc800PhysicalKeyCode(Key.A, 'a', false, false))
+        assertEquals(1, abc800PhysicalKeyCode(Key.A, 'a', false, true))
+    }
+
+    @Test
     fun abc800FunctionKeysUseAllFourManualCodeRanges() {
         val terminal = ABC80()
         val sent = mutableListOf<Int>()

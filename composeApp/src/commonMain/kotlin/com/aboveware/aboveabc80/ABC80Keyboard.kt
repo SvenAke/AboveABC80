@@ -107,6 +107,27 @@ internal fun abc80CharCode(char: Char, shift: Boolean = false): Int? = when(char
     else -> null
 }
 
+internal fun abc800FunctionKeyCode(number: Int, shift: Boolean, control: Boolean): Int {
+    require(number in 1..8)
+    return 0xC0 + number - 1 + (if (shift) 0x10 else 0) + (if (control) 0x20 else 0)
+}
+
+internal fun abc800PhysicalKeyCode(key: Key, char: Char?, shift: Boolean, control: Boolean): Int? {
+    val function = when (key) {
+        Key.F1 -> 1
+        Key.F2 -> 2
+        Key.F3 -> 3
+        Key.F4 -> 4
+        Key.F5 -> 5
+        Key.F6 -> 6
+        Key.F7 -> 7
+        Key.F8 -> 8
+        else -> null
+    }
+    return if (function != null) abc800FunctionKeyCode(function, shift, control)
+        else char?.let { abc800mKeyCode(it, control) }
+}
+
 internal fun abc800mKeyCode(char: Char, control: Boolean = false): Int? {
     val code = if (control) when (val value = char.code) {
         in 97..122 -> value - 96

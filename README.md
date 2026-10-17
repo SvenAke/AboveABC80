@@ -46,7 +46,9 @@ The ABC800 layout follows the original keyboard with cream character keys,
 orange special keys, a two-column PF1-PF8 block and a separate numeric keypad
 (wide zero and tall Return). PF keys support Shift and Ctrl using the
 [ABC800 manual's codes](https://www.devili.iki.fi/Computers/Luxor/Manuals/ABC800/Kayttoohje/sivu_44.html).
-Changing models reloads the keyboard. Physical keyboard mappings are unchanged.
+Changing models reloads the keyboard. For ABC800M/C on desktop, F1-F8 send
+PF1-PF8, including Shift/Ctrl combinations. F3 therefore sends PF3 rather than
+opening terminal setup while emulating an ABC800. ABC80 mappings are unchanged.
 
 The application supports ABC80, ABC800M and ABC800C. ABC800C uses the C-12
 model-specific BASIC ROM (`basic800c.rom`, 4 KB at 0x0000), together with the

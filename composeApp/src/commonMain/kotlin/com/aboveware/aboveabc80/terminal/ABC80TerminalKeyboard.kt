@@ -3,6 +3,7 @@ package com.aboveware.aboveabc80.terminal
 import androidx.compose.ui.input.key.Key
 import com.aboveware.aboveabc80.Abc80Log
 import com.aboveware.aboveabc80.abc80TableCode
+import com.aboveware.aboveabc80.abc800FunctionKeyCode
 import com.aboveware.aboveabc80.keyboard.KeyboardLed
 import androidx.compose.runtime.mutableStateMapOf
 
@@ -38,7 +39,7 @@ class ABC80TerminalKeyboard(private val terminal: Terminal) : TerminalKeyboard {
                 Abc80Log.wtf("Unknown ABC800 function key: $codes")
                 return
             }
-            val code = 0xC0 + number - 1 + (if (shift) 0x10 else 0) + (if (control) 0x20 else 0)
+            val code = abc800FunctionKeyCode(number, shift, control)
             terminal.onKeyEvent(code.toChar())
             return
         }

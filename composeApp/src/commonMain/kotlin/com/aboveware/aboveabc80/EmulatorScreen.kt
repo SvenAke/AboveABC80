@@ -1494,7 +1494,7 @@ private fun handleTerminalKeyEvent(
     if (!activeTerminal.isSetupVisible) {
         if (TerminalManager.computerModel.isAbc800) {
             if (key == Key.Enter || key == Key.NumPadEnter) charValue = '\r'
-            val code = charValue?.let { abc800mKeyCode(it, isCtrl) }
+            val code = abc800PhysicalKeyCode(key, charValue, isShift, isCtrl)
             if (code != null) {
                 if (shouldForwardABC800MKey(type == KeyEventType.KeyDown, getRepeatCount(event))) {
                     NativeLib.getObject().sendKey(code)
