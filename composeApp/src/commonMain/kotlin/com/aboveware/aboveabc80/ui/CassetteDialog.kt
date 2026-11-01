@@ -1,16 +1,20 @@
 package com.aboveware.aboveabc80.ui
 
 import aboveabc80.composeapp.generated.resources.*
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowLeft
@@ -19,9 +23,12 @@ import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Eject
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.FastRewind
+import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.AlertDialog
@@ -63,13 +70,23 @@ private const val SAVED_TAPES = "tapes"
 
 @Composable
 internal fun CassetteIconButton(
+    label: String,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    content: @Composable () -> Unit
+) {
+    TooltipIconButton(label = label, enabled = enabled, onClick = onClick, content = content)
+}
+
+@Composable
+internal fun CassetteIconButton(
     icon: ImageVector,
     label: String,
     enabled: Boolean,
     iconModifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
-    TooltipIconButton(label = label, enabled = enabled, onClick = onClick) {
+    CassetteIconButton(label = label, enabled = enabled, onClick = onClick) {
         Icon(icon, contentDescription = label, modifier = iconModifier)
     }
 }
@@ -175,8 +192,32 @@ fun CassetteDialog(
                     ) {
                         refresh(Abc80Cassette.forward())
                     }
-                    CassetteIconButton(Icons.Default.Add, stringResource(Res.string.cassette_new), !loading) {
-                        Abc80Cassette.format(); refresh()
+                    CassetteIconButton(
+                        label = stringResource(Res.string.cassette_new),
+                        enabled = !loading,
+                        onClick = { Abc80Cassette.format(); refresh() }
+                    ) {
+                        Box(modifier = Modifier.size(24.dp)) {
+                            Icon(
+                                Icons.Default.FolderOpen,
+                                contentDescription = stringResource(Res.string.cassette_new),
+                                modifier = Modifier.fillMaxSize()
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .offset(x = 3.dp, y = (-3).dp)
+                                    .size(15.dp)
+                                    .background(MaterialTheme.colorScheme.surface, CircleShape)
+                            ) {
+                                Icon(
+                                    Icons.Default.StarBorder,
+                                    contentDescription = null,
+                                    modifier = Modifier.fillMaxSize(),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
                     }
                     CassetteIconButton(Icons.Default.Eject, stringResource(Res.string.cassette_eject), !loading) {
                         Abc80Cassette.eject(); refresh()
