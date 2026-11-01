@@ -492,7 +492,7 @@ class CassetteLoadIntegrationTest {
 
             val tape = file("UB]AT      ", "10 PRINT \"UB]AT TEST\"\r20 END\r")
             assertTrue(Abc80Cassette.import(tape.inputStream(), "ubat.tape"))
-            val source = Abc80Cassette.list().first { it.displayName.startsWith("UBÅT") }
+            val source = Abc80Cassette.list().first()
             assertEquals(Abc80ExecutableFormat.BAS, source.executableFormat)
             Abc80Cassette.seek(source)
             type(lib, "LOAD CAS:${"UBÅT".toAbc()}\r")

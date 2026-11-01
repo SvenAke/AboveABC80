@@ -68,6 +68,7 @@ fun SettingsDialog(
     cpuSpeedSetting: Int,
     onCpuSpeedChange: (Int) -> Unit,
     onComputerModelChange: (ComputerModel) -> Unit,
+    onLanguageChange: (String) -> Unit = {},
     onDismiss: () -> Unit
 ) {
     val scope = rememberCoroutineScope()
@@ -318,7 +319,50 @@ fun SettingsDialog(
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
 
-                // 4. Misc Settings
+                // 4. Language Selection
+                Text(
+                    stringResource(Res.string.settings_language),
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
+                var currentLanguage by remember { mutableStateOf(getAppLanguage()) }
+                val languageOptions = listOf(
+                    "system" to stringResource(Res.string.settings_language_system),
+                    "sv" to stringResource(Res.string.settings_language_sv),
+                    "en" to stringResource(Res.string.settings_language_en)
+                )
+                Column(modifier = Modifier.selectableGroup()) {
+                    languageOptions.forEach { (langKey, label) ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp)
+                                .selectable(
+                                    selected = (currentLanguage == langKey),
+                                    onClick = {
+                                        currentLanguage = langKey
+                                        onLanguageChange(langKey)
+                                    },
+                                    role = Role.RadioButton
+                                ),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = (currentLanguage == langKey),
+                                onClick = null
+                            )
+                            Text(
+                                text = label,
+                                style = MaterialTheme.typography.bodyLarge,
+                                modifier = Modifier.padding(start = 16.dp)
+                            )
+                        }
+                    }
+                }
+
+                HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
+
+                // 5. Misc Settings
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()

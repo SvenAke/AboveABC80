@@ -195,7 +195,7 @@ private suspend fun restoreDisksForModel(model: ComputerModel, migrateLegacySett
 }
 
 @Composable
-fun EmulatorScreen(startWithStorageOpen: Boolean = false) {
+fun EmulatorScreen(startWithStorageOpen: Boolean = false, onLanguageChange: (String) -> Unit = {}) {
     val assembler = remember { Assembler.instance }
     val nativeLib = remember { NativeLib.getObject() }
     val keyboard = remember { Keyboard.instance }
@@ -1252,6 +1252,7 @@ fun EmulatorScreen(startWithStorageOpen: Boolean = false) {
                     TerminalManager.cpuSpeed = currentCpuMHz
                 }
             },
+            onLanguageChange = onLanguageChange,
             onDismiss = {
                 showCpuAndFps = getPersistedString("show_cpu_and_fps", "true").toBoolean()
                 showSettingsDialog = false
