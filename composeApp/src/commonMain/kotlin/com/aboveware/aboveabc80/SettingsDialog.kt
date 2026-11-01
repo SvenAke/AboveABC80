@@ -171,10 +171,6 @@ fun SettingsDialog(
                         }
                     }
                 }
-                Text(
-                    stringResource(Res.string.settings_computer_model_notice),
-                    style = MaterialTheme.typography.bodySmall
-                )
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
 

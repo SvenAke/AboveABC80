@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.lazy.LazyColumn
@@ -278,8 +279,10 @@ fun CassetteDialog(
                                     },
                                     leadingContent = { Text(if (info.current) "▶" else "") },
                                     trailingContent = {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            if (info.length > 0) Text("${(info.length + 1023) / 1024} kB")
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(2.dp)
+                                        ) {
                                             val ext = info.displayName.substringAfterLast('.', "")
                                             val isBas = info.executableFormat == Abc80ExecutableFormat.BAS
                                             if (info.executableFormat != null) {
@@ -323,6 +326,13 @@ fun CassetteDialog(
                                                         }
                                                     }
                                                 }
+                                            }
+                                            if (info.length > 0) {
+                                                Text(
+                                                    "${(info.length + 1023) / 1024} kB",
+                                                    modifier = Modifier.padding(start = 4.dp),
+                                                    style = MaterialTheme.typography.bodyMedium
+                                                )
                                             }
                                         }
                                     }
