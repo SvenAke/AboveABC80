@@ -275,7 +275,10 @@ fun SettingsDialog(
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(vertical = 4.dp)
+                ) {
                     Checkbox(
                         checked = startWide,
                         onCheckedChange = {
@@ -283,9 +286,20 @@ fun SettingsDialog(
                             setPersistedString("tkn80_start", it.toString())
                         }
                     )
-                    Text(stringResource(Res.string.tkn80_start))
+                    Column(modifier = Modifier.padding(start = 8.dp)) {
+                        Text(
+                            text = stringResource(Res.string.tkn80_start),
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                        Text(
+                            text = stringResource(Res.string.tkn80_restart),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
-                Text(stringResource(Res.string.tkn80_restart), style = MaterialTheme.typography.bodySmall)
+
+                HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
 
                 Text(
                     stringResource(Res.string.settings_cpu_speed),

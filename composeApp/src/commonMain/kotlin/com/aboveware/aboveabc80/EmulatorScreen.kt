@@ -669,8 +669,10 @@ fun EmulatorScreen(startWithStorageOpen: Boolean = false, onLanguageChange: (Str
                             .clickable {
                                 isFastSpeedMode = !isFastSpeedMode
                                 nativeLib.setFastSpeed(isFastSpeedMode)
-                            focusRequester.requestFocus()
-                        }
+                                cpuSpeedSetting = if (isFastSpeedMode) 9 else (if (cpuSpeedSetting == 9) initialModel.defaultCpuSpeedSetting else cpuSpeedSetting)
+                                setPersistedString("cpu_speed_mhz", cpuSpeedSetting.toString())
+                                focusRequester.requestFocus()
+                            }
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -1196,15 +1198,17 @@ fun EmulatorScreen(startWithStorageOpen: Boolean = false, onLanguageChange: (Str
                 showCpuAndFps = it
                 setPersistedString("show_cpu_and_fps", it.toString())
             },
-            cpuSpeedSetting = cpuSpeedSetting,
+            cpuSpeedSetting = if (nativeLib.isFastSpeed()) 9 else cpuSpeedSetting,
             onCpuSpeedChange = {
                 cpuSpeedSetting = it
                 setPersistedString("cpu_speed_mhz", it.toString())
                 val model = TerminalManager.computerModel
                 val frequency = model.cpuFrequencyHz(it)
-                nativeLib.setFastSpeed(it == 9)
+                val fastMode = (it == 9)
+                nativeLib.setFastSpeed(fastMode)
+                isFastSpeedMode = fastMode
                 nativeLib.setCpuFrequency(frequency)
-                currentCpuMHz = model.cpuSpeedLabel(it)
+                currentCpuMHz = if (fastMode) "MAX" else model.cpuSpeedLabel(it)
                 TerminalManager.cpuSpeed = currentCpuMHz
             },
             onComputerModelChange = { model ->

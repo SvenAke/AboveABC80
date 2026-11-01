@@ -828,6 +828,20 @@ internal fun ABC80Screen(
                     }
                 }
             }
+            val scanlineIntensity = TerminalManager.scanlineIntensity
+            if (scanlineIntensity > 0f) {
+                val totalScanlines = ABC80_SCREEN_ROWS * ch
+                val scanlineHeight = py * 0.4f
+                val scanlineAlpha = (scanlineIntensity * 1.5f).coerceIn(0f, 0.9f)
+                val darkColor = Color.Black.copy(alpha = scanlineAlpha)
+                for (y in 0 until totalScanlines) {
+                    drawRect(
+                        color = darkColor,
+                        topLeft = Offset(0f, (y + 0.6f) * py),
+                        size = Size(size.width, scanlineHeight)
+                    )
+                }
+            }
         }
         }
             if (!isAbc800M && nativeLib.dosActive) {
