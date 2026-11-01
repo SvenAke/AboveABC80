@@ -15,7 +15,7 @@ import org.jetbrains.compose.resources.painterResource
 fun main() = application {
     Window(
         onCloseRequest = ::exitApplication,
-        title = "AboveABC80",
+        title = "aboveABC80",
         icon = painterResource(Res.drawable.windows_icon)
     ) {
         Box(
