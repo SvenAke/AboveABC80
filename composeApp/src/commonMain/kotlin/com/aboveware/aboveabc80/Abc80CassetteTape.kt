@@ -112,8 +112,16 @@ class Abc80CassetteTape {
         }
         if (fileInfo.valid) {
             val eightPointThree = fileInfo.name.eightPointThree()
-            foundProgram = program.filename.startsWith(".") ||
-                    eightPointThree == program.filename
+            val reqName = program.filename
+            val eightBase = eightPointThree.substringBefore('.')
+            val reqBase = reqName.substringBefore('.')
+            val eightExt = eightPointThree.substringAfter('.', "")
+            val reqExt = reqName.substringAfter('.', "")
+
+            foundProgram = reqName.startsWith(".") || reqName.isEmpty() ||
+                    eightPointThree.equals(reqName, ignoreCase = true) ||
+                    (eightBase.equals(reqBase, ignoreCase = true) &&
+                     (eightExt.isEmpty() || reqExt.isEmpty() || eightExt.equals(reqExt, ignoreCase = true)))
             val message = if (foundProgram) {
                 program.filename = eightPointThree
                 "Läser in $eightPointThree..."
@@ -124,7 +132,7 @@ class Abc80CassetteTape {
             if (!foundProgram) {
                 // Pause the emulator thread so no cassette bits or ROM timeouts advance.
                 val started = TimeSource.Monotonic.markNow()
-                while (started.elapsedNow().inWholeMilliseconds < 1000 &&
+                while (started.elapsedNow().inWholeMilliseconds < 1020 &&
                     !Abc80CassetteStatus.cancelled) {
                     Thread.sleep(10)
                 }
@@ -151,7 +159,7 @@ class Abc80CassetteTape {
         foundProgram = true
     }
 
-    /** An ABC80 file name is 11 consecutive letters, digits, spaces or the national characters [ \ ]. */
+    /** An ABC80 file name is 11 consecutive letters, digits, spaces or the national characters [ \ ] { | }. */
     private fun filenameOnStack(): String {
         val sp = NativeLib.getObject().stackPointer()
         val memory = NativeLib.getObject().getMemory()
@@ -165,5 +173,8 @@ class Abc80CassetteTape {
         return ""
     }
 
-    private fun abc80Character(c: Char) = (c in 'A'..'Z') || (c in '0'..'9') || c == ' ' || c == '[' || c == '\\' || c == ']'
+    private fun abc80Character(c: Char) =
+        (c in 'A'..'Z') || (c in 'a'..'z') || (c in '0'..'9') || c == ' ' || c == '.' ||
+        c == '[' || c == '\\' || c == ']' || c == '{' || c == '|' || c == '}' ||
+        c in "ÅÄÖåäö"
 }

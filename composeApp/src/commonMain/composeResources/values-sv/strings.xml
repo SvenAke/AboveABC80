@@ -38,6 +38,7 @@
     <string name="cassette_not_found">Programmet %1$s hittades inte. Spola tillbaka och sök från början?</string>
     <string name="cassette_restart_search">Sök från början</string>
     <string name="cassette_cancel">Avbryt</string>
+    <string name="menu_cassettes">Kassetter…</string>
     <string name="menu_fast_mode">SNABB</string>
     <string name="font_select_title">Välj teckensnitt</string>
     <string name="font_standard_ascii">Standard-ASCII</string>

@@ -61,6 +61,7 @@
     <string name="screen_copy">Kopiera</string>
     <string name="menu_paste_terminal">Klistra in i terminalen</string>
     <string name="menu_disks">Disketter…</string>
+    <string name="menu_cassettes">Kassett…</string>
     <string name="menu_character_set">Teckenuppsättning</string>
     <string name="menu_debugger">Felsökare</string>
     <string name="menu_test">Test</string>

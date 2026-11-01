@@ -6,14 +6,15 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowLeft
+import androidx.compose.material.icons.filled.ArrowRight
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Eject
 import androidx.compose.material.icons.filled.Download
@@ -65,10 +66,11 @@ internal fun CassetteIconButton(
     icon: ImageVector,
     label: String,
     enabled: Boolean,
+    iconModifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
     TooltipIconButton(label = label, enabled = enabled, onClick = onClick) {
-        Icon(icon, contentDescription = label)
+        Icon(icon, contentDescription = label, modifier = iconModifier)
     }
 }
 
@@ -157,10 +159,20 @@ fun CassetteDialog(
                     CassetteIconButton(Icons.Default.FastRewind, stringResource(Res.string.cassette_rewind), !loading) {
                         Abc80Cassette.rewind(); refresh()
                     }
-                    CassetteIconButton(Icons.AutoMirrored.Filled.ArrowBack, stringResource(Res.string.cassette_back), !loading) {
+                    CassetteIconButton(
+                        Icons.Default.ArrowLeft,
+                        stringResource(Res.string.cassette_back),
+                        !loading,
+                        iconModifier = Modifier.size(32.dp)
+                    ) {
                         refresh(Abc80Cassette.back())
                     }
-                    CassetteIconButton(Icons.AutoMirrored.Filled.ArrowForward, stringResource(Res.string.cassette_forward), !loading) {
+                    CassetteIconButton(
+                        Icons.Default.ArrowRight,
+                        stringResource(Res.string.cassette_forward),
+                        !loading,
+                        iconModifier = Modifier.size(32.dp)
+                    ) {
                         refresh(Abc80Cassette.forward())
                     }
                     CassetteIconButton(Icons.Default.Add, stringResource(Res.string.cassette_new), !loading) {

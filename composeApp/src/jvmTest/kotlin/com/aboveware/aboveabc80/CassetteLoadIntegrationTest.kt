@@ -466,6 +466,55 @@ class CassetteLoadIntegrationTest {
         }
     }
 
+    @Test
+    fun cassetteLoadsFileWithSwedishCharacters() = runBlocking {
+        val home = Files.createTempDirectory("abc80-cassette-swedish-test").toFile()
+        val previousHome = System.getProperty("user.home")
+        val previousModel = TerminalManager.computerModel
+        System.setProperty("user.home", home.absolutePath)
+        TerminalManager.computerModel = ComputerModel.ABC80
+        var native: NativeLib? = null
+        try {
+            check(home.resolve(".aboveabc80").resolve("dr").mkdirs())
+            val lib = NativeLib.getObject()
+            native = lib
+            val memory = ByteArray(0x10000)
+            Res.readBytes("files/prom.rom").copyInto(memory)
+            Res.readBytes("files/dos.rom").copyInto(memory, 0x6000)
+            Res.readBytes("files/printer.rom").copyInto(memory, 0x7800)
+            lib.copyToMemory(0, memory)
+            lib.enableLogging(false)
+            lib.startEmulator(3_000_000)
+            await("BASIC must finish booting") {
+                screen(lib).contains("ABC80")
+            }
+            Thread.sleep(250)
+
+            val tape = file("UB]AT      ", "10 PRINT \"UB]AT TEST\"\r20 END\r")
+            assertTrue(Abc80Cassette.import(tape.inputStream(), "ubat.tape"))
+            val source = Abc80Cassette.list().first { it.displayName.startsWith("UBÅT") }
+            assertEquals(Abc80ExecutableFormat.BAS, source.executableFormat)
+            Abc80Cassette.seek(source)
+            type(lib, "LOAD CAS:${"UBÅT".toAbc()}\r")
+            type(lib, "LIST\r")
+            assertTrue(screen(lib).contains("UBÅT TEST"), screen(lib))
+
+            Abc80Cassette.seek(source)
+            type(lib, "NEW\r")
+            type(lib, "LOAD CAS:${"UBÅT".toAbc()}\r")
+            type(lib, "RUN\r")
+            assertTrue(screen(lib).toAndroid().contains("UBÅT TEST"), screen(lib))
+        } finally {
+            Abc80CassetteStatus.cancel()
+            native?.freeze()
+            native?.setFastSpeed(false)
+            Abc80Cassette.eject()
+            TerminalManager.computerModel = previousModel
+            System.setProperty("user.home", previousHome)
+            home.deleteRecursively()
+        }
+    }
+
     private fun file(name: String, text: String): ByteArray {
         val header = ByteArray(256)
         header[0] = -1

@@ -144,12 +144,22 @@ fun String.toAndroid() = replace(']', 'Å')
     .replace('}', 'å')
     .replace('{', 'ä')
     .replace('|', 'ö')
-fun String.toAbc() = replace('Å', ']')
+
+fun String.toAbc() = replace('Å', ']').replace('å', '}')
+    .replace('Ä', '[').replace('ä', '{')
+    .replace('Ö', '\\').replace('ö', '|')
 
 /** The name is formatted as 8.3 characters with spaces. */
-fun String.eightPointThree() =
-    try {
-        (substring(0..7).trim() + "." + substring(8..10).trim()).toAndroid()
-    } catch (e: IndexOutOfBoundsException) {
-        ""
+fun String.eightPointThree(): String {
+    if (isEmpty()) return ""
+    val converted = toAndroid().trim()
+    if (converted.contains('.')) {
+        val base = converted.substringBefore('.').trim()
+        val ext = converted.substringAfter('.').trim()
+        return if (ext.isEmpty()) "$base." else "$base.$ext"
     }
+    val padded = converted.padEnd(11, ' ')
+    val namePart = padded.substring(0, 8).trim()
+    val extPart = padded.substring(8, 11).trim()
+    return if (extPart.isEmpty()) "$namePart." else "$namePart.$extPart"
+}

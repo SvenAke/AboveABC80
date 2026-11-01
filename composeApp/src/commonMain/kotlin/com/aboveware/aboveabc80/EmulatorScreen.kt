@@ -1024,7 +1024,7 @@ fun EmulatorScreen(startWithStorageOpen: Boolean = false) {
                                         modifier = Modifier.padding(end = 12.dp)
                                     ) {
                                         Text(
-                                            stringResource(Res.string.cassette_title) + "...",
+                                            stringResource(Res.string.menu_cassettes),
                                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                                             style = MaterialTheme.typography.labelLarge
                                         )
@@ -1037,7 +1037,7 @@ fun EmulatorScreen(startWithStorageOpen: Boolean = false) {
                                         containerColor = MaterialTheme.colorScheme.secondaryContainer,
                                         contentColor = MaterialTheme.colorScheme.onSecondaryContainer
                                     ) {
-                                        Icon(Icons.Default.Album, contentDescription = stringResource(Res.string.cassette_title))
+                                        Icon(Icons.Default.Album, contentDescription = stringResource(Res.string.menu_cassettes))
                                     }
                                 }
 
@@ -1331,6 +1331,7 @@ fun EmulatorScreen(startWithStorageOpen: Boolean = false) {
                     val started = TimeSource.Monotonic.markNow()
                     while (!Abc80CassetteStatus.visible && started.elapsedNow().inWholeMilliseconds < 3000) delay(20)
                     while (Abc80CassetteStatus.visible) delay(50)
+                    delay(300)
                     pasteABC80Text(nativeLib, "RUN\r")
                 }
             }

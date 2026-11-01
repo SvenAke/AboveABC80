@@ -29,8 +29,16 @@ internal fun abc80ExecutableFormat(
         for (index in start until minOf(start + recordSize, data.size)) {
             val code = data[index].toInt() and 255
             if (code == 0 || code == 3) break
-            if (code !in 32..127 && code != 9 && code != 10 && code != 13) return null
-            text.append(code.toChar())
+            if (code < 32 && code != 9 && code != 10 && code != 13) return null
+            text.append(when (code) {
+                0x5b -> 'Ä'
+                0x5c -> 'Ö'
+                0x5d -> 'Å'
+                0x7b -> 'ä'
+                0x7c -> 'ö'
+                0x7d -> 'å'
+                else -> code.toChar()
+            })
         }
     }
     val lines = text.toString().replace('\r', '\n').lines().filter { it.isNotBlank() }
