@@ -32,7 +32,7 @@ internal class ABC80Selection {
 }
 
 internal fun selectedABC80Text(rows: List<String>, range: IntRange): String {
-    val columns = rows.first().length
+    val columns = rows.firstOrNull()?.length ?: 40
     return (range.first / columns..range.last / columns).joinToString("\n") { row ->
         val start = if (row == range.first / columns) range.first % columns else 0
         val end = if (row == range.last / columns) range.last % columns + 1 else columns

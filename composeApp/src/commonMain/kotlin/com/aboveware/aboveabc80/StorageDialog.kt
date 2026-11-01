@@ -92,7 +92,7 @@ fun StorageFileDialog(
     val controller = remember { DiskController.instance }
     var nodes by remember { mutableStateOf<List<StorageNode>>(emptyList()) }
     var pathStack by remember { mutableStateOf(listOf(rootPath)) }
-    val destinationFolder = cloudDownloadFolder(pathStack.last(), downloadFolder)
+    val destinationFolder = cloudDownloadFolder(pathStack.lastOrNull() ?: rootPath, downloadFolder)
     var isLoading by remember { mutableStateOf(true) }
     var isDownloading by remember { mutableStateOf(false) }
     var downloadingFileName by remember { mutableStateOf("") }
@@ -196,7 +196,7 @@ fun StorageFileDialog(
         }
     }
 
-    val currentPrefix = pathStack.last()
+    val currentPrefix = pathStack.lastOrNull() ?: rootPath
 
     LaunchedEffect(currentPrefix) {
         isLoading = true
@@ -258,7 +258,7 @@ fun StorageFileDialog(
                     )
                     if (pathStack.size > 1 && selectedCloudFiles.isEmpty()) {
                         Text(
-                            text = "/" + pathStack.last().removePrefix("abc80/").toCloudDisplayName(),
+                            text = "/" + (pathStack.lastOrNull() ?: rootPath).removePrefix("abc80/").toCloudDisplayName(),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -288,9 +288,9 @@ fun StorageFileDialog(
                         val totalBytes = selectedCloudFiles.sumOf { it.second.size.toLong() }
                         val displayNames = if (selectedCloudFiles.size > 1) {
                             "${selectedCloudFiles.size} files"
-                        } else {
-                            "\"${selectedCloudFiles[0].first}\""
-                        }
+                        } else if (selectedCloudFiles.isNotEmpty()) {
+                            "\"${selectedCloudFiles.first().first}\""
+                        } else ""
 
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
@@ -790,7 +790,7 @@ fun StorageFileDialog(
                                                 downloadingFileName = node.displayName
                                                 downloadedBytes = 0
                                                 val fileDestinationFolder = cloudDownloadFolder(
-                                                    pathStack.last(), downloadFolder, node.name
+                                                    pathStack.lastOrNull() ?: rootPath, downloadFolder, node.name
                                                 )
                                                 if (fileDestinationFolder != null) {
                                                     provider.downloadToFile(

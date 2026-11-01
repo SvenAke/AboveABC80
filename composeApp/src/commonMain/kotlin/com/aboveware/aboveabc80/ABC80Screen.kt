@@ -704,7 +704,7 @@ internal fun ABC80Screen(
         isAbc800C -> ABC800C_TEXT_CELL_HEIGHT
         else -> charMap.charHeight
     }
-    val columns = rows.first().length
+    val columns = rows.firstOrNull()?.length ?: if (wideScreen) 80 else 40
     LaunchedEffect(columns) { selection.clear() }
     Box(
         modifier.fillMaxSize().background(model.caseColor).padding(BEZEL_WIDTH),

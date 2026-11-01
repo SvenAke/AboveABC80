@@ -301,14 +301,15 @@ class Abc80FloppyLayout(formatName: String, val drive: Int) {
             image[at + 2] = (index shr 8).toByte()
             if (index > 0) records.copyInto(image, at + 3, (index - 1) * 253, index * 253)
         }
-        val header = physicalSector(sectors.first()) * 256
+        val firstSector = sectors.firstOrNull() ?: 0
+        val header = physicalSector(firstSector) * 256
         image.fill(0xFF.toByte(), header + 3, header + 240)
         runs.forEachIndexed { index, (start, length) ->
             image[header + 4 + index * 2] = (start / 8).toByte()
             image[header + 5 + index * 2] = (((start % 8) shl 5) or (length - 1)).toByte()
         }
-        image[selectedEntry] = (sectors.first() / 8).toByte()
-        image[selectedEntry + 1] = ((sectors.first() % 8) shl 5).toByte()
+        image[selectedEntry] = (firstSector / 8).toByte()
+        image[selectedEntry + 1] = ((firstSector % 8) shl 5).toByte()
         image[selectedEntry + 2] = 0
         image[selectedEntry + 3] = 0
         diskName.copyInto(image, selectedEntry + 4)

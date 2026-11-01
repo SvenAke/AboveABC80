@@ -49,7 +49,7 @@ internal fun abc80PromptLine(memory: ByteArray): String? {
     val cursor = decodeABC80Cursor(memory) ?: return null
     val rows = decodeABC80Screen(memory)
     var firstRow = cursor.first
-    while (firstRow > 0 && rows[firstRow - 1].last() != ' ') firstRow--
+    while (firstRow > 0 && rows[firstRow - 1].lastOrNull() != ' ') firstRow--
     return buildString {
         for (row in firstRow..cursor.first) {
             append(if (row == cursor.first) rows[row].take(cursor.second) else rows[row].trimEnd())
