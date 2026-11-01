@@ -21,11 +21,38 @@ class Abc80MonitorCharacterMap {
     }
 
     @ExperimentalUnsignedTypes
-    fun character(char: Int, row: Int) = when (char) {
-        in 32..127 -> characters[(char - 32) * charHeight + row]
-        in 160..191, in 224..255 -> characters[char * charHeight + row]
-        in 192..223 -> characters[(char - 160) * charHeight + row]
-        else -> characters[row]
+    fun character(char: Int, row: Int): UByte {
+        if (char in 128..255) {
+            val val7 = char and 0x7F
+            if (val7 in 0x20..0x3F || val7 in 0x60..0x7F) {
+                val b0 = (val7 and 1) != 0   // Top-Left
+                val b1 = (val7 and 2) != 0   // Top-Right
+                val b2 = (val7 and 4) != 0   // Middle-Left
+                val b3 = (val7 and 8) != 0   // Middle-Right
+                val b4 = (val7 and 16) != 0  // Bottom-Left
+                val b5 = (val7 and 32) != 0  // Bottom-Right
+                val activeLeft = when (row) {
+                    in 0..3 -> b0
+                    in 4..7 -> b2
+                    else -> b4
+                }
+                val activeRight = when (row) {
+                    in 0..3 -> b1
+                    in 4..7 -> b3
+                    else -> b5
+                }
+                var byte = 0
+                if (activeLeft) byte = byte or 0b11110000
+                if (activeRight) byte = byte or 0b00001111
+                return byte.toUByte()
+            }
+        }
+        return when (char) {
+            in 32..127 -> characters[(char - 32) * charHeight + row]
+            in 160..191, in 224..255 -> characters[char * charHeight + row]
+            in 192..223 -> characters[(char - 160) * charHeight + row]
+            else -> characters[row]
+        }
     }
 
     @ExperimentalUnsignedTypes

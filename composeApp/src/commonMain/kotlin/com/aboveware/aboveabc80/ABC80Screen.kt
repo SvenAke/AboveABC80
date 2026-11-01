@@ -742,7 +742,7 @@ internal fun ABC80Screen(
             inset(m) {
             val px = size.width / (columns * cw)
             val py = size.height / (ABC80_SCREEN_ROWS * ch)
-            val pixel = Size(px, py)
+            val pixel = Size(px + 0.5f, py + 0.5f)
             if (isAbc800M) {
                 highResolutionBitmap?.let { bitmap ->
                     drawImage(
@@ -765,14 +765,14 @@ internal fun ABC80Screen(
                         drawRect(
                             model.screenColor,
                             Offset(c * cw * px, (r * ch + scanlines.first) * py),
-                            Size(cw * px, scanlines.count() * py)
+                            Size(cw * px + 0.5f, scanlines.count() * py + 0.5f)
                         )
                     }
                 } else {
                     drawRect(
                         model.screenColor,
                         Offset(c * cw * px, r * ch * py),
-                        Size(cw * px, ch * py)
+                        Size(cw * px + 0.5f, ch * py + 0.5f)
                     )
                 }
             }
@@ -792,7 +792,7 @@ internal fun ABC80Screen(
                     drawRect(
                         color = Color.White,
                         topLeft = Offset(column * cw * px, row * ch * py),
-                        size = Size(cw * px, ch * py),
+                        size = Size(cw * px + 0.5f, ch * py + 0.5f),
                         blendMode = BlendMode.Difference
                     )
                 }
@@ -800,7 +800,7 @@ internal fun ABC80Screen(
                 line.forEachIndexed { c, char ->
                     val selected = selection.range?.contains(r * columns + c) == true
                     if (selected) drawRect(
-                        model.screenColor, Offset(c * cw * px, r * ch * py), Size(cw * px, ch * py)
+                        model.screenColor, Offset(c * cw * px, r * ch * py), Size(cw * px + 0.5f, ch * py + 0.5f)
                     )
                     if (char == ' ') return@forEachIndexed
                     if (isAbc800M) {
