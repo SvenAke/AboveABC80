@@ -506,7 +506,7 @@ class CassetteLoadIntegrationTest {
             assertTrue(screen(lib).toAndroid().contains("UBÅT TEST"), screen(lib))
         } finally {
             Abc80CassetteStatus.cancel()
-            native?.freeze()
+            native?.freeze(false)
             native?.setFastSpeed(false)
             Abc80Cassette.eject()
             TerminalManager.computerModel = previousModel

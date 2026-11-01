@@ -1509,7 +1509,11 @@ private fun handleTerminalKeyEvent(
         if (code != null) {
             if (type == KeyEventType.KeyDown) {
                 pressedKeys[key] = code
-                NativeLib.getObject().pressKey(code)
+                if (code == 3) {
+                    NativeLib.getObject().sendKey(3)
+                } else {
+                    NativeLib.getObject().pressKey(code)
+                }
             }
             return true
         }
