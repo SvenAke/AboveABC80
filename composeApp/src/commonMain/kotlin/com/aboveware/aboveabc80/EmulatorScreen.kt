@@ -314,7 +314,13 @@ fun EmulatorScreen(startWithStorageOpen: Boolean = false, onLanguageChange: (Str
             try {
                 audioPlayer.start()
                 while (isActive) {
-                    audioPlayer.play(soundOutput.process(nativeLib.readSoundSamples(audioPlayer.sampleRate / 100)))
+                    audioPlayer.play(
+                        soundOutput.process(
+                            samples = nativeLib.readSoundSamples(audioPlayer.sampleRate / 100),
+                            activity = Abc80CassetteStatus.activity,
+                            cassetteBit = nativeLib.pio.B.cassette
+                        )
+                    )
                 }
             } catch (e: CancellationException) {
                 throw e
