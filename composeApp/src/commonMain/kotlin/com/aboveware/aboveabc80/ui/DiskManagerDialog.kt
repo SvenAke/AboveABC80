@@ -174,8 +174,10 @@ fun DiskManagerDialog(
                             ListItem(
                                 headlineContent = { Text(name) },
                                 trailingContent = {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text("${(size + 1023) / 1024} kB")
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(2.dp)
+                                    ) {
                                         if (runnable) {
                                             if (runnableFiles[name] != Abc80ExecutableFormat.ABS) CassetteIconButton(
                                                 Icons.Default.Download,
@@ -194,6 +196,11 @@ fun DiskManagerDialog(
                                                 onRunFile(listingDrive, name)
                                             }
                                         }
+                                        Text(
+                                            "${(size + 1023) / 1024} kB",
+                                            modifier = Modifier.padding(start = 4.dp),
+                                            style = MaterialTheme.typography.bodyMedium
+                                        )
                                     }
                                 }
                             )
