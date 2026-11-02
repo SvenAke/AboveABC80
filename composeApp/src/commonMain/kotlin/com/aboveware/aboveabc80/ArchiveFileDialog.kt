@@ -338,14 +338,14 @@ private fun ByteArray.toAbc80PreviewText(): AnnotatedString {
 
     var renderedIndex = 1
     while (renderedIndex < renderedLines.size) {
-        val number = renderedLines[renderedIndex].parts
-            .joinToString(separator = "") { it.text }
-            .trim()
+        val number = renderedLines.getOrNull(renderedIndex)?.parts
+            ?.joinToString(separator = "") { it.text }
+            ?.trim() ?: ""
         if (number.matches(Regex("\\d+"))) {
             val previousIndex = (renderedIndex - 1 downTo 0).firstOrNull { index ->
-                renderedLines[index].parts.any { it.text.trim().isNotEmpty() }
+                renderedLines.getOrNull(index)?.parts?.any { it.text.trim().isNotEmpty() } == true
             }
-            if (previousIndex != null) {
+            if (previousIndex != null && previousIndex < renderedLines.size) {
                 val previous = renderedLines[previousIndex]
                 val previousTextLength = previous.parts.sumOf { it.text.length }
                 val padding = (charactersPerLine - previousTextLength - number.length).coerceAtLeast(1)

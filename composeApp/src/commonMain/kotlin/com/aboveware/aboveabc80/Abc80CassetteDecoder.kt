@@ -33,22 +33,26 @@ class Abc80CassetteDecoder(progressText: String) {
         private var blocks = inBlocks
         private var rawBuffers = inRawBuffers
         fun name(): String {
+            if (blocks.isEmpty()) return ""
             val nameString = StringBuilder()
-            for (index in 0..10)
+            for (index in 0..minOf(10, blocks[0].lastIndex))
                 nameString.append(blocks[0][index].toInt().toChar())
             return nameString.toString()
         }
 
         fun data(): ByteArray {
+            if (blocks.size < 2) return ByteArray(0)
             val result = mutableListOf<Byte>()
             // Return all data blocks without the first name block and the last end block
-            blocks.subList(1, blocks.size - 1).forEach { result.addAll(it.toList()) }
+            blocks.subList(1, (blocks.size - 1).coerceAtLeast(1)).forEach { result.addAll(it.toList()) }
             return result.toByteArray()
         }
 
         fun rawData(): ByteArray {
+            if (rawBuffers.isEmpty()) return ByteArray(0)
             val result = mutableListOf<Byte>()
-            rawBuffers.subList(0, blocks.size).forEach { result.addAll(it.toList()) }
+            val count = minOf(blocks.size, rawBuffers.size)
+            rawBuffers.subList(0, count).forEach { result.addAll(it.toList()) }
             return result.toByteArray()
         }
 
@@ -60,7 +64,7 @@ class Abc80CassetteDecoder(progressText: String) {
          *  Has 11 character as the filename and the rest is zeros
          */
         fun validate(): Boolean {
-            if (blocks.size < 3) {
+            if (blocks.size < 3 || rawBuffers.isEmpty()) {
                 Abc80Log.cassette("To few blocks decoded")
                 return false
             }
@@ -70,7 +74,7 @@ class Abc80CassetteDecoder(progressText: String) {
                 Abc80Log.cassette("Name block error")
                 return false
             }
-            for (index in 1 until blocks.size) {
+            for (index in 1 until minOf(blocks.size, rawBuffers.size)) {
                 val dataBlock = Abc80Program.DataBlock(index - 1)
                 dataBlock.load(rawBuffers[index])
                 if (!dataBlock.verify()) {

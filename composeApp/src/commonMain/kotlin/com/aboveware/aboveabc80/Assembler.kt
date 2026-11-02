@@ -276,7 +276,7 @@ class Assembler {
 
         fun forEach(action: (Map.Entry<String, Int>) -> Unit) = labels.forEach { action(it) }
         fun label(pc: Int) =
-            if (labels.values.contains(pc)) labels.keys.first { pc == labels[it] } else pc.toHex()
+            if (labels.values.contains(pc)) labels.keys.firstOrNull { pc == labels[it] } ?: pc.toHex() else pc.toHex()
 
         fun dump() {
             val resolvedList = mutableListOf<String>()
@@ -364,7 +364,7 @@ class Assembler {
         }
 
         operator fun get(key: Int) = if (labels.containsValue(key))
-            labels.keys.first { key == labels[it] }
+            labels.keys.firstOrNull { key == labels[it] } ?: "0x${key.toHex()}"
         else
             "0x${key.toHex()}"
 

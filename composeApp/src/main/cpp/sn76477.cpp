@@ -2339,13 +2339,13 @@ static void *sn76477_start(SN76477 *sn, int port) {
 
     intialize_noise(sn);
     /* set up interface values */
-    enable(sn, (port & 0x01) != 0x01);
-    vco(sn, (port & 0x04) != 0x00);             // pin 22
-    mixer_a(sn, (port & 0x10) != 0x00);
-    mixer_b(sn, (port & 0x08) != 0x00);
-    mixer_c(sn, (port & 0x20) != 0x00);
-    envelope_1(sn, (port & 0x80) != 0x00);
-    envelope_2(sn, (port & 0x40) != 0x00);
+    enable(sn, (port & 0x01) == 0);
+    vco(sn, (port & 0x04) != 0);             // pin 22
+    mixer_a(sn, (port & 0x10) != 0);
+    mixer_b(sn, (port & 0x08) != 0);
+    mixer_c(sn, (port & 0x20) != 0);
+    envelope_1(sn, (port & 0x80) != 0);
+    envelope_2(sn, (port & 0x40) != 0);
 
     one_shot_res(sn, RES_K(330));
     one_shot_cap(sn, CAP_U(0.1));
@@ -2353,7 +2353,7 @@ static void *sn76477_start(SN76477 *sn, int port) {
     slf_cap(sn, CAP_U(1));
     vco_res(sn, RES_K(100));
     vco_cap(sn, CAP_N(10));
-    vco_voltage(sn, (port & 0x02) != 0x00 ? 2.5 : 0);
+    vco_voltage(sn, (port & 0x02) != 0 ? 2.5 : 0);
     noise_clock_res(sn, RES_K(47));
     noise_filter_res(sn, RES_K(330));
     noise_filter_cap(sn, CAP_P(390));
@@ -2362,7 +2362,7 @@ static void *sn76477_start(SN76477 *sn, int port) {
     attack_decay_cap(sn, CAP_U(10));
     amplitude_res(sn, RES_K(33));
     feedback_res(sn, RES_K(10));
-    pitch_voltage(sn, 0.0);
+    pitch_voltage(sn, 2.5);
     log_complete_state(sn);
 
 #if LOG_WAV

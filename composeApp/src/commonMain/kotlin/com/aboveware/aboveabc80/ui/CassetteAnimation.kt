@@ -46,11 +46,15 @@ import com.aboveware.aboveabc80.Abc80CassetteStatus
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
-fun CassetteAnimation(modifier: Modifier = Modifier) {
-    val activity = Abc80CassetteStatus.activity
+fun CassetteAnimation(
+    modifier: Modifier = Modifier,
+    activity: Abc80CassetteStatus.Activity = Abc80CassetteStatus.activity,
+    text: String = Abc80CassetteStatus.text,
+    missingProgram: String? = Abc80CassetteStatus.missingProgram
+) {
     if (activity == Abc80CassetteStatus.Activity.Idle) return
 
-    Abc80CassetteStatus.missingProgram?.let { filename ->
+    missingProgram?.let { filename ->
         AlertDialog(
             onDismissRequest = { Abc80CassetteStatus.cancel() },
             title = { Text(stringResource(Res.string.cassette_end_of_tape)) },
@@ -86,7 +90,7 @@ fun CassetteAnimation(modifier: Modifier = Modifier) {
                 recording = activity == Abc80CassetteStatus.Activity.Writing
             )
             Text(
-                text = Abc80CassetteStatus.text,
+                text = text,
                 color = Color.White,
                 modifier = Modifier.padding(top = 12.dp)
             )

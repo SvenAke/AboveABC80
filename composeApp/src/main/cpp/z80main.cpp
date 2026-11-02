@@ -217,7 +217,7 @@ void abc80_release_all_keys() {
 }
 
 int abc80_read_keyboard() {
-    return g_key_value.load(std::memory_order_relaxed);
+    return g_key_value.load();
 }
 
 /* Called between instructions; delivers the pending keyboard interrupt once the CPU accepts it. */

@@ -7,6 +7,7 @@ import com.aboveware.aboveabc80.terminal.TerminalManager
 import java.nio.file.Files
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import kotlin.test.Test
@@ -78,7 +79,7 @@ class CassetteLoadIntegrationTest {
 
         } finally {
             Abc80CassetteStatus.cancel()
-            native?.freeze()
+            native?.freeze(false)
             native?.setFastSpeed(false)
             native?.portWrite(128, 0)
             Abc80Cassette.eject()
@@ -276,7 +277,7 @@ class CassetteLoadIntegrationTest {
             }
         } finally {
             Abc80CassetteStatus.cancel()
-            native?.freeze()
+            native?.freeze(false)
             native?.setFastSpeed(false)
             native?.let { TKN80.setEnabled(false, it) }
             native?.removeMemoryReadWatcher(0x05a0, delayWatcher)
@@ -424,6 +425,8 @@ class CassetteLoadIntegrationTest {
             }
             val frequency = peaks * 44100.0 / samples.size
             println("MUSIK $key: $frequency Hz, range $baseline..${samples.max()}")
+            assertTrue(samples.max() - baseline > 0.4f,
+                "MUSIK must have full pulse amplitude: range $baseline..${samples.max()}")
             assertTrue(frequency in 80.0..280.0,
                 "MUSIK must produce a sustained periodic tone, not silence, DC or a click: $frequency Hz")
             return frequency
@@ -439,7 +442,7 @@ class CassetteLoadIntegrationTest {
     private fun verifyInstalledMusic(lib: NativeLib, tape: ByteArray) {
         assertTrue(Abc80Cassette.import(tape.inputStream(), "music-test.tape"))
         "LOAD CAS:MUSIK.BAS\r".forEach { lib.sendKey(it.code) }
-        await("The installed MUSIK.BAS LOAD must start") { Abc80CassetteStatus.visible }
+        await("The installed MUSIK.BAS must start loading") { Abc80CassetteStatus.visible }
         val loadingStarted = TimeSource.Monotonic.markNow()
         while (Abc80CassetteStatus.visible && loadingStarted.elapsedNow().inWholeMilliseconds < 30000) Thread.sleep(10)
         assertFalse(Abc80CassetteStatus.visible, "The installed MUSIK.BAS must load")
@@ -490,14 +493,14 @@ class CassetteLoadIntegrationTest {
             }
             Thread.sleep(250)
 
-            val tape = file("UB]AT      ", "10 PRINT \"UB]AT TEST\"\r20 END\r")
+            val tape = file("UB]T    BAS", "10 PRINT \"UB]T TEST\"\r20 END\r")
             assertTrue(Abc80Cassette.import(tape.inputStream(), "ubat.tape"))
             val source = Abc80Cassette.list().first()
             assertEquals(Abc80ExecutableFormat.BAS, source.executableFormat)
             Abc80Cassette.seek(source)
             type(lib, "LOAD CAS:${"UBÅT".toAbc()}\r")
             type(lib, "LIST\r")
-            assertTrue(screen(lib).contains("UBÅT TEST"), screen(lib))
+            assertTrue(screen(lib).toAndroid().contains("UBÅT TEST"), screen(lib))
 
             Abc80Cassette.seek(source)
             type(lib, "NEW\r")

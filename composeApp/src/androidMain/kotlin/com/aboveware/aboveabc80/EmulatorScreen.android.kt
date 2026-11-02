@@ -33,6 +33,7 @@ actual fun Any.toImageBitmap(): ImageBitmap {
 actual fun PlatformKeyboard(keyboard: Keyboard, modifier: Modifier) {
     val activeTerminal = TerminalManager.activeTerminal
     val layoutId = activeTerminal.keyboardXmlResId
+    val upperCaseLedOn = activeTerminal.keyboard.leds["upper_case"]?.isOn == true
 
     Box(
         modifier = modifier,
@@ -56,6 +57,8 @@ actual fun PlatformKeyboard(keyboard: Keyboard, modifier: Modifier) {
                 if (view.keyboardXmlResId != layoutId) {
                     view.keyboardXmlResId = layoutId
                 }
+                view.tag = upperCaseLedOn
+                view.invalidate()
             }
         )
     }

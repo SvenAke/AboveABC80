@@ -235,6 +235,21 @@ fun EmulatorScreen(startWithStorageOpen: Boolean = false, onLanguageChange: (Str
     var showFontDialog by remember { mutableStateOf(value = false) }
     var showTapeStorageDialog by remember { mutableStateOf(value = false) }
 
+    var cassetteStatusVisible by remember { mutableStateOf(Abc80CassetteStatus.visible) }
+    var cassetteStatusText by remember { mutableStateOf(Abc80CassetteStatus.text) }
+    var cassetteStatusActivity by remember { mutableStateOf(Abc80CassetteStatus.activity) }
+    var cassetteMissingProgram by remember { mutableStateOf(Abc80CassetteStatus.missingProgram) }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            cassetteStatusVisible = Abc80CassetteStatus.visible
+            cassetteStatusText = Abc80CassetteStatus.text
+            cassetteStatusActivity = Abc80CassetteStatus.activity
+            cassetteMissingProgram = Abc80CassetteStatus.missingProgram
+            delay(50.milliseconds)
+        }
+    }
+
     var flashState by remember { mutableStateOf(value = false) }
     var isFastSpeedMode by remember { mutableStateOf(nativeLib.isFastSpeed()) }
     var speedDialOpen by remember { mutableStateOf(value = false) }
@@ -714,8 +729,8 @@ fun EmulatorScreen(startWithStorageOpen: Boolean = false, onLanguageChange: (Str
 
 
                     // Cassette indicator: shown while the tape is moving
-                    if (Abc80CassetteStatus.visible &&
-                        Abc80CassetteStatus.activity == Abc80CassetteStatus.Activity.Idle) {
+                    if (cassetteStatusVisible &&
+                        cassetteStatusActivity == Abc80CassetteStatus.Activity.Idle) {
                         Surface(
                             color = Color.White.copy(alpha = 0.4f),
                             shape = MaterialTheme.shapes.extraSmall,
@@ -729,7 +744,7 @@ fun EmulatorScreen(startWithStorageOpen: Boolean = false, onLanguageChange: (Str
                             ) {
                                 Icon(Icons.Default.Album, contentDescription = null, modifier = Modifier.size(14.dp))
                                 Text(
-                                    text = " ${Abc80CassetteStatus.text}",
+                                    text = " $cassetteStatusText",
                                     style = MaterialTheme.typography.labelSmall
                                 )
                                 Text(
@@ -848,7 +863,12 @@ fun EmulatorScreen(startWithStorageOpen: Boolean = false, onLanguageChange: (Str
                     }
                 }
 
-                CassetteAnimation(modifier = Modifier.zIndex(2f))
+                CassetteAnimation(
+                    modifier = Modifier.zIndex(2f),
+                    activity = cassetteStatusActivity,
+                    text = cassetteStatusText,
+                    missingProgram = cassetteMissingProgram
+                )
 
                 if (!TerminalManager.activeTerminal.isSetupVisible && printer.isVisible) {
                     Abc80Log.terminal("EmulatorScreen: Showing VirtualPrinterView (isVisible=${printer.isVisible})")
@@ -1504,9 +1524,23 @@ private fun handleTerminalKeyEvent(
     }
 
     if (!activeTerminal.isSetupVisible) {
+        if (key == Key.CapsLock) {
+            if (type == KeyEventType.KeyDown && getRepeatCount(event) == 0) {
+                activeTerminal.keyboard.leds["upper_case"]?.let {
+                    it.isOn = !it.isOn
+                    Abc80Log.keyboard("Physical Caps Lock toggled Upper Case LED: ${it.isOn}")
+                }
+            }
+            return true
+        }
+        if (!isShift && !isCtrl && charValue?.isUpperCase() == true) {
+            activeTerminal.keyboard.leds["upper_case"]?.isOn = true
+        }
+        val upperCase = activeTerminal.keyboard.leds["upper_case"]?.isOn == true
         if (TerminalManager.computerModel.isAbc800) {
             if (key == Key.Enter || key == Key.NumPadEnter) charValue = '\r'
-            val code = abc800PhysicalKeyCode(key, charValue, isShift, isCtrl)
+            val effectiveChar = if (upperCase && !isShift) charValue?.uppercaseChar() else charValue
+            val code = abc800PhysicalKeyCode(key, effectiveChar, isShift, isCtrl)
             if (code != null) {
                 if (shouldForwardABC800MKey(type == KeyEventType.KeyDown, getRepeatCount(event))) {
                     NativeLib.getObject().sendKey(code)
@@ -1514,7 +1548,6 @@ private fun handleTerminalKeyEvent(
                 return true
             }
         }
-        val upperCase = activeTerminal.keyboard.leds["upper_case"]?.isOn == true
         val code = abc80KeyCode(key, charValue, isShift || upperCase, isCtrl)
         if (code != null) {
             if (type == KeyEventType.KeyDown) {

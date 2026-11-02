@@ -289,7 +289,7 @@ fun StorageFileDialog(
                         val displayNames = if (selectedCloudFiles.size > 1) {
                             "${selectedCloudFiles.size} files"
                         } else if (selectedCloudFiles.isNotEmpty()) {
-                            "\"${selectedCloudFiles.first().first}\""
+                            "\"${selectedCloudFiles.firstOrNull()?.first ?: ""}\""
                         } else ""
 
                         Row(verticalAlignment = Alignment.CenterVertically) {

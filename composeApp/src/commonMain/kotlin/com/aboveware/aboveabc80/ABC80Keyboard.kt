@@ -8,6 +8,7 @@ import java.nio.charset.StandardCharsets
  * or null if the key has no ABC80 equivalent.
  */
 internal fun abc80KeyCode(key: Key, char: Char?, shift: Boolean, control: Boolean = false): Int? {
+    val effectiveShift = shift || (char?.isUpperCase() == true)
     val symbolNumber = when (char) {
         'É', 'é', '`', '@' -> 12
         'Å', 'å' -> 30
@@ -22,7 +23,7 @@ internal fun abc80KeyCode(key: Key, char: Char?, shift: Boolean, control: Boolea
             }?.key
         } else null
     }
-    if (symbolNumber != null) return abc80TableCode(symbolNumber, shift, control)
+    if (symbolNumber != null) return abc80TableCode(symbolNumber, effectiveShift, control)
     val number = when (key) {
         Key.One -> 1
         Key.Two -> 2
@@ -72,7 +73,7 @@ internal fun abc80KeyCode(key: Key, char: Char?, shift: Boolean, control: Boolea
         Key.Spacebar -> 74
         else -> null
     }
-    if (number != null) return abc80TableCode(number, shift, control)
+    if (number != null) return abc80TableCode(number, effectiveShift, control)
     when (key) {
         Key.Enter, Key.NumPadEnter -> return 0x0D
         Key.Backspace, Key.DirectionLeft -> return 0x08
