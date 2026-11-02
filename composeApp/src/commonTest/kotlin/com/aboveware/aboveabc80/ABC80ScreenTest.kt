@@ -63,7 +63,6 @@ class ABC80ScreenTest {
         for (row in 0 until map.charHeight) {
             assertEquals(0xf0, map.character(0xb5, row).toInt())
             assertEquals(0x0f, map.character(0xea, row).toInt())
-            assertEquals(map.character('W'.code, row), map.character(0xd7, row))
         }
         assertEquals(0xff, map.character(0xaf, 0).toInt())
         assertEquals(0, map.character(0xaf, 13).toInt())

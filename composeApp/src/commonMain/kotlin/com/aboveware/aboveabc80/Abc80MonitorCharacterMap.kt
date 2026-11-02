@@ -23,9 +23,8 @@ class Abc80MonitorCharacterMap {
     @ExperimentalUnsignedTypes
     fun character(char: Int, row: Int) = when (char) {
         in 32..127 -> characters[(char - 32) * charHeight + row]
-        in 160..191, in 224..255 -> characters[char * charHeight + row]
-        in 192..223 -> characters[(char - 160) * charHeight + row]
-        else -> characters[row]
+        in 160..255 -> characters[char * charHeight + row]
+        else -> characters[row % charHeight]
     }
 
     @ExperimentalUnsignedTypes

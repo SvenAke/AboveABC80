@@ -14,6 +14,8 @@ class CloudDisplayNameTest {
     fun decodesSwedishLettersFromLatin1AndWindows1252Mojibake() {
         assertEquals("åäöÅÄÖ.bas", "Ã¥Ã¤Ã¶Ã\u0085Ã\u0084Ã\u0096.bas".toCloudDisplayName())
         assertEquals("åäöÅÄÖ.bas", "Ã¥Ã¤Ã¶Ã…Ã„Ã–.bas".toCloudDisplayName())
+        assertEquals("stöltemp.bas", "stÕ\u0303ltemp.bas".toCloudDisplayName())
+        assertEquals("stöltemp.bas", "stÕltemp.bas".toCloudDisplayName())
     }
 
     @Test
