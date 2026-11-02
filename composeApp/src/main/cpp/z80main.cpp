@@ -271,13 +271,14 @@ bool abc80_try_keyboard_interrupt() {
     return accepted;
 }
 
-/* Queued text uses a two-frame pulse; physical keys stay down until release. */
+/* Queued text uses a two-frame pulse; physical keys stay down for at least five frames or until release. */
 static void abc80_keyboard_frame() {
     if (g_key_value.load(std::memory_order_relaxed) != 0) {
-        if (g_key_hold_frames < 2) ++g_key_hold_frames;
+        const int min_frames = (g_current_key_held || I == 0xFA) ? 5 : 2;
+        if (g_key_hold_frames < min_frames) ++g_key_hold_frames;
         if (g_current_key_held &&
             g_held_key.load() == (g_key_value.load() & 0x7F)) return;
-        if (g_key_hold_frames >= 2) {
+        if (g_key_hold_frames >= min_frames) {
             g_key_value.store(0, std::memory_order_relaxed);
             g_key_hold_frames = 0;
         }
