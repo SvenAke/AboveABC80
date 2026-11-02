@@ -29,6 +29,10 @@ import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Storage
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.ui.text.AnnotatedString
+import com.aboveware.aboveabc80.ArchiveFileTextPreviewDialog
+import com.aboveware.aboveabc80.isText
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
@@ -115,6 +119,8 @@ fun DiskManagerDialog(
 
     var listing by remember { mutableStateOf<Pair<String, List<Pair<String, Int>>?>?>(null) }
     var listingDrive by remember { mutableStateOf(0) }
+    var listingImage by remember { mutableStateOf<ByteArray?>(null) }
+    var textPreview by remember { mutableStateOf<Pair<String, String>?>(null) }
     var runnableFiles by remember { mutableStateOf(emptyMap<String, Abc80ExecutableFormat>()) }
 
     data class ExportPending(val parentDir: String, val floppyName: String, val floppy: AbcDiskImage)
@@ -171,6 +177,7 @@ fun DiskManagerDialog(
                     else -> LazyColumn(modifier = Modifier.sizeIn(maxHeight = 400.dp)) {
                         items(files) { (name, size) ->
                             val runnable = name in runnableFiles
+                            val isPreviewable = runnableFiles[name] == Abc80ExecutableFormat.BAS || name.isText()
                             ListItem(
                                 headlineContent = { Text(name) },
                                 trailingContent = {
@@ -194,6 +201,19 @@ fun DiskManagerDialog(
                                             ) {
                                                 listing = null
                                                 onRunFile(listingDrive, name)
+                                            }
+                                        }
+                                        if (isPreviewable) {
+                                            CassetteIconButton(
+                                                Icons.Default.Visibility,
+                                                stringResource(Res.string.cassette_preview),
+                                                true
+                                            ) {
+                                                val data = listingImage?.let { Abc80FloppyLayout.readFile(it, name) }
+                                                if (data != null) {
+                                                    val text = decodeAbc80FloppyText(data)
+                                                    textPreview = name to text
+                                                }
                                             }
                                         }
                                         Text(
@@ -254,6 +274,7 @@ fun DiskManagerDialog(
                                                         }
                                                         try {
                                                             listingDrive = index
+                                                            listingImage = image
                                                             val files = image?.let { Abc80FloppyLayout.list(it) }
                                                             runnableFiles = files.orEmpty().mapNotNull { (name, _) ->
                                                                 val data = checkNotNull(Abc80FloppyLayout.readFile(checkNotNull(image), name)) {
@@ -657,6 +678,14 @@ fun DiskManagerDialog(
             }
         )
     }
+
+    textPreview?.let { (fileName, content) ->
+        ArchiveFileTextPreviewDialog(
+            fileName = fileName,
+            content = AnnotatedString(content),
+            onDismissRequest = { textPreview = null }
+        )
+    }
 }
 
 @OptIn(ExperimentalUnsignedTypes::class)
@@ -783,4 +812,29 @@ fun NewDiskDialog(
             }
         )
     }
+}
+
+private fun decodeAbc80FloppyText(data: ByteArray, recordSize: Int = 253): String {
+    val text = StringBuilder()
+    for (start in data.indices step recordSize) {
+        for (index in start until minOf(start + recordSize, data.size)) {
+            val code = data[index].toInt() and 255
+            if (code == 0 || code == 3) break
+            text.append(when (code) {
+                0x40 -> 'É'
+                0x5b -> 'Ä'
+                0x5c -> 'Ö'
+                0x5d -> 'Å'
+                0x5e -> 'Ü'
+                0x60 -> 'é'
+                0x7b -> 'ä'
+                0x7c -> 'ö'
+                0x7d -> 'å'
+                0x7e -> 'ü'
+                0x24 -> '¤'
+                else -> code.toChar()
+            })
+        }
+    }
+    return text.toString().replace("\r\n", "\n").replace('\r', '\n')
 }
