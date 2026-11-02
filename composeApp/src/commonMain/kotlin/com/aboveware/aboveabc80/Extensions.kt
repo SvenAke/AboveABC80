@@ -122,6 +122,7 @@ fun String.isHtml() = substringAfterLast('.', "").lowercase() in setOf("html", "
 fun String.isText() =
     when (substringAfterLast('.', "").lowercase()) {
         "txt",
+        "rem",
         "bas" -> true
         else -> false
     }

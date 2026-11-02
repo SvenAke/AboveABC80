@@ -147,4 +147,34 @@ class CassettePreviewTest {
             }
         }
     }
+
+    @Test
+    fun previewRemExtensionCassetteFile() {
+        val original = Abc80Cassette.exportBytes()
+        val inserted = Abc80Cassette.anyCassette()
+        try {
+            val name = ByteArray(256).apply {
+                fill(-1, 0, 3)
+                "REMARK  REM".encodeToByteArray().copyInto(this, 3)
+            }
+            val text = "THIS IS A REMARK FILE\r"
+            val blockData = block(ByteArray(256).apply {
+                (text + "\u0000").encodeToByteArray().copyInto(this, 3)
+                this[255] = 3
+            })
+            val tape = block(name) + blockData + ByteArray(Abc80Program.Block.BYTES)
+            check(Abc80Cassette.import(tape.inputStream(), "rem.tape"))
+            val file = Abc80Cassette.list().first { it.displayName == "REMARK.REM" }
+            assertEquals(
+                "THIS IS A REMARK FILE\n",
+                Abc80Cassette.previewBasic(file)
+            )
+        } finally {
+            if (inserted) {
+                check(Abc80Cassette.import(original.inputStream(), "restore.tape"))
+            } else {
+                Abc80Cassette.eject()
+            }
+        }
+    }
 }

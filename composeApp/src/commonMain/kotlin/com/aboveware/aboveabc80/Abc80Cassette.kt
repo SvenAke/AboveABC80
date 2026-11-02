@@ -202,8 +202,10 @@ object Abc80Cassette {
     }
 
     private fun readText(info: FileInfo, requireEndMarker: Boolean): String {
-        require(info.displayName.substringAfterLast('.', "").equals("txt", true) ||
-            executableFormat(info) == Abc80ExecutableFormat.BAS) {
+        require(
+            info.displayName.isText() ||
+            executableFormat(info) == Abc80ExecutableFormat.BAS
+        ) {
             "Only BASIC and text cassette files can be previewed"
         }
         val text = StringBuilder()

@@ -62,6 +62,7 @@ import com.aboveware.aboveabc80.ArchiveFileTextPreviewDialog
 import com.aboveware.aboveabc80.StorageFileDialog
 import com.aboveware.aboveabc80.getCurrentTimestamp
 import com.aboveware.aboveabc80.saveLocalFile
+import com.aboveware.aboveabc80.isText
 import org.jetbrains.compose.resources.stringResource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -301,7 +302,7 @@ fun CassetteDialog(
                                                     loadFile(info, run = true)
                                                 }
                                             }
-                                            if (isBas || ext.equals("txt", true)) {
+                                            if (isBas || info.displayName.isText()) {
                                                 CassetteIconButton(
                                                     Icons.Default.Visibility,
                                                     stringResource(Res.string.cassette_preview),
