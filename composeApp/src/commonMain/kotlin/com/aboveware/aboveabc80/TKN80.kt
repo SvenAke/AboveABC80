@@ -37,20 +37,21 @@ object TKN80 {
         lib: NativeLib = NativeLib.getObject(),
         patchAbc80Rom: Boolean = true
     ) {
-        enabled = wide
+        val isAbc80 = TerminalManager.computerModel == ComputerModel.ABC80
+        enabled = wide && isAbc80
         for (row in 0 until ABC80_SCREEN_ROWS) {
             lib.patchMemory(0x0374 + row * 2, -1)
             lib.patchMemory(0x0375 + row * 2, -1)
         }
         val patchAddresses = intArrayOf(0x01d8, 0x0211, 0x024e, 0x02de, 0x033c, 0x026f)
         patchAddresses.forEach { lib.patchMemory(it, -1) }
-        if (!patchAbc80Rom) return
+        if (!patchAbc80Rom || !isAbc80) return
         for (row in 0 until ABC80_SCREEN_ROWS) {
-            val address = rowAddress(row, wide)
+            val address = rowAddress(row, enabled)
             lib.patchMemory(0x0374 + row * 2, address and 0xff)
             lib.patchMemory(0x0375 + row * 2, address shr 8)
         }
-        val width = if (wide) 80 else 40
+        val width = if (enabled) 80 else 40
         for (address in intArrayOf(0x01d8, 0x0211, 0x024e, 0x02de, 0x033c)) {
             lib.patchMemory(address, width)
         }
