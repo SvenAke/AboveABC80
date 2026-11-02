@@ -729,7 +729,8 @@ fun EmulatorScreen(startWithStorageOpen: Boolean = false, onLanguageChange: (Str
 
 
                     // Cassette indicator: shown while the tape is moving
-                    if (cassetteStatusVisible &&
+                    if (!TerminalManager.computerModel.isAbc800 &&
+                        cassetteStatusVisible &&
                         cassetteStatusActivity == Abc80CassetteStatus.Activity.Idle) {
                         Surface(
                             color = Color.White.copy(alpha = 0.4f),
@@ -809,30 +810,32 @@ fun EmulatorScreen(startWithStorageOpen: Boolean = false, onLanguageChange: (Str
                         }
                     }
 
-                    val cassetteButtonDescription = stringResource(Res.string.cassette_title)
-                    Surface(
-                        color = Color.White.copy(alpha = 0.4f),
-                        shape = MaterialTheme.shapes.extraSmall,
-                        modifier = Modifier
-                            .padding(horizontal = 4.dp)
-                            .semantics { contentDescription = cassetteButtonDescription }
-                            .clickable(role = Role.Button) { showCassetteDialog = true }
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp)
+                    if (!TerminalManager.computerModel.isAbc800) {
+                        val cassetteButtonDescription = stringResource(Res.string.cassette_title)
+                        Surface(
+                            color = Color.White.copy(alpha = 0.4f),
+                            shape = MaterialTheme.shapes.extraSmall,
+                            modifier = Modifier
+                                .padding(horizontal = 4.dp)
+                                .semantics { contentDescription = cassetteButtonDescription }
+                                .clickable(role = Role.Button) { showCassetteDialog = true }
                         ) {
-                            Canvas(Modifier.size(16.dp)) {
-                                val ink = Color.Black.copy(alpha = 0.7f)
-                                val outline = Stroke(width = 1.dp.toPx())
-                                drawRect(ink, Offset(0f, size.height * 0.15f),
-                                    Size(size.width, size.height * 0.7f), style = outline)
-                                for (x in listOf(0.3f, 0.7f)) {
-                                    drawCircle(ink, size.width * 0.12f,
-                                        Offset(size.width * x, size.height * 0.42f), style = outline)
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp)
+                            ) {
+                                Canvas(Modifier.size(16.dp)) {
+                                    val ink = Color.Black.copy(alpha = 0.7f)
+                                    val outline = Stroke(width = 1.dp.toPx())
+                                    drawRect(ink, Offset(0f, size.height * 0.15f),
+                                        Size(size.width, size.height * 0.7f), style = outline)
+                                    for (x in listOf(0.3f, 0.7f)) {
+                                        drawCircle(ink, size.width * 0.12f,
+                                            Offset(size.width * x, size.height * 0.42f), style = outline)
+                                    }
+                                    drawRect(ink, Offset(size.width * 0.25f, size.height * 0.65f),
+                                        Size(size.width * 0.5f, size.height * 0.2f), style = outline)
                                 }
-                                drawRect(ink, Offset(size.width * 0.25f, size.height * 0.65f),
-                                    Size(size.width * 0.5f, size.height * 0.2f), style = outline)
                             }
                         }
                     }
@@ -863,12 +866,14 @@ fun EmulatorScreen(startWithStorageOpen: Boolean = false, onLanguageChange: (Str
                     }
                 }
 
-                CassetteAnimation(
-                    modifier = Modifier.zIndex(2f),
-                    activity = cassetteStatusActivity,
-                    text = cassetteStatusText,
-                    missingProgram = cassetteMissingProgram
-                )
+                if (!TerminalManager.computerModel.isAbc800) {
+                    CassetteAnimation(
+                        modifier = Modifier.zIndex(2f),
+                        activity = cassetteStatusActivity,
+                        text = cassetteStatusText,
+                        missingProgram = cassetteMissingProgram
+                    )
+                }
 
                 if (!TerminalManager.activeTerminal.isSetupVisible && printer.isVisible) {
                     Abc80Log.terminal("EmulatorScreen: Showing VirtualPrinterView (isVisible=${printer.isVisible})")
@@ -1041,31 +1046,33 @@ fun EmulatorScreen(startWithStorageOpen: Boolean = false, onLanguageChange: (Str
                                 }
 
                                 // Cassette
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.padding(bottom = 16.dp)
-                                ) {
-                                    Surface(
-                                        shape = MaterialTheme.shapes.small,
-                                        color = MaterialTheme.colorScheme.surface,
-                                        shadowElevation = 4.dp,
-                                        modifier = Modifier.padding(end = 12.dp)
+                                if (!TerminalManager.computerModel.isAbc800) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.padding(bottom = 16.dp)
                                     ) {
-                                        Text(
-                                            stringResource(Res.string.menu_cassettes),
-                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                            style = MaterialTheme.typography.labelLarge
-                                        )
-                                    }
-                                    SmallFloatingActionButton(
-                                        onClick = {
-                                            speedDialOpen = false
-                                            showCassetteDialog = true
-                                        },
-                                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-                                    ) {
-                                        Icon(Icons.Default.Album, contentDescription = stringResource(Res.string.menu_cassettes))
+                                        Surface(
+                                            shape = MaterialTheme.shapes.small,
+                                            color = MaterialTheme.colorScheme.surface,
+                                            shadowElevation = 4.dp,
+                                            modifier = Modifier.padding(end = 12.dp)
+                                        ) {
+                                            Text(
+                                                stringResource(Res.string.menu_cassettes),
+                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                                style = MaterialTheme.typography.labelLarge
+                                            )
+                                        }
+                                        SmallFloatingActionButton(
+                                            onClick = {
+                                                speedDialOpen = false
+                                                showCassetteDialog = true
+                                            },
+                                            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                                        ) {
+                                            Icon(Icons.Default.Album, contentDescription = stringResource(Res.string.menu_cassettes))
+                                        }
                                     }
                                 }
 
@@ -1338,7 +1345,7 @@ fun EmulatorScreen(startWithStorageOpen: Boolean = false, onLanguageChange: (Str
         }
     }
 
-    if (showCassetteDialog) {
+    if (showCassetteDialog && !TerminalManager.computerModel.isAbc800) {
         CassetteDialog(
             onLoadFile = { name ->
                 showCassetteDialog = false

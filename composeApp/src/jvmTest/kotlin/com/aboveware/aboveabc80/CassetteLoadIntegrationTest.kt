@@ -26,6 +26,7 @@ class CassetteLoadIntegrationTest {
         val previousModel = TerminalManager.computerModel
         System.setProperty("user.home", home.absolutePath)
         TerminalManager.computerModel = ComputerModel.ABC80
+        NativeLib.getObject().cassettePlayer.run()
         var native: NativeLib? = null
         try {
             check(home.resolve(".aboveabc80").resolve("dr").mkdirs())
@@ -96,6 +97,7 @@ class CassetteLoadIntegrationTest {
         val previousModel = TerminalManager.computerModel
         System.setProperty("user.home", home.absolutePath)
         TerminalManager.computerModel = ComputerModel.ABC80
+        NativeLib.getObject().cassettePlayer.run()
         var native: NativeLib? = null
         val bitDelay = AtomicInteger(-1)
         val unexpectedRecording = AtomicBoolean(false)
@@ -476,6 +478,7 @@ class CassetteLoadIntegrationTest {
         val previousModel = TerminalManager.computerModel
         System.setProperty("user.home", home.absolutePath)
         TerminalManager.computerModel = ComputerModel.ABC80
+        NativeLib.getObject().cassettePlayer.run()
         var native: NativeLib? = null
         try {
             check(home.resolve(".aboveabc80").resolve("dr").mkdirs())

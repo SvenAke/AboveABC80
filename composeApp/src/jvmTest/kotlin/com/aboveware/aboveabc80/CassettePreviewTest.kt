@@ -1,5 +1,8 @@
 package com.aboveware.aboveabc80
 
+import com.aboveware.aboveabc80.terminal.ComputerModel
+import com.aboveware.aboveabc80.terminal.TerminalManager
+import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertContentEquals
@@ -7,6 +10,10 @@ import kotlin.test.assertFailsWith
 
 @OptIn(ExperimentalUnsignedTypes::class)
 class CassettePreviewTest {
+    @BeforeTest
+    fun setUp() {
+        TerminalManager.computerModel = ComputerModel.ABC80
+    }
     private fun block(data: ByteArray): ByteArray {
         val result = ByteArray(Abc80Program.Block.BYTES)
         byteArrayOf(0x16, 0x16, 0x16, 2).copyInto(result, 32)

@@ -43,18 +43,21 @@ object Abc80Cassette {
         inserted = false
         tape = ByteArray(0)
         position = 0
-        val stored = loadLocalFile(FOLDER, FILE)
-        if (stored != null && stored.size >= HEADER) {
-            inserted = true
-            var pos = 0L
-            for (i in 0 until HEADER) pos = (pos shl 8) or (stored[i].toLong() and 0xFF)
-            tape = stored.copyOfRange(HEADER, stored.size)
-            position = pos.toInt().coerceIn(0, tape.size)
+        if (!model.isAbc800) {
+            val stored = loadLocalFile(FOLDER, FILE)
+            if (stored != null && stored.size >= HEADER) {
+                inserted = true
+                var pos = 0L
+                for (i in 0 until HEADER) pos = (pos shl 8) or (stored[i].toLong() and 0xFF)
+                tape = stored.copyOfRange(HEADER, stored.size)
+                position = pos.toInt().coerceIn(0, tape.size)
+            }
         }
         Abc80CassetteStatus.hasTape = inserted
     }
 
     private fun persist() {
+        if (TerminalManager.computerModel.isAbc800) return
         val out = ByteArray(HEADER + tape.size)
         var pos = position.toLong()
         for (i in HEADER - 1 downTo 0) {
@@ -148,6 +151,7 @@ object Abc80Cassette {
     /** Lists the files on the tape; the file at the current tape position is marked as current. */
     fun list(): List<FileInfo> {
         ensureLoaded()
+        if (TerminalManager.computerModel.isAbc800) return emptyList()
         val saved = position
         position = 0
         val infos = mutableListOf<FileInfo>()
@@ -258,6 +262,7 @@ object Abc80Cassette {
     }
 
     fun format() {
+        if (TerminalManager.computerModel.isAbc800) return
         Abc80Log.cassette("FORMAT")
         tape = ByteArray(0)
         position = 0
@@ -269,6 +274,7 @@ object Abc80Cassette {
 
     fun rewind() {
         ensureLoaded()
+        if (TerminalManager.computerModel.isAbc800) return
         position = 0
         persist()
     }
@@ -276,11 +282,13 @@ object Abc80Cassette {
     /** Positions the tape at the start of [info]. */
     fun seek(info: FileInfo) {
         ensureLoaded()
+        if (TerminalManager.computerModel.isAbc800) return
         position = info.position.toInt().coerceIn(0, tape.size)
         persist()
     }
 
     fun forward(): List<FileInfo> {
+        if (TerminalManager.computerModel.isAbc800) return emptyList()
         val infos = list()
         val current = infos.indexOfFirst { it.current }
         if (current != -1) {
@@ -292,6 +300,7 @@ object Abc80Cassette {
     }
 
     fun back(): List<FileInfo> {
+        if (TerminalManager.computerModel.isAbc800) return emptyList()
         val infos = list()
         val current = infos.indexOfFirst { it.current }
         if (current > 0) {
@@ -302,9 +311,11 @@ object Abc80Cassette {
     }
 
     /** Imports a WAV/RAW recording (decoded) or a custom tape file (raw blocks); returns true on success. */
-    fun import(stream: InputStream, name: String): Boolean =
-        if (name.endsWith("WAV", true) || name.endsWith("RAW", true)) importWave(stream, name)
+    fun import(stream: InputStream, name: String): Boolean {
+        if (TerminalManager.computerModel.isAbc800) return false
+        return if (name.endsWith("WAV", true) || name.endsWith("RAW", true)) importWave(stream, name)
         else importCustom(stream, name)
+    }
 
     private fun importWave(stream: InputStream, name: String): Boolean {
         Abc80CassetteStatus.tapeName = ""
@@ -353,6 +364,7 @@ object Abc80Cassette {
 
     fun exportBytes(): ByteArray {
         ensureLoaded()
+        if (TerminalManager.computerModel.isAbc800) return byteArrayOf()
         return tape.copyOf()
     }
 

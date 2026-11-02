@@ -125,7 +125,7 @@ class ComputerModelStorageTest {
     }
 
     @Test
-    fun currentCassetteFollowsTheSelectedComputerModel() {
+    fun cassetteIsOnlySupportedForABC80() {
         val home = Files.createTempDirectory("model-cassette-storage").toFile()
         val previousHome = System.getProperty("user.home")
         val previousModel = TerminalManager.computerModel
@@ -136,26 +136,21 @@ class ComputerModelStorageTest {
             TerminalManager.computerModel = ComputerModel.ABC80
             Abc80Cassette.eject()
             assertTrue(Abc80Cassette.import(ByteArrayInputStream(abc80Tape), "abc80.tap"))
+            assertTrue(Abc80Cassette.anyCassette())
 
             TerminalManager.computerModel = ComputerModel.ABC800M
             assertContentEquals(byteArrayOf(), Abc80Cassette.exportBytes())
-            assertTrue(Abc80Cassette.import(ByteArrayInputStream(abc800mTape), "abc800m.tap"))
-            assertContentEquals(abc800mTape, Abc80Cassette.exportBytes())
+            kotlin.test.assertFalse(Abc80Cassette.import(ByteArrayInputStream(abc800mTape), "abc800m.tap"))
+            kotlin.test.assertFalse(Abc80Cassette.anyCassette())
+
+            TerminalManager.computerModel = ComputerModel.ABC800C
+            assertContentEquals(byteArrayOf(), Abc80Cassette.exportBytes())
+            kotlin.test.assertFalse(Abc80Cassette.import(ByteArrayInputStream(abc800mTape), "abc800c.tap"))
+            kotlin.test.assertFalse(Abc80Cassette.anyCassette())
 
             TerminalManager.computerModel = ComputerModel.ABC80
+            assertTrue(Abc80Cassette.anyCassette())
             assertContentEquals(abc80Tape, Abc80Cassette.exportBytes())
-            assertContentEquals(
-                abc80Tape,
-                home.resolve(".aboveabc80/abc80/cassette/current.tape")
-                    .readBytes()
-                    .copyOfRange(8, 11)
-            )
-            assertContentEquals(
-                abc800mTape,
-                home.resolve(".aboveabc80/abc800m/cassette/current.tape")
-                    .readBytes()
-                    .copyOfRange(8, 11)
-            )
         } finally {
             Abc80Cassette.eject()
             TerminalManager.computerModel = previousModel
