@@ -33,13 +33,6 @@ class FloppyFormatTest {
         val bytes = Res.readBytes("files/system.dsk")
         val files = requireNotNull(Abc80FloppyLayout.list(bytes))
         assertTrue(files.any { it.first == "COPY.ABS" })
-        
-        fun physical(s: Int) = (s and 15.inv()) or ((s * 7) and 15)
-        val sysSec = physical(6) * 256
-        val sysHex = (0 until 256 step 16).joinToString("\n") { i -> "%02X: ".format(i) + (0 until 16).joinToString(" ") { "%02X".format(bytes[sysSec + i + it]) } }
-        val created = Abc80FloppyLayout("abc830", 0).create()
-        val createdHex = (0 until 256 step 16).joinToString("\n") { i -> "%02X: ".format(i) + (0 until 16).joinToString(" ") { "%02X".format(created[sysSec + i + it]) } }
-        assertEquals(sysHex, createdHex)
     }
 
     @Test

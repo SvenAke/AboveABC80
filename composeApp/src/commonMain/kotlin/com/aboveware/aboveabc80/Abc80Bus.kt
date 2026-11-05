@@ -21,9 +21,13 @@ class Abc80Bus {
     }
 
     fun write(port: Int, data: Int) {
+        if (port == 3 || port == 6) {
+            floppy.onWrite(port.toUByte(), data.toUByte(), 0u)
+            return
+        }
         if (port == 1) {
-            currentDevice = when (data) {
-                0x2d -> floppy
+            currentDevice = when (data and 0x3F) {
+                0x2c, 0x2d -> floppy
                 0x3C -> printer
                 else -> null
             }
@@ -32,6 +36,9 @@ class Abc80Bus {
     }
 
     fun read(port: Int): Int {
+        if (port == 6) {
+            return floppy.onRead(port.toUByte()).toInt()
+        }
         if (port == 7) {
             floppy.reset()
             printer.reset()

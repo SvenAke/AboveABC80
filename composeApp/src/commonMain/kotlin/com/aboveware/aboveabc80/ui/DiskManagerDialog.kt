@@ -697,7 +697,8 @@ fun NewDiskDialog(
     val templates = listOf(
         "fd2" to stringResource(Res.string.disk_format_sssd),
         "abc830" to stringResource(Res.string.disk_format_ssdd),
-        "fd4d" to stringResource(Res.string.disk_format_dsdd_320)
+        "fd4d" to stringResource(Res.string.disk_format_dsdd_320),
+        "abc832" to stringResource(Res.string.disk_format_dsdd_640)
     )
     var selectedTemplate by remember { mutableStateOf("abc830") }
     var systemDisk by remember { mutableStateOf(false) }

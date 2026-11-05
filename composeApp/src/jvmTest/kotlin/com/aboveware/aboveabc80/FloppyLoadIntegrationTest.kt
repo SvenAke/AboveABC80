@@ -77,14 +77,18 @@ class FloppyLoadIntegrationTest {
             Res.readBytes("files/printer.rom").copyInto(memory, 0x7800)
             lib.copyToMemory(0, memory)
             val image = Res.readBytes("files/system.dsk")
-            lib.enableLogging(false)
-            lib.startEmulator(3_000_000)
-            Thread.sleep(1000)
             val controller = DiskController.instance
             assertTrue(saveLocalDisk("SYSTEM.DSK", image))
             assertTrue(saveLocalDisk("SECOND.DSK", image))
             assertEquals("SYSTEM.DSK", controller.loadFromLocal(0, "SYSTEM.DSK"))
-            assertEquals("SECOND.DSK", controller.loadFromLocal(1, "SECOND.DSK"))
+            for (drive in 1 until DiskController.MAX_DRIVES) {
+                assertEquals("SECOND.DSK", controller.loadFromLocal(drive, "SECOND.DSK"))
+            }
+            lib.enableLogging(false)
+            lib.startEmulator(3_000_000)
+            Thread.sleep(1000)
+            val bootScreen = decodeABC80Screen(lib.getMemory(), false).joinToString("\n")
+            assertFalse(bootScreen.contains("Hittar inte filen"), bootScreen)
             val mounted = lib.bus.floppy.disks[0]
             assertTrue(saveLocalDisk("INVALID.DSK", image.copyOf(163072)))
             assertEquals(null, controller.loadFromLocal(0, "INVALID.DSK"))
@@ -125,7 +129,45 @@ class FloppyLoadIntegrationTest {
                     assertTrue(prompts.get() > before, "$text did not finish:\n$output")
                     assertFalse(output.contains("ERR"), "$text:\n$output")
                 }
-                for (format in listOf("fd2", "abc830", "fd4d")) {
+                fun runLib(options: String = ""): String {
+                    "PRINT CHR$(12)\r".forEach { lib.sendKey(it.code) }
+                    val clearWait = TimeSource.Monotonic.markNow()
+                    while (decodeABC80Screen(lib.getMemory(), false).any { it.contains("Optioner") } &&
+                        clearWait.elapsedNow().inWholeMilliseconds < 2000
+                    ) {
+                        Thread.sleep(10)
+                    }
+                    "RUN DR0:LIB\r".forEach { lib.sendKey(it.code) }
+                    val libStarted = TimeSource.Monotonic.markNow()
+                    while (!decodeABC80Screen(lib.getMemory(), false).any { it.contains("Optioner") } &&
+                        libStarted.elapsedNow().inWholeMilliseconds < 12000
+                    ) {
+                        Thread.sleep(10)
+                    }
+                    assertTrue(decodeABC80Screen(lib.getMemory(), false).any { it.contains("Optioner") })
+                    val beforeLibFinish = prompts.get()
+                    "$options\r".forEach { lib.sendKey(it.code) }
+                    val libFinished = TimeSource.Monotonic.markNow()
+                    while (prompts.get() == beforeLibFinish && libFinished.elapsedNow().inWholeMilliseconds < 12000) {
+                        Thread.sleep(10)
+                    }
+                    val libOutput = decodeABC80Screen(lib.getMemory(), false).joinToString("\n")
+                    assertTrue(prompts.get() > beforeLibFinish, libOutput)
+                    assertFalse(libOutput.contains("ERR ") || libOutput.contains("Diskfel") || libOutput.contains("ÉÉÉ"), libOutput)
+                    return libOutput
+                }
+                val systemLibOutput = runLib("")
+                assertTrue(systemLibOutput.contains("453 av 616 sektorer kvar."), systemLibOutput)
+                assertTrue(lib.bus.floppy.mount(1, Abc80FloppyLayout("abc832", 1).create(), "EMPTY640.DSK"))
+                val empty640LibOutput = runLib("1")
+                assertTrue(empty640LibOutput.contains("632 av 632 sektorer kvar."), empty640LibOutput)
+                val beforeClear = prompts.get()
+                "PRINT CHR$(12)\r".forEach { lib.sendKey(it.code) }
+                val clearTimer = TimeSource.Monotonic.markNow()
+                while (prompts.get() == beforeClear && clearTimer.elapsedNow().inWholeMilliseconds < 12000) {
+                    Thread.sleep(10)
+                }
+                for (format in listOf("fd2", "abc830", "fd4d", "abc832")) {
                     assertTrue(lib.bus.floppy.mount(1, Abc80FloppyLayout(format, 1).create(), "$format.DSK"))
                     command("NEW")
                     command("10 PRINT 42")
@@ -204,6 +246,11 @@ class FloppyLoadIntegrationTest {
                     assertTrue(decodeABC80Screen(lib.getMemory(), false).any { it.contains("1200 PRINT 9876") }, format)
                     command("RUN")
                     assertTrue(decodeABC80Screen(lib.getMemory(), false).any { it.trim() == "9876" }, format)
+                    if (format == "abc832") {
+                        val populated640Lib = runLib("1S")
+                        assertTrue(populated640Lib.contains("LARGE   .BAS 15"), populated640Lib)
+                        assertTrue(populated640Lib.contains("610 av 632 sektorer kvar."), populated640Lib)
+                    }
                 }
             } finally {
                 lib.removeMemoryReadWatcher(0x00db, promptWatcher)

@@ -220,6 +220,8 @@ class Abc80Floppy : Abc80Bus.BusInterface {
     //                          0 : Busy
 
     private var status: UByte = 0b11001001u
+    private var queriedDrive: Int = 0
+    private var dos21CallBuffer: Int = 0
 
     private val route = mutableListOf<Int>()
 
@@ -229,16 +231,29 @@ class Abc80Floppy : Abc80Bus.BusInterface {
             0x00 -> {
                 when (stateMachine.state) {
                     StateMachine.State.STARTED -> {
+                        route.add(data.toInt())
                         if (route.size == 4) {
-                            if (route[0].and(0x0C) == 0x0C) {
-                                stateMachine.state = StateMachine.State.WRITING
-                                selectDrive(route[1])
-                                disk.open(route[2], route[3])
-                                disk.write(data)
+                            Abc80Log.floppy("ROUTE $route")
+                            val dos21SystemBuffer = dos21CallBuffer == 0x01
+                            dos21CallBuffer = 0
+                            when {
+                                route[0].and(0x01) == 0x01 -> {
+                                    stateMachine.state = StateMachine.State.READING
+                                    selectDrive(route[1])
+                                    if (progressOperation.isNotEmpty()) {
+                                        progressDrive = "DR$drive: "
+                                        progress(text = progressText)
+                                    }
+                                    disk.open(route[2], route[3], dos21SystemBuffer)
+                                }
+                                route[0].and(0x0C) == 0x0C -> {
+                                    stateMachine.state = StateMachine.State.WRITING
+                                    selectDrive(route[1])
+                                    disk.open(route[2], route[3], dos21SystemBuffer)
+                                }
                             }
                             route.clear()
                         }
-                        route.add(data.toInt())
                     }
                     StateMachine.State.WRITING -> {
                         disk.write(data)
@@ -256,9 +271,13 @@ class Abc80Floppy : Abc80Bus.BusInterface {
                 route.clear()
             }
             0x03 -> {
+                dos21CallBuffer = data.toInt() and 0xFF
             }
             0x04 -> {
                 reset()
+            }
+            0x06 -> {
+                queriedDrive = data.toInt() and 0x03
             }
             else -> {
             }
@@ -277,37 +296,33 @@ class Abc80Floppy : Abc80Bus.BusInterface {
                 when (stateMachine.state) {
                     StateMachine.State.UNINITIALIZED -> 0xffu
                     StateMachine.State.SELECTED -> drive
-                    StateMachine.State.STARTED -> {
-                        if (route.size == 4) {
-                            if (route[0].and(0x01) == 0x01) {
-                                stateMachine.state = StateMachine.State.READING
-                                selectDrive(route[1])
-                                if (progressOperation.isNotEmpty()) {
-                                    progressDrive = "DR$drive: "
-                                    progress(text = progressText)
-                                }
-                                disk.open(route[2], route[3])
-                                return disk.read().toUByte()
-                            }
-                            route.clear()
-                        }
-                        0Xffu
-                    }
+                    StateMachine.State.STARTED -> 0xffu
                     StateMachine.State.READING -> {
-                        disk.read().toUByte()
+                        if (disk.inTransfer()) {
+                            disk.read().toUByte()
+                        } else {
+                            stateMachine.state = StateMachine.State.SELECTED
+                            if (disk.isValid()) 0x00u else 0x80u
+                        }
                     }
                     StateMachine.State.WRITING -> {
-                        0x00u
+                        stateMachine.state = StateMachine.State.SELECTED
+                        if (disk.isValid()) 0x00u else 0x80u
                     }
                 }
             }
             0x01 -> {
                 when (stateMachine.state) {
-                    StateMachine.State.READING -> {
-                        disk.status
+                    StateMachine.State.READING,
+                    StateMachine.State.WRITING -> {
+                        if (disk.inTransfer()) 0b01001001u else 0b11001001u
                     }
                     else -> status
                 }
+            }
+            0x06 -> {
+                val targetDisk = disks[queriedDrive and 0x03]
+                if (targetDisk.format?.clusterShift == 2) 0x08u else 0x0Cu
             }
             else -> {
                 0xffu

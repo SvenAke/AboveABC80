@@ -9,30 +9,8 @@ import kotlin.test.assertTrue
 @OptIn(ExperimentalUnsignedTypes::class)
 class CloudDiskImportTest {
     companion object {
-        fun readRecords(image: ByteArray, name: String): ByteArray {
-            fun physical(sector: Int) = (sector and 15.inv()) or ((sector * 7) and 15)
-            val diskName = Abc80CloudDiskImport.encodeText(
-                name.substringBeforeLast('.').uppercase().padEnd(8) +
-                    name.substringAfterLast('.', "").uppercase().padEnd(3)
-            )
-            val entry = (8 until 16).flatMap { sector ->
-                (1..15).map { physical(sector) * 256 + it * 16 }
-            }.first { image.copyOfRange(it + 4, it + 15).contentEquals(diskName) }
-            val headerSector = (image[entry].toInt() and 255) * 8 +
-                ((image[entry + 1].toInt() and 255) shr 5)
-            val header = physical(headerSector) * 256
-            val sectors = mutableListOf<Int>()
-            for (offset in 4 until 240 step 2) {
-                if (image[header + offset] == 0xFF.toByte()) break
-                val start = (image[header + offset].toInt() and 255) * 8 +
-                    ((image[header + offset + 1].toInt() and 255) shr 5)
-                val count = (image[header + offset + 1].toInt() and 31) + 1
-                repeat(count) { sectors.add(start + it) }
-            }
-            return sectors.drop(1).flatMap { sector ->
-                image.copyOfRange(physical(sector) * 256 + 3, (physical(sector) + 1) * 256).asIterable()
-            }.toByteArray()
-        }
+        fun readRecords(image: ByteArray, name: String): ByteArray =
+            requireNotNull(Abc80FloppyLayout.readFile(image, name))
     }
 
     @Test

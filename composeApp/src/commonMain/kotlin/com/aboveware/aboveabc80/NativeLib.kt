@@ -101,7 +101,9 @@ class NativeLib {
     fun startEmulator(cpuFrequency: Int) {
         screenCursorVisible = true
         dosActive = false
+        resetCpuNative()
         startEmulatorNative(cpuFrequency)
+        freezeNative(false)
     }
     private external fun startEmulatorNative(cpuFrequency: Int)
 
@@ -295,7 +297,44 @@ class NativeLib {
     fun getTStates(): Long = getTStatesNative()
     private external fun getTStatesNative(): Long
 
-    fun copyToMemory(address: Int, data: ByteArray) = copyToMemoryNative(address, data)
+    fun copyToMemory(address: Int, data: ByteArray) {
+        val patched = if (address == 0 && data.size >= 0x7000 &&
+            data[0x6000] == 0xC3.toByte() &&
+            data[0x6001] == 0x95.toByte() &&
+            data[0x6002] == 0x64.toByte()
+        ) {
+            data.copyOf().also { mem ->
+                // UFD-DOS 2.0: route external DOSDIRRD (0x600F) and DOSDIRWR (0x6012) through INC B
+                mem[0x6010] = 0xCA.toByte()
+                mem[0x6013] = 0xD7.toByte()
+                // UFD-DOS 2.0: set DOS 2.1 layout compatibility flag (bit 6) on MO device entry
+                mem[0x6797] = 0x40.toByte()
+                // UFD-DOS 2.0: report external DOS 2.1 call buffer index via port 3 and skip sector shift
+                val dos21Hook = intArrayOf(
+                    0x78,       // LD A, B
+                    0xD3, 0x03, // OUT (0x03), A
+                    0x18, 0x2B  // JR 0x612D
+                )
+                dos21Hook.forEachIndexed { index, byte -> mem[0x60FD + index] = byte.toByte() }
+                // UFD-DOS 2.0: query per-drive format (0x08 = MF 640 KB, 0x0C = MO 80/160/320 KB) via port 6
+                val drLookup = intArrayOf(
+                    0x21, 0xC0, 0xFF, // LD HL, 0xFFC0
+                    0xCD, 0xFE, 0x61, // CALL 0x61FE
+                    0xD3, 0x06,       // OUT (0x06), A
+                    0xDB, 0x06,       // IN A, (0x06)
+                    0x85,             // ADD A, L
+                    0x6F,             // LD L, A
+                    0x7E,             // LD A, (HL)
+                    0xC9,             // RET
+                    0x00, 0x00, 0x00, 0x00
+                )
+                drLookup.forEachIndexed { index, byte -> mem[0x61D0 + index] = byte.toByte() }
+            }
+        } else {
+            data
+        }
+        copyToMemoryNative(address, patched)
+    }
     private external fun copyToMemoryNative(address: Int, data: ByteArray)
 
     fun setRam(address: Int, data: ByteArray) = setRamNative(address, data)

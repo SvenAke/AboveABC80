@@ -51,6 +51,8 @@ class AbsoluteDiskRunIntegrationTest {
                 assertTrue(condition(), "$message:\n${decodeABC80Screen(lib.getMemory()).joinToString("\n")}")
             }
             await("BASIC must boot") { decodeABC80Screen(lib.getMemory()).any { it.contains("ABC80") } }
+            val bootRows = decodeABC80Screen(lib.getMemory()).joinToString("\n")
+            assertTrue(!bootRows.contains("Hittar inte filen"), bootRows)
             delay(250)
             loadABC80DiskFile(lib, 0, "SPACE.ABS", run = true)
             await("SPACE must show free space") {
