@@ -279,7 +279,7 @@ fun StorageFileDialog(
                     val controller = DiskController.instance
                     val mountedDrives = (0 until DiskController.MAX_DRIVES).mapNotNull { i ->
                         val mounted = controller.mountedDisks[i]
-                        if (mounted != null && mounted.source == DiskController.Source.LOCAL) {
+                        if (mounted != null) {
                             i to mounted
                         } else null
                     }

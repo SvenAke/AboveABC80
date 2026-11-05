@@ -12,7 +12,6 @@ object Abc80CloudDiskImport {
         val mounted = requireNotNull(DiskController.instance.mountedDisks[drive]) {
             "No floppy disk mounted on DR$drive:"
         }
-        require(mounted.source == DiskController.Source.LOCAL) { "The floppy disk must be saved locally" }
         NativeLib.getObject().bus.floppy.updateImage(drive, mounted.name) { image ->
             Abc80FloppyLayout.importFiles(image, records, clear)
         }

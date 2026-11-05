@@ -1,6 +1,7 @@
 package com.aboveware.aboveabc80
 
 import com.aboveware.aboveabc80.printer.VirtualPrinter
+import com.aboveware.aboveabc80.terminal.TerminalManager
 
 @Suppress("SpellCheckingInspection")
 @ExperimentalUnsignedTypes
@@ -111,17 +112,30 @@ class Abc80Printer : Abc80Bus.BusInterface {
         when (state) {
             STATE.NORMAL -> normal(data)
             STATE.FF -> ff(data)
-            STATE.FILE -> state = STATE.NORMAL
+            STATE.FILE -> file(data)
             STATE.CONSOLE -> console(data)
         }
     }
 
-    private fun console(data: UByte) {}
+    private fun console(data: UByte) {
+        if (data == 0xffu.toUByte()) {
+            state = STATE.FF
+        } else {
+            output(data)
+            try {
+                TerminalManager.activeTerminal.putChar((data.toInt() and 0x7F).toChar())
+            } catch (_: Exception) {}
+        }
+    }
+
+    private fun file(data: UByte) {
+        if (data == 0xffu.toUByte()) state = STATE.FF else output(data)
+    }
 
     private fun ff(data: UByte) {
         when (data.toInt()) {
             0x00 -> end()
-            in 0xa0..0xbf -> state = STATE.NORMAL // todo file!
+            in 0xa0..0xbf -> state = STATE.FILE
             0xc0 -> state = STATE.CONSOLE
             else -> {
                 output(data)

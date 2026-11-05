@@ -323,7 +323,7 @@ fun DiskManagerDialog(
                                                     targetImportDriveIndex = index
                                                     controller.currentDriveIndex = index
                                                     showCloudImportDialog = true
-                                                }, enabled = mounted.source == DiskController.Source.LOCAL) {
+                                                }) {
                                                     Icon(
                                                         Icons.Default.CloudDownload,
                                                         contentDescription = importCloudLabel
