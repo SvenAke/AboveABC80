@@ -432,8 +432,6 @@ fun EmulatorScreen(startWithStorageOpen: Boolean = false, onLanguageChange: (Str
         if (!speedDialOpen) speedDialTestOpen = false
     }
 
-    assembler.RomFileLoader()
-
     // Setup Tape Controller callbacks
     LaunchedEffect(Unit) {
         TapeController.instance.onRequireTape = {
@@ -525,6 +523,8 @@ fun EmulatorScreen(startWithStorageOpen: Boolean = false, onLanguageChange: (Str
         } catch (e: Exception) {
             Abc80Log.wtf("Failed to restore disks: ${e.message}")
         }
+
+        assembler.start()
 
         // Wait for composition to settle then request focus
         repeat(10) {

@@ -1,11 +1,10 @@
 package com.aboveware.aboveabc80
 
 import aboveabc80.composeapp.generated.resources.Res
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import com.aboveware.aboveabc80.terminal.ComputerModel
 import com.aboveware.aboveabc80.terminal.TerminalManager
 import com.aboveware.aboveabc80.Assembler.Companion.opcodeList
+import com.aboveware.aboveabc80.core.DiskController
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.ExperimentalResourceApi
@@ -35,7 +34,7 @@ class Assembler {
             if (!wasFrozen) lib.freeze(false)
         }
     }
-    @OptIn(ExperimentalResourceApi::class)
+    @OptIn(ExperimentalResourceApi::class, ExperimentalUnsignedTypes::class)
     suspend fun loadRomFiles() = withContext(Dispatchers.Default) {
         val previousMemory = memory.copyOf()
         try {
@@ -48,6 +47,10 @@ class Assembler {
                     loadRom("files/basic800c.rom", 0x0000, 0x1000)
                 }
                 loadRom("files/dos800.rom", 0x6000, 0x1000)
+                if (!hasAbc800BasicIni()) {
+                    // UFD-DOS reports a missing optional BASICINI.SYS before using its built-in defaults.
+                    byteArrayOf(0x3E, 0x01, 0xB7.toByte()).copyInto(memory, 0x6C7C)
+                }
                 loadRom("files/opt800.rom", 0x7000, 0x1000)
                 require(Res.readBytes("files/font800.bin").size == 0x800) {
                     "ABC800M character ROM must be 2048 bytes"
@@ -77,25 +80,28 @@ class Assembler {
         }
     }
 
-    @OptIn(ExperimentalResourceApi::class)
-    @Composable
-    fun RomFileLoader() {
-        LaunchedEffect(Unit) {
-            try {
-                loadRomFiles()
-                NativeLib.getObject().enableLogging(false)
-                val cpuSpeedMHz = getPersistedString(
-                    "cpu_speed_mhz",
-                    TerminalManager.computerModel.defaultCpuSpeedSetting.toString()
-                ).toIntOrNull()?.coerceIn(1, 9)
-                    ?: TerminalManager.computerModel.defaultCpuSpeedSetting
-                NativeLib.getObject().setFastSpeed(cpuSpeedMHz == 9)
-                NativeLib.getObject().startEmulator(
-                    TerminalManager.computerModel.cpuFrequencyHz(cpuSpeedMHz)
-                )
-            } catch (e: Exception) {
-                Abc80Log.wtf("Kunde inte starta emulatorn: ${e.message}")
-            }
+    @OptIn(ExperimentalUnsignedTypes::class)
+    private fun hasAbc800BasicIni(): Boolean =
+        DiskController.instance.getFloppy(0)?.listFiles()?.any {
+            it.filename.equals("BASICINI", ignoreCase = true) &&
+                it.extension.equals("SYS", ignoreCase = true)
+        } == true
+
+    suspend fun start() {
+        try {
+            loadRomFiles()
+            NativeLib.getObject().enableLogging(false)
+            val cpuSpeedMHz = getPersistedString(
+                "cpu_speed_mhz",
+                TerminalManager.computerModel.defaultCpuSpeedSetting.toString()
+            ).toIntOrNull()?.coerceIn(1, 9)
+                ?: TerminalManager.computerModel.defaultCpuSpeedSetting
+            NativeLib.getObject().setFastSpeed(cpuSpeedMHz == 9)
+            NativeLib.getObject().startEmulator(
+                TerminalManager.computerModel.cpuFrequencyHz(cpuSpeedMHz)
+            )
+        } catch (e: Exception) {
+            Abc80Log.wtf("Kunde inte starta emulatorn: ${e.message}")
         }
     }
 

@@ -123,7 +123,8 @@ fun String.isText() =
     when (substringAfterLast('.', "").lowercase()) {
         "txt",
         "rem",
-        "bas" -> true
+        "bas",
+        "sys" -> true
         else -> false
     }
 
