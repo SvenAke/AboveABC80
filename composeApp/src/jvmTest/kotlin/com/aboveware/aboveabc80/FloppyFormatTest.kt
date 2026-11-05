@@ -30,20 +30,46 @@ class FloppyFormatTest {
     @OptIn(ExperimentalResourceApi::class)
     @Test
     fun bundledSystemDirectoryStillContainsCopy() = runBlocking {
-        val files = requireNotNull(Abc80FloppyLayout.list(Res.readBytes("files/system.dsk")))
+        val bytes = Res.readBytes("files/system.dsk")
+        val files = requireNotNull(Abc80FloppyLayout.list(bytes))
         assertTrue(files.any { it.first == "COPY.ABS" })
+        
+        fun physical(s: Int) = (s and 15.inv()) or ((s * 7) and 15)
+        val sysSec = physical(6) * 256
+        val sysHex = (0 until 256 step 16).joinToString("\n") { i -> "%02X: ".format(i) + (0 until 16).joinToString(" ") { "%02X".format(bytes[sysSec + i + it]) } }
+        val created = Abc80FloppyLayout("abc830", 0).create()
+        val createdHex = (0 until 256 step 16).joinToString("\n") { i -> "%02X: ".format(i) + (0 until 16).joinToString(" ") { "%02X".format(created[sysSec + i + it]) } }
+        assertEquals(sysHex, createdHex)
     }
 
     @Test
     fun largeDiskListsEntriesBeyondTheFirstEightDirectorySectors() {
-        val image = Abc80FloppyLayout("abc832", 0).create()
-        image[2 * 256 + 239 + 8] = 2
-        val entry = 24 * 256 + 16
-        image[entry] = 4
-        image[entry + 1] = 0
+        val layout = Abc80FloppyLayout("abc832", 0)
+        val image = layout.create()
+        val bitmap = layout.physicalSector(14) * 256
+        image[bitmap + 239 + 8] = 2
+        val entry = layout.physicalSector(24) * 256 + 16
+        image[entry] = 0
+        image[entry + 1] = (4 shl 5).toByte()
         "NINTH   BAS".encodeToByteArray().copyInto(image, entry + 4)
-        image.fill(0xFF.toByte(), 128 * 256, 129 * 256)
+        image[entry + 15] = 0xFF.toByte()
+        val header = layout.physicalSector(4) * 256
+        image.fill(0xFF.toByte(), header, header + 256)
         assertEquals(listOf("NINTH.BAS" to 0), Abc80FloppyLayout.list(image))
+    }
+
+    @Test
+    fun newlyCreatedLargeDisksHaveCleanDirectoryAccessOverBus() {
+        for (name in listOf("abc830", "fd4d", "abc832")) {
+            val layout = Abc80FloppyLayout(name, 0)
+            val image = layout.create()
+            val dirSector = layout.format!!.directorySectors.a
+            val file = dirSector / 8
+            val sec = dirSector % 8
+            // Verify physical sector for dirSector matches offset
+            val physicalDirOffset = layout.physicalSector(dirSector) * 256
+            assertEquals(0, image[physicalDirOffset].toInt() and 0xFF, "Directory sector $dirSector for $name must start with 0x00")
+        }
     }
 
     @Test

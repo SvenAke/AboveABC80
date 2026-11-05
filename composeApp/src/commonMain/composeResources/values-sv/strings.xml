@@ -162,6 +162,10 @@
     <string name="disk_name_label">Namn (högst 8 tecken A–Z)</string>
     <string name="disk_exists_title">Diskavbilden finns redan</string>
     <string name="disk_exists_message">Diskavbilden %1$s finns redan. Vad vill du göra?</string>
+    <string name="disk_format_sssd">Enkelsidig (SS/SD) – 80 kB</string>
+    <string name="disk_format_ssdd">Enkelsidig (SS/DD) – 160 kB</string>
+    <string name="disk_format_dsdd_320">Dubbelsidig (DS/DD) – 320 kB</string>
+    <string name="disk_format_dsdd_640">Dubbelsidig (DS/DD) – 640 kB</string>
 
     <string name="tape_punch_title">Pappersremsestans</string>
     <string name="tape_reader_title">Pappersremseläsare</string>

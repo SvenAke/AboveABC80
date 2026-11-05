@@ -14,7 +14,7 @@ import kotlin.test.assertTrue
 class AbcDiskImageTest {
     @Test
     fun exportsEntireFilesInAllWritableFormatsIncludingSwedishNames() {
-        for (format in listOf("fd2", "abc830", "fd4d")) {
+        for (format in listOf("fd2", "abc830", "fd4d", "abc832")) {
             val records = ByteArray(253 * 45) { (it * 37).toByte() }
             val image = Abc80FloppyLayout.importFiles(
                 Abc80FloppyLayout(format, 0).create(),

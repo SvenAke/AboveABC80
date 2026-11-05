@@ -162,6 +162,10 @@
     <string name="disk_name_label">Name (max 8 characters A–Z)</string>
     <string name="disk_exists_title">Disk image already exists</string>
     <string name="disk_exists_message">Disk image %1$s already exists. What do you want to do?</string>
+    <string name="disk_format_sssd">Single-sided (SS/SD) – 80 kB</string>
+    <string name="disk_format_ssdd">Single-sided (SS/DD) – 160 kB</string>
+    <string name="disk_format_dsdd_320">Double-sided (DS/DD) – 320 kB</string>
+    <string name="disk_format_dsdd_640">Double-sided (DS/DD) – 640 kB</string>
 
     <string name="tape_punch_title">Paper tape punch</string>
     <string name="tape_reader_title">Paper tape reader</string>

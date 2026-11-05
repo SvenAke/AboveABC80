@@ -694,9 +694,13 @@ fun NewDiskDialog(
     onDismiss: () -> Unit,
     onCreated: (String) -> Unit
 ) {
-    val templates = listOf("fd2" to "ABC80 80 kB (SSSD)", "abc830" to "ABC80 160 kB (SSDD)", "fd4d" to "ABC80 320 kB (DSDD)", "abc832" to "ABC80 640 kB (DSQD)")
+    val templates = listOf(
+        "fd2" to stringResource(Res.string.disk_format_sssd),
+        "abc830" to stringResource(Res.string.disk_format_ssdd),
+        "fd4d" to stringResource(Res.string.disk_format_dsdd_320)
+    )
     var selectedTemplate by remember { mutableStateOf("abc830") }
-    var systemDisk by remember { mutableStateOf(true) }
+    var systemDisk by remember { mutableStateOf(false) }
     var newName by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     var showOverwriteConfirmation by remember { mutableStateOf<String?>(null) }
@@ -725,8 +729,8 @@ fun NewDiskDialog(
             Column {
                 Text(stringResource(Res.string.storage_disk_type), style = MaterialTheme.typography.labelSmall)
                 listOf(
-                    true to stringResource(Res.string.storage_system_disk),
-                    false to stringResource(Res.string.storage_empty_disk)
+                    false to stringResource(Res.string.storage_empty_disk),
+                    true to stringResource(Res.string.storage_system_disk)
                 ).forEach { (isSystem, label) ->
                     Row(
                         modifier = Modifier
@@ -739,16 +743,19 @@ fun NewDiskDialog(
                         Text(label, modifier = Modifier.padding(start = 8.dp))
                     }
                 }
-                if (!systemDisk) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    DiskFormatDropdown(
-                        formats = templates,
-                        selected = selectedTemplate,
-                        onSelected = { selectedTemplate = it },
-                        label = stringResource(Res.string.storage_format),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+                DiskFormatDropdown(
+                    formats = templates,
+                    selected = if (systemDisk) "abc830" else selectedTemplate,
+                    onSelected = {
+                        selectedTemplate = it
+                        systemDisk = false
+                    },
+                    enabled = !systemDisk,
+                    label = stringResource(Res.string.storage_format),
+                    modifier = Modifier.fillMaxWidth()
+                )
 
                 Spacer(modifier = Modifier.height(16.dp))
 

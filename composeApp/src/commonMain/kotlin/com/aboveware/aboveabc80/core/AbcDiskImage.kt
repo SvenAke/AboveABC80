@@ -20,6 +20,7 @@ class AbcDiskImage(private var data: ByteArray) {
             81920 -> "fd2"
             163840 -> "abc830"
             327680 -> "fd4d"
+            655360 -> "abc832"
             else -> throw IllegalArgumentException("Diskformatet kan inte formateras")
         }
         data = Abc80FloppyLayout(format, 0).create()

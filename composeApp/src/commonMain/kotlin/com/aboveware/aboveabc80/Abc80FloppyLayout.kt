@@ -205,11 +205,8 @@ class Abc80FloppyLayout(formatName: String, val drive: Int) {
         fileNumber = physicalFileNumber.and(0b00001111)
         libraryOffset = physicalFileNumber.and(0b11110000).shr(4)
         sector = physicalSectorNumber.shr(5) * 256L
-        val secPerCluster = 1.shl(format!!.clusterShift)
 
-        var offset =
-            ((physicalFileNumber.shl(3) + physicalSectorNumber.shr(5)) * secPerCluster +
-                    physicalSectorNumber.and(31))
+        var offset = physicalFileNumber.shl(3) + physicalSectorNumber.shr(5) + physicalSectorNumber.and(31)
         offset = physicalSector(offset)
         offset = offset.shl(8)
         return offset
@@ -403,7 +400,6 @@ class Abc80FloppyLayout(formatName: String, val drive: Int) {
                 val offset = sectorStartOffset + index
                 if (bytes[offset].toInt() == 0x00 || bytes[offset].toInt() == -1) continue
                 var hsect = bytes[offset].toInt().shl(3) + bytes[offset + 1].toInt().shr(5)
-                hsect = hsect.shl(format.clusterShift)
                 if (hsect == 0 ||
                     (bytes[offset + 1].toInt() and bytes[offset + 1].toInt()) == -1 ||
                     bytes[offset + 4].toInt() == 0x00 ||
@@ -439,7 +435,7 @@ class Abc80FloppyLayout(formatName: String, val drive: Int) {
         val diskFormat = requireNotNull(format)
         val bitmapIndex = physicalSector(diskFormat.systemSector) * 256
         for (index in 0 until diskFormat.numberOfDirectorySectors) {
-            userDirectorySectors.add(bytes[bitmapIndex + 239 + index].toUByte().toInt() > 1)
+            userDirectorySectors.add(bytes[bitmapIndex + 239 + index].toUByte().toInt() >= 1)
         }
         return userDirectorySectors
     }
