@@ -242,6 +242,20 @@ internal fun decodeABC800MHighResolutionScreen(videoRam: ByteArray): ByteArray {
     }
 }
 
+internal fun decodeABC800MHighResolutionScreen(
+    videoRam: ByteArray,
+    control: Int,
+    colorProm: ByteArray
+): ByteArray {
+    require(colorProm.size == 512) { "ABC800M graphics color PROM must be 512 bytes" }
+    val paletteOffset = ((control ushr 8) and 0x7f) * 4
+    return decodeABC800MHighResolutionScreen(videoRam).also { pixels ->
+        for (index in pixels.indices) {
+            pixels[index] = if (colorProm[paletteOffset + pixels[index].toInt()].toInt() and 7 != 0) 1 else 0
+        }
+    }
+}
+
 internal const val ABC800C_HIGH_RESOLUTION_WIDTH = 240
 internal const val ABC800C_HIGH_RESOLUTION_HEIGHT = 240
 internal const val ABC800C_TEXT_CELL_WIDTH = 12
@@ -561,10 +575,10 @@ internal fun ABC80Screen(
     val wideScreen = model.isWideScreen(TKN80.enabled)
     val screenColumns = if (wideScreen) 80 else ABC80_SCREEN_COLUMNS
     var abc800Font by remember { mutableStateOf<ByteArray?>(null) }
-    var abc800CColorProm by remember { mutableStateOf<ByteArray?>(null) }
+    var abc800HrColorProm by remember { mutableStateOf<ByteArray?>(null) }
     LaunchedEffect(model) {
         abc800Font = if (isAbc800) Res.readBytes("files/font800.bin") else null
-        abc800CColorProm = if (isAbc800C) Res.readBytes("files/hru800c.bin") else null
+        abc800HrColorProm = if (isAbc800) Res.readBytes("files/hru800c.bin") else null
     }
     var rows by remember(model) {
         mutableStateOf(List(ABC80_SCREEN_ROWS) { " ".repeat(screenColumns) })
@@ -581,6 +595,8 @@ internal fun ABC80Screen(
     LaunchedEffect(nativeLib, model, wideScreen) {
         var ticks = 0
         var previousHighResolutionVideoRam: ByteArray? = null
+        var previousABC800MControl: Int? = null
+        var previousABC800MProm: ByteArray? = null
         var previousABC800CControl: Int? = null
         var previousABC800CCharacterRam: ByteArray? = null
         var previousABC800CFlashVisible: Boolean? = null
@@ -595,10 +611,16 @@ internal fun ABC80Screen(
                 cursorRasterRange = nativeLib.getAbc800MCursorRasterRange()
                 val videoRam = nativeLib.getAbc800MHighResolutionScreen()
                 highResolutionControl = nativeLib.getAbc800MHighResolutionControl()
-                if (previousHighResolutionVideoRam?.contentEquals(videoRam) != true) {
+                val prom = abc800HrColorProm
+                if (previousHighResolutionVideoRam?.contentEquals(videoRam) != true ||
+                    previousABC800MControl != highResolutionControl ||
+                    previousABC800MProm !== prom
+                ) {
                     previousHighResolutionVideoRam = videoRam
-                    if (videoRam.any { it != 0.toByte() }) {
-                        val pixels = decodeABC800MHighResolutionScreen(videoRam)
+                    previousABC800MControl = highResolutionControl
+                    previousABC800MProm = prom
+                    if (prom != null) {
+                        val pixels = decodeABC800MHighResolutionScreen(videoRam, highResolutionControl, prom)
                         val bitmap = ImageBitmap(
                             ABC800M_HIGH_RESOLUTION_WIDTH,
                             ABC800M_HIGH_RESOLUTION_HEIGHT
@@ -668,7 +690,7 @@ internal fun ABC80Screen(
                     abc800cDisplayBitmap == null
                 ) {
                     val text = abc800cTextBitmap
-                    val prom = abc800CColorProm
+                    val prom = abc800HrColorProm
                     if (text != null && prom != null) {
                         abc800cDisplayBitmap = renderABC800CDisplay(text, videoRam, control, prom)
                         previousHighResolutionVideoRam = videoRam

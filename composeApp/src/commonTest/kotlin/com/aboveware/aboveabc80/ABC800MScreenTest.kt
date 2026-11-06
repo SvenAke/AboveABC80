@@ -59,6 +59,21 @@ class ABC800MScreenTest {
     }
 
     @Test
+    fun monochromeHruUsesSelectedPromPaletteIncludingPixelZero() {
+        val videoRam = ByteArray(64 * 240)
+        videoRam[0] = 0b00_01_10_11
+        val prom = ByteArray(512)
+        byteArrayOf(9, 0, 10, 0).copyInto(prom, 127 * 4)
+        val pixels = decodeABC800MHighResolutionScreen(videoRam, 0xff00, prom)
+        assertEquals(listOf(1, 0, 1, 0), pixels.take(4).map { it.toInt() })
+        assertEquals(1, pixels[4].toInt())
+        assertEquals(0, decodeABC800MHighResolutionScreen(videoRam, 0, prom)[0].toInt())
+        assertFailsWith<IllegalArgumentException> {
+            decodeABC800MHighResolutionScreen(videoRam, 0, ByteArray(511))
+        }
+    }
+
+    @Test
     fun decodesABC800C40ColumnText() {
         val characterRam = ByteArray(40 * 24) { 0x20 }
         characterRam[0] = 'A'.code.toByte()

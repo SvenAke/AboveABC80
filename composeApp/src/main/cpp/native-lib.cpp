@@ -46,6 +46,7 @@ extern "C" void abc800m_copy_text_screen(std::uint8_t *destination);
 extern "C" void abc800c_copy_text_screen(std::uint8_t *destination);
 extern "C" void abc800m_copy_high_resolution_screen(std::uint8_t *destination);
 extern "C" int abc800m_high_resolution_control();
+extern "C" void abc800_set_hr_enabled(bool enabled);
 extern "C" int abc800m_cursor_position();
 extern "C" int abc800m_cursor_raster_range();
 
@@ -138,7 +139,8 @@ void onWritePort(int port, int value) {
     int port8 = port & 0xFF;
     if (g_abc800m_active.load(std::memory_order_relaxed)) {
         if ((port8 >= 0x20 && port8 <= 0x2f) || port8 == 0x38 || port8 == 0x39 ||
-            port8 == 0x3c || port8 == 0x3d || port8 == 0x06 || port8 == 0x07 ||
+            port8 == 0x3c || port8 == 0x3d ||
+            (port8 & 0xe7) == 0x06 || (port8 & 0xe7) == 0x07 ||
             (port8 >= 0x60 && port8 <= 0x7f)) {
             abc800m_write_port(port8, value);
             return;
@@ -224,6 +226,11 @@ Java_com_aboveware_aboveabc80_NativeLib_getAbc800MHighResolutionScreenNative(JNI
 JNIEXPORT jint JNICALL
 Java_com_aboveware_aboveabc80_NativeLib_getAbc800MHighResolutionControlNative(JNIEnv *, jobject) {
     return abc800m_high_resolution_control();
+}
+
+JNIEXPORT void JNICALL
+Java_com_aboveware_aboveabc80_NativeLib_setAbc800HrEnabledNative(JNIEnv *, jobject, jboolean enabled) {
+    abc800_set_hr_enabled(enabled == JNI_TRUE);
 }
 
 JNIEXPORT jint JNICALL

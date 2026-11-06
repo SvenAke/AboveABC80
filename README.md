@@ -68,6 +68,18 @@ The C-model glyphs still approximate the SAA5052 using the VUM SE font;
 its nine glyph rows are doubled below a blank row in the ten-row teletext
 cell, excluding VUM SE's trailing padding. They are not yet an accurate
 SAA5052 character set.
+ABC800M/C settings include **Luxor HR-kort (High Resolution Board)**.
+The HRU-II board is enabled by default; the shared setting is persisted and
+changing it restarts the emulated computer. When disabled, its 16 KB graphics
+RAM and graphics ROM are absent and HR register writes are ignored; text video
+and the rest of the machine remain available.
+The installed board banks graphics RAM at 0x0000-0x3FFF via DART /DTRB
+or graphics-ROM execution. Ports 0x06/0x07 (also mirrored at 0x0E/0x0F,
+0x16/0x17 and 0x1E/0x1F) select vertical origin and palette/text disable.
+Both models use the bundled HRU-II PROM (`hru800c.bin`); ABC800M maps
+non-black palette entries to its monochrome foreground. Four packed two-bit
+pixels per byte provide 256x240 source pixels on ABC800M; ABC800C displays
+240x240 pixels with the remaining VRAM columns outside its visible raster.
 ABC800C high-resolution graphics use the bundled HRU-II PROM (`hru800c.bin`)
 for all four pixel values in the selected palette. PROM bit 3 preserves
 non-black text pixels; when cleared, the graphics color covers text.

@@ -71,6 +71,7 @@ fun SettingsDialog(
     onCpuSpeedChange: (Int) -> Unit,
     onComputerModelChange: (ComputerModel) -> Unit,
     onDosRomChange: () -> Unit = {},
+    onHrBoardChange: () -> Unit = {},
     onLanguageChange: (String) -> Unit = {},
     onDismiss: () -> Unit
 ) {
@@ -344,6 +345,31 @@ fun SettingsDialog(
                         }
                     }
 
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
+                }
+
+                if (TerminalManager.computerModel.isAbc800) {
+                    var hrEnabled by remember {
+                        mutableStateOf(getPersistedString("abc800_hr_enabled", "true").toBoolean())
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(
+                            checked = hrEnabled,
+                            onCheckedChange = {
+                                hrEnabled = it
+                                setPersistedString("abc800_hr_enabled", it.toString())
+                                onHrBoardChange()
+                            }
+                        )
+                        Column(modifier = Modifier.padding(start = 8.dp)) {
+                            Text(stringResource(Res.string.settings_hr_board))
+                            Text(
+                                stringResource(Res.string.settings_hr_board_description),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
                     HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
                 }
 

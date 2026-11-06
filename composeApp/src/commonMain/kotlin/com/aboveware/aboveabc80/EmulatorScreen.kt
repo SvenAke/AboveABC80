@@ -1304,6 +1304,18 @@ fun EmulatorScreen(startWithStorageOpen: Boolean = false, onLanguageChange: (Str
                     }
                 }
             },
+            onHrBoardChange = {
+                scope.launch {
+                    val wasFrozen = nativeLib.isFrozen()
+                    nativeLib.freeze(true)
+                    try {
+                        assembler.loadRomFiles()
+                        nativeLib.resetCpu()
+                    } finally {
+                        if (!wasFrozen) nativeLib.freeze(false)
+                    }
+                }
+            },
             onLanguageChange = onLanguageChange,
             onDismiss = {
                 showCpuAndFps = getPersistedString("show_cpu_and_fps", "true").toBoolean()

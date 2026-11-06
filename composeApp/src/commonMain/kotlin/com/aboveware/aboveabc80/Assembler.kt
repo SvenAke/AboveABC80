@@ -74,6 +74,9 @@ class Assembler {
             if (model == ComputerModel.ABC800C) {
                 nativeLib.setAbc800CEnabled(true)
             }
+            nativeLib.setAbc800HrEnabled(
+                model.isAbc800 && getPersistedString("abc800_hr_enabled", "true").toBoolean()
+            )
             nativeLib.copyToMemory(0, memory)
         } catch (e: Exception) {
             previousMemory.copyInto(memory)

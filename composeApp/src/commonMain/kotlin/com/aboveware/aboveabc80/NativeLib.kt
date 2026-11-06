@@ -203,6 +203,8 @@ class NativeLib {
     private external fun setAbc800MEnabledNative(enabled: Boolean)
     fun setAbc800CEnabled(enabled: Boolean) = setAbc800CEnabledNative(enabled)
     private external fun setAbc800CEnabledNative(enabled: Boolean)
+    fun setAbc800HrEnabled(enabled: Boolean) = setAbc800HrEnabledNative(enabled)
+    private external fun setAbc800HrEnabledNative(enabled: Boolean)
     fun resetCpu() = resetCpuNative()
     private external fun resetCpuNative()
 
