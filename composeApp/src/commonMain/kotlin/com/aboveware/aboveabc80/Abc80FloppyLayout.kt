@@ -52,6 +52,23 @@ class Abc80FloppyLayout(formatName: String, val drive: Int) {
             return candidates.maxByOrNull { (_, layout) -> layout.directoryEntryCount(image) }?.first
         }
 
+        fun diskType(image: ByteArray): String {
+            val formatName = detectFormatName(image)
+            return when (formatName) {
+                "fd2", "dd80" -> "SS/SD"
+                "abc830", "abc830-ufd", "fd2d", "dd82", "mo" -> "SS/DD"
+                "fd4d", "dd84" -> "DS/DD"
+                "abc832", "abc832-ufd", "abc834", "mf" -> "DS/QD"
+                else -> when (image.size) {
+                    81920 -> "SS/SD"
+                    163840 -> "SS/DD"
+                    327680 -> "DS/DD"
+                    655360 -> "DS/QD"
+                    else -> "SS/DD"
+                }
+            }
+        }
+
         @OptIn(ExperimentalUnsignedTypes::class)
         fun readFile(image: ByteArray, name: String): ByteArray? {
             val layout = detectFormatName(image)?.let { Abc80FloppyLayout(it, 0) }

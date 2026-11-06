@@ -99,4 +99,13 @@ class FloppyFormatTest {
                 "$name must have free clusters")
         }
     }
+
+    @Test
+    fun diskTypeDeterminesCorrectFloppyType() {
+        assertEquals("SS/SD", Abc80FloppyLayout.diskType(Abc80FloppyLayout("fd2", 0).create()))
+        assertEquals("SS/DD", Abc80FloppyLayout.diskType(Abc80FloppyLayout("abc830", 0).create()))
+        assertEquals("DS/DD", Abc80FloppyLayout.diskType(Abc80FloppyLayout("fd4d", 0).create()))
+        assertEquals("DS/QD", Abc80FloppyLayout.diskType(Abc80FloppyLayout("abc832", 0).create()))
+    }
+}
 }

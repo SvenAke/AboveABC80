@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.ui.text.AnnotatedString
 import com.aboveware.aboveabc80.ArchiveFileTextPreviewDialog
+import com.aboveware.aboveabc80.formatSize
 import com.aboveware.aboveabc80.isText
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -52,8 +53,12 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.aboveware.aboveabc80.ArchiveFileDialog
 import com.aboveware.aboveabc80.ArchivedFile
 import com.aboveware.aboveabc80.NativeLib
@@ -167,9 +172,31 @@ fun DiskManagerDialog(
     }
 
     listing?.let { (diskName, files) ->
+        val diskFreeLabel = stringResource(Res.string.disk_free)
+        val titleText = remember(diskName, listingImage, diskFreeLabel) {
+            val baseName = diskName.substringBeforeLast(".")
+            val image = listingImage
+            if (image != null) {
+                val type = Abc80FloppyLayout.diskType(image)
+                val freeSpace = Abc80FloppyLayout.freeSpace(image)
+                buildAnnotatedString {
+                    append(baseName)
+                    withStyle(
+                        SpanStyle(
+                            fontWeight = FontWeight.Normal,
+                            fontSize = 14.sp
+                        )
+                    ) {
+                        append(" ($type, ${formatSize(freeSpace)} $diskFreeLabel)")
+                    }
+                }
+            } else {
+                AnnotatedString(baseName)
+            }
+        }
         AlertDialog(
             onDismissRequest = { listing = null },
-            title = { Text(diskName.substringBeforeLast(".")) },
+            title = { Text(titleText) },
             text = {
                 when {
                     files == null -> Text(stringResource(Res.string.disk_unrecognized_image))

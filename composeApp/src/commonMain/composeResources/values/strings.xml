@@ -151,6 +151,7 @@
     <string name="storage_download_progress">Downloading…</string>
 
     <string name="disk_manager_title">Disk Manager</string>
+    <string name="disk_free">free</string>
     <string name="disk_mount_failed">Could not mount diskette in %1$s. Please check image format and size in log.</string>
     <string name="disk_unrecognized_image">Unrecognized disk image</string>
     <string name="disk_no_files">No files</string>
