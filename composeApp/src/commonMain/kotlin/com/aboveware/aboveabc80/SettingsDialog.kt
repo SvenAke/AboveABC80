@@ -303,7 +303,7 @@ fun SettingsDialog(
 
                     Text(
                         stringResource(Res.string.settings_dos_rom),
-                        style = MaterialTheme.typography.bodyLarge,
+                        style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.padding(top = 12.dp, bottom = 4.dp)
                     )
                     var selectedDosRom by remember {
@@ -313,7 +313,11 @@ fun SettingsDialog(
                         "dos.rom" to stringResource(Res.string.settings_dos_rom_floppy),
                         "ufdv20.rom" to stringResource(Res.string.settings_dos_rom_ufd20)
                     )
-                    Column(modifier = Modifier.selectableGroup()) {
+                    Column(
+                        modifier = Modifier
+                            .padding(start = 12.dp)
+                            .selectableGroup()
+                    ) {
                         dosRomOptions.forEach { (romKey, label) ->
                             Row(
                                 modifier = Modifier
@@ -338,8 +342,8 @@ fun SettingsDialog(
                                 )
                                 Text(
                                     text = label,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    modifier = Modifier.padding(start = 16.dp)
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    modifier = Modifier.padding(start = 8.dp)
                                 )
                             }
                         }
