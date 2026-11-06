@@ -86,6 +86,8 @@
     <string name="settings_printer">Skrivare</string>
     <string name="settings_configure_printer">Konfigurera skrivare</string>
     <string name="settings_crt_scanline_intensity">CRT-skanningslinjernas styrka</string>
+    <string name="settings_drive_count">Antal diskstationer</string>
+    <string name="settings_drives_label">%1$d diskstationer (DR0:–DR%2$d:)</string>
     <string name="settings_dos_rom">DOS ROM (ABC80)</string>
     <string name="settings_dos_rom_floppy">Floppy DOS (dos.rom)</string>
     <string name="settings_dos_rom_ufd20">UFD-DOS v2.0 (ufdv20.rom)</string>

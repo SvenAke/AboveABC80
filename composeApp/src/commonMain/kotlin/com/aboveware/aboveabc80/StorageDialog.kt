@@ -277,7 +277,7 @@ fun StorageFileDialog(
                     }
                 } else if (selectedCloudFiles.isNotEmpty()) {
                     val controller = DiskController.instance
-                    val mountedDrives = (0 until DiskController.MAX_DRIVES).mapNotNull { i ->
+                    val mountedDrives = (0 until DiskController.instance.maxDrives).mapNotNull { i ->
                         val mounted = controller.mountedDisks[i]
                         if (mounted != null) {
                             i to mounted

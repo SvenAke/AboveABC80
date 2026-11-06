@@ -243,7 +243,7 @@ fun DiskManagerDialog(
             Box(modifier = Modifier.sizeIn(minHeight = 300.dp, maxHeight = 500.dp).fillMaxWidth()) {
                 if (selectedDriveIndex == null) {
                     LazyColumn {
-                        items(DiskController.MAX_DRIVES) { index ->
+                        items(DiskController.instance.maxDrives) { index ->
                             val driveLetter = "DR$index"
                             val mounted = controller.mountedDisks[index]
 
@@ -404,7 +404,7 @@ fun DiskManagerDialog(
                                             onClick = {
                                                 deleteLocalDisk(diskName)
                                                 localDisks = listLocalDisks().filter { it.lowercase().endsWith(".dsk") }
-                                                for (i in 0 until DiskController.MAX_DRIVES) {
+                                                for (i in 0 until DiskController.instance.maxDrives) {
                                                     if (controller.mountedDisks[i]?.name == diskName) {
                                                         controller.clearDrive(i)
                                                         setPersistedString(

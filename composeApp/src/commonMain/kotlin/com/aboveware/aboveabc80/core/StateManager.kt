@@ -21,7 +21,7 @@ object StateManager {
         val driveIndex = controller.currentDriveIndex
         // For mounts, we just save the names.
         val mounts = StringBuilder()
-        for (i in 0 until DiskController.MAX_DRIVES) {
+        for (i in 0 until DiskController.instance.maxDrives) {
             val m = controller.mountedDisks[i]
             if (m != null) {
                 mounts.append("${m.source.name}:${m.name}\n")
@@ -97,7 +97,7 @@ object StateManager {
         // Restore mounts
         val lines = mountData.split("\n")
         val controller = DiskController.instance
-        for (i in 0 until DiskController.MAX_DRIVES) {
+        for (i in 0 until DiskController.instance.maxDrives) {
             val line = lines.getOrNull(i)
             val preferenceKey = DiskController.drivePreferenceKey(TerminalManager.computerModel, i)
             if (line != null && line != "NONE" && line.contains(":")) {

@@ -38,6 +38,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -49,6 +50,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.aboveware.aboveabc80.core.DiskController
 import com.aboveware.aboveabc80.core.StateManager
 import com.aboveware.aboveabc80.printer.Diablo630ConfigView
 import com.aboveware.aboveabc80.printer.Mx80ConfigView
@@ -273,6 +275,36 @@ fun SettingsDialog(
                     valueRange = 0f..0.5f,
                     modifier = Modifier.fillMaxWidth()
                 )
+
+                HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
+
+                // Number of Disk Drives
+                Text(
+                    stringResource(Res.string.settings_drive_count),
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                var driveCountSetting by remember { mutableIntStateOf(DiskController.instance.maxDrives) }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Slider(
+                        value = driveCountSetting.toFloat(),
+                        onValueChange = {
+                            val newCount = it.roundToInt().coerceIn(2, 8)
+                            driveCountSetting = newCount
+                            DiskController.instance.setDriveCount(newCount)
+                        },
+                        valueRange = 2f..8f,
+                        steps = 5,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Text(
+                        stringResource(Res.string.settings_drives_label, driveCountSetting, driveCountSetting - 1),
+                        modifier = Modifier.padding(start = 12.dp)
+                    )
+                }
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
 

@@ -5,10 +5,13 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import com.aboveware.aboveabc80.Abc80Log
 import com.aboveware.aboveabc80.NativeLib
 import com.aboveware.aboveabc80.Abc80FloppyLayout
 import com.aboveware.aboveabc80.getComputerModelStorageDir
+import com.aboveware.aboveabc80.getPersistedString
+import com.aboveware.aboveabc80.setPersistedString
 import com.aboveware.aboveabc80.loadLocalDisk
 import com.aboveware.aboveabc80.listLocalDisks
 import com.aboveware.aboveabc80.terminal.ComputerModel
@@ -20,12 +23,26 @@ class DiskController {
 
     companion object {
         val instance = DiskController()
-        const val MAX_DRIVES = 3
+        const val MAX_POSSIBLE_DRIVES = 8
+        const val MAX_DRIVES = 8
         const val UNMOUNTED_PREFERENCE = "NONE"
 
         fun drivePreferenceKey(model: ComputerModel, index: Int): String {
-            require(index in 0 until MAX_DRIVES)
+            require(index in 0 until MAX_POSSIBLE_DRIVES)
             return "drive_${model.name}_$index"
+        }
+    }
+
+    var maxDrives by mutableIntStateOf(
+        getPersistedString("abc80_max_drives", "3").toIntOrNull()?.coerceIn(2, MAX_POSSIBLE_DRIVES) ?: 3
+    )
+
+    fun setDriveCount(count: Int) {
+        val newMax = count.coerceIn(2, MAX_POSSIBLE_DRIVES)
+        maxDrives = newMax
+        setPersistedString("abc80_max_drives", newMax.toString())
+        for (i in newMax until MAX_POSSIBLE_DRIVES) {
+            clearDrive(i)
         }
     }
 
@@ -39,14 +56,14 @@ class DiskController {
         lastAccessTime = System.currentTimeMillis()
     }
     @Volatile var currentDriveIndex = 0
-        set(value) { field = value.coerceIn(0 until MAX_DRIVES) }
+        set(value) { field = value.coerceIn(0 until maxDrives) }
 
     fun getFloppy(index: Int): AbcDiskImage? =
         if (mountedDisks.containsKey(index)) AbcDiskImage(NativeLib.getObject().bus.floppy.snapshot(index)) else null
 
     @OptIn(ExperimentalResourceApi::class)
     suspend fun loadFromResource(index: Int, resourcePath: String) {
-        require(index in 0 until MAX_DRIVES)
+        require(index in 0 until MAX_POSSIBLE_DRIVES)
         val image = Res.readBytes(resourcePath)
         val name = resourcePath.substringAfterLast('/')
         check(NativeLib.getObject().bus.floppy.mount(index, image, name)) { "Kunde inte montera $name" }
@@ -54,7 +71,7 @@ class DiskController {
     }
 
     fun loadFromLocal(index: Int, name: String): String? {
-        require(index in 0 until MAX_DRIVES)
+        require(index in 0 until MAX_POSSIBLE_DRIVES)
         val data = loadLocalDisk(name) ?: run {
             Abc80Log.wtf("Kunde inte läsa disketten $name")
             return null
@@ -63,7 +80,7 @@ class DiskController {
     }
 
     fun restoreFromLocal(index: Int, name: String): String? {
-        require(index in 0 until MAX_DRIVES)
+        require(index in 0 until MAX_POSSIBLE_DRIVES)
         val driveImage = getComputerModelStorageDir("dr").resolve("$index.dsk")
         if (driveImage.isFile && driveImage.length() > 0) {
             val image = try {
@@ -89,7 +106,7 @@ class DiskController {
 
     @OptIn(ExperimentalUnsignedTypes::class)
     fun restoreFromDriveImage(index: Int): String? {
-        require(index in 0 until MAX_DRIVES)
+        require(index in 0 until MAX_POSSIBLE_DRIVES)
         val driveImage = getComputerModelStorageDir("dr").resolve("$index.dsk")
         if (!driveImage.isFile || driveImage.length() == 0L) return null
         val image = try {
@@ -127,7 +144,7 @@ class DiskController {
     }
 
     fun clearDrive(index: Int) {
-        require(index in 0 until MAX_DRIVES)
+        require(index in 0 until MAX_POSSIBLE_DRIVES)
         mountedDisks.remove(index)
         NativeLib.getObject().bus.floppy.unmount(index)
     }

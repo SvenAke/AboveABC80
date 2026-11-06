@@ -145,7 +145,7 @@ private suspend fun restoreDisksForModel(model: ComputerModel, migrateLegacySett
     val controller = DiskController.instance
     var driveZeroLoaded = false
     var driveZeroExplicitlyUnmounted = false
-    for (index in 0 until DiskController.MAX_DRIVES) {
+    for (index in 0 until controller.maxDrives) {
         val preferenceKey = DiskController.drivePreferenceKey(model, index)
         val legacyValue = if (migrateLegacySettings) {
             getPersistedString("drive_$index")
