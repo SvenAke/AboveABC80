@@ -56,8 +56,10 @@ class Assembler {
                     "ABC800M character ROM must be 2048 bytes"
                 }
             } else {
+                val dosRomKey = getPersistedString("abc80_dos_rom", "dos.rom")
+                val dosRomFile = if (dosRomKey == "ufdv20.rom" || dosRomKey == "ufdv20") "files/ufdv20.rom" else "files/dos.rom"
                 loadRom("files/prom.rom", 0x0000)
-                loadRom("files/dos.rom", 0x6000)
+                loadRom(dosRomFile, 0x6000)
                 loadRom("files/printer.rom", 0x7800)
                 patchPrinterColumnTracking()
             }

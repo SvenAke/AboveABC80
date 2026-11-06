@@ -38,6 +38,7 @@ class AbcDiskImageTest {
     @Test
     fun exportsBundledSystemFiles() = runBlocking {
         val disk = AbcDiskImage(Res.readBytes("files/system.dsk"))
+
         for (entry in disk.listFiles()) {
             val data = assertNotNull(disk.readFile(entry.filename, entry.extension))
             assertTrue(data.isNotEmpty(), entry.toString())

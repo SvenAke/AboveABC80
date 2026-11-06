@@ -81,6 +81,10 @@ use the ABC80 filesystem.
 Startup restores saved disks on a background dispatcher so file I/O and disk
 parsing do not block Android input handling.
 
+ABC80's default Floppy DOS uses the original `dos.rom` from commit `3a29234`
+(ABC-DOS, SHA-1 `a6b3a9587714f8db807c05bee6c71c0684363744`), without
+the UFD autostart patch. UFD-DOS v2.0 remains a separate ROM choice.
+
 Disk mounting and ABC80 disk-port access share a lock so a live read cannot
 seek or close the disk file while an image is being copied. A disk is shown as
 mounted only after the ABC80 controller accepts it; the log records its DR

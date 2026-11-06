@@ -86,6 +86,9 @@
     <string name="settings_printer">Printer</string>
     <string name="settings_configure_printer">Configure printer</string>
     <string name="settings_crt_scanline_intensity">CRT scanline intensity</string>
+    <string name="settings_dos_rom">DOS ROM (ABC80)</string>
+    <string name="settings_dos_rom_floppy">Floppy DOS (dos.rom)</string>
+    <string name="settings_dos_rom_ufd20">UFD-DOS v2.0 (ufdv20.rom)</string>
     <string name="settings_cpu_speed">CPU speed</string>
     <string name="settings_cpu_max">MAX</string>
     <string name="settings_show_cpu_fps">Show CPU and FPS</string>

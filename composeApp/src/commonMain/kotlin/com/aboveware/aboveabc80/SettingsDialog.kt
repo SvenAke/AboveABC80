@@ -68,6 +68,7 @@ fun SettingsDialog(
     cpuSpeedSetting: Int,
     onCpuSpeedChange: (Int) -> Unit,
     onComputerModelChange: (ComputerModel) -> Unit,
+    onDosRomChange: () -> Unit = {},
     onLanguageChange: (String) -> Unit = {},
     onDismiss: () -> Unit
 ) {
@@ -297,6 +298,52 @@ fun SettingsDialog(
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
+                        }
+                    }
+
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
+
+                    Text(
+                        stringResource(Res.string.settings_dos_rom),
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.padding(vertical = 8.dp)
+                    )
+                    var selectedDosRom by remember {
+                        mutableStateOf(getPersistedString("abc80_dos_rom", "dos.rom"))
+                    }
+                    val dosRomOptions = listOf(
+                        "dos.rom" to stringResource(Res.string.settings_dos_rom_floppy),
+                        "ufdv20.rom" to stringResource(Res.string.settings_dos_rom_ufd20)
+                    )
+                    Column(modifier = Modifier.selectableGroup()) {
+                        dosRomOptions.forEach { (romKey, label) ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(48.dp)
+                                    .selectable(
+                                        selected = (selectedDosRom == romKey),
+                                        onClick = {
+                                            if (selectedDosRom != romKey) {
+                                                selectedDosRom = romKey
+                                                setPersistedString("abc80_dos_rom", romKey)
+                                                onDosRomChange()
+                                            }
+                                        },
+                                        role = Role.RadioButton
+                                    ),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                RadioButton(
+                                    selected = (selectedDosRom == romKey),
+                                    onClick = null
+                                )
+                                Text(
+                                    text = label,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    modifier = Modifier.padding(start = 16.dp)
+                                )
+                            }
                         }
                     }
 
