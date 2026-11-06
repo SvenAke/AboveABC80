@@ -162,7 +162,10 @@ private suspend fun restoreDisksForModel(model: ComputerModel, migrateLegacySett
             } else {
                 controller.restoreFromLocal(index, diskName) != null
             }
-            if (!loaded) Abc80Log.wtf("Could not restore $diskName in DR$index for ${model.displayName}")
+            if (!loaded) {
+                Abc80Log.wtf("Could not restore $diskName in DR$index for ${model.displayName}")
+                setPersistedString(preferenceKey, "")
+            }
             if (index == 0) driveZeroLoaded = loaded
             if (loaded && persistedValue.isEmpty() && legacyValue.isNotEmpty()) {
                 setPersistedString(preferenceKey, persistence)
