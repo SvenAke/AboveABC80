@@ -4,7 +4,7 @@ import com.aboveware.aboveabc80.core.DiskController
 import com.aboveware.aboveabc80.terminal.TerminalManager
 
 internal fun cloudDownloadFolder(path: String, configuredFolder: String?, fileName: String? = null): String? =
-    if (fileName?.endsWith(".dsk", ignoreCase = true) == true) "disks"
+    if (fileName != null && isDiskImageName(fileName)) "disks"
     else configuredFolder ?: if (path.startsWith("abc80/cassettes/")) "tapes" else null
 
 internal fun mountDownloadedCloudDisk(name: String, drive: Int) {

@@ -73,7 +73,6 @@ import com.aboveware.aboveabc80.createFolder
 import com.aboveware.aboveabc80.deleteFolder
 import com.aboveware.aboveabc80.deleteLocalDisk
 import com.aboveware.aboveabc80.fileExists
-import com.aboveware.aboveabc80.loadLocalDisk
 import com.aboveware.aboveabc80.folderExists
 import com.aboveware.aboveabc80.getPlatform
 import com.aboveware.aboveabc80.listLocalDisks
@@ -89,6 +88,7 @@ import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.stringResource
 import com.aboveware.aboveabc80.abc80ExecutableFormat
 import com.aboveware.aboveabc80.Abc80ExecutableFormat
+import com.aboveware.aboveabc80.isDiskImageName
 
 
 @OptIn(ExperimentalUnsignedTypes::class)
@@ -119,7 +119,7 @@ fun DiskManagerDialog(
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var arkResult: List<ArchivedFile> by remember { mutableStateOf(emptyList()) }
     var localDisks by remember {
-        mutableStateOf(listLocalDisks().filter { it.lowercase().endsWith(".dsk") })
+        mutableStateOf(listLocalDisks().filter(::isDiskImageName))
     }
 
     var listing by remember { mutableStateOf<Pair<String, List<Pair<String, Int>>?>?>(null) }
@@ -168,7 +168,7 @@ fun DiskManagerDialog(
 
     // Refresh list when dialog opens
     LaunchedEffect(Unit) {
-        localDisks = listLocalDisks().filter { it.lowercase().endsWith(".dsk") }
+        localDisks = listLocalDisks().filter(::isDiskImageName)
     }
 
     listing?.let { (diskName, files) ->
@@ -289,16 +289,7 @@ fun DiskManagerDialog(
                                             Row {
                                                 TooltipIconButton(label = listContentsLabel, onClick = {
                                                     scope.launch {
-                                                        val image = when (mounted.source) {
-                                                            DiskController.Source.LOCAL -> loadLocalDisk(mounted.name)
-                                                            DiskController.Source.RESOURCE -> try {
-                                                                Res.readBytes("files/${mounted.name}")
-                                                            } catch (e: Exception) {
-                                                                null
-                                                            }
-                                                            DiskController.Source.DRIVE ->
-                                                                controller.getFloppy(index)?.getRawData()
-                                                        }
+                                                        val image = controller.getFloppy(index)?.getRawData()
                                                         try {
                                                             listingDrive = index
                                                             listingImage = image
@@ -430,7 +421,7 @@ fun DiskManagerDialog(
                                             label = deleteLabel,
                                             onClick = {
                                                 deleteLocalDisk(diskName)
-                                                localDisks = listLocalDisks().filter { it.lowercase().endsWith(".dsk") }
+                                                localDisks = listLocalDisks().filter(::isDiskImageName)
                                                 for (i in 0 until DiskController.instance.maxDrives) {
                                                     if (controller.mountedDisks[i]?.name == diskName) {
                                                         controller.clearDrive(i)
@@ -462,7 +453,7 @@ fun DiskManagerDialog(
                                                 "LOCAL:$actualName"
                                             )
                                             if (actualName != diskName) {
-                                                localDisks = listLocalDisks().filter { it.lowercase().endsWith(".dsk") }
+                                                localDisks = listLocalDisks().filter(::isDiskImageName)
                                             }
                                             selectedDriveIndex = null
                                         } else {
@@ -520,7 +511,7 @@ fun DiskManagerDialog(
         NewDiskDialog(
             onDismiss = { showNewDiskDialog = false },
             onCreated = { newName ->
-                localDisks = listLocalDisks().filter { it.lowercase().endsWith(".dsk") }
+                localDisks = listLocalDisks().filter(::isDiskImageName)
                 showNewDiskDialog = false
                 // Auto-mount if a drive was selected
                 selectedDriveIndex?.let { driveIndex ->
@@ -584,7 +575,7 @@ fun DiskManagerDialog(
         StorageFileDialog(
             targetDriveIndex = targetImportDriveIndex,
             onDismiss = {
-                localDisks = listLocalDisks().filter { it.endsWith(".dsk", ignoreCase = true) }
+                localDisks = listLocalDisks().filter(::isDiskImageName)
                 showCloudImportDialog = false
             },
             onFilesSelected = { selectedFiles, clearBeforeDownload ->

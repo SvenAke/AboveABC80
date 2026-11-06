@@ -1,13 +1,15 @@
 package com.aboveware.aboveabc80.core
 
 import com.aboveware.aboveabc80.Abc80FloppyLayout
+import com.aboveware.aboveabc80.TeleDiskImage
 
 @OptIn(ExperimentalUnsignedTypes::class)
 class AbcDiskImage(private var data: ByteArray) {
     companion object {
         fun createFromData(data: ByteArray): AbcDiskImage {
-            requireNotNull(Abc80FloppyLayout.list(data)) { "Diskavbildens format stöds inte" }
-            return AbcDiskImage(data)
+            val raw = if (TeleDiskImage.hasSignature(data)) TeleDiskImage.decode(data).rawData else data
+            requireNotNull(Abc80FloppyLayout.list(raw)) { "Diskavbildens format stöds inte" }
+            return AbcDiskImage(raw)
         }
     }
 

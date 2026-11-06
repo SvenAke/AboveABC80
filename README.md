@@ -106,6 +106,27 @@ disk image; for example, a renamed TAR archive cannot be mounted as a floppy.
 Mount and directory error messages identify the selected computer model.
 The bundled system disk contains `COPY.ABS` (not `COPY.BAS`).
 
+TeleDisk `.td0` images can also be mounted from the local disk library or the
+cloud browser. Supported images use the `TD` signature (no advanced LZH
+compression), 256-byte MFM sectors, 16 sector numbers per track and 160, 320 or
+640 kB geometry. Sector encodings 0, 1 and 2, comments and identical repeated
+sectors are supported; checksums are verified. Unsupported geometries,
+error/deleted/missing-sector flags and conflicting duplicate data are rejected
+explicitly rather than silently discarded.
+
+The controller implements read-address-mark (`10h`, second command byte
+`10h | drive`) and subsequent controller-buffer download (`02h`). It preserves
+physical CHRN IDs, including nonstandard side fields: the archived ORD 800 v2.4
+TD0 uses side ID `42h` on track 0, which its startup check requires. Raw DSK
+images have no such metadata and use conventional IDs. The writable drive
+sectors remain in `dr/N.dsk`; the original TD0 is retained as `dr/N.td0` for
+address marks across restarts. Writes do not change the library TD0. Replacing
+or ejecting the disk removes stale drive metadata. Do not copy just the DSK
+when transferring a protected mounted disk; keep its TD0 sidecar as well.
+The optional ORD boot regression reads a user-supplied image from the
+`ABC800_ORD_TD0` environment variable; no commercial disk image is bundled in
+the tests. It checks startup, text input and boot after restoring the drive.
+
 New empty disks are formatted in the controller's physical 7:1 sector order,
 including allocation maps and empty main/backup directories. The creation
 dialog offers 80, 160 and 320 kB formats, verified with BASIC SAVE/LOAD using
@@ -133,7 +154,7 @@ Android uses an internal WebView with scripts, local-file access and network
 loads disabled. Only the downloaded HTML file is supplied; linked assets are
 not downloaded by the app.
 
-Cloud `.dsk` downloads (case-insensitive) are saved byte-for-byte to the selected
+Cloud `.dsk` and `.td0` downloads (case-insensitive) are saved byte-for-byte to the selected
 computer model's local disk library, regardless of the cloud folder. They are
 not imported as text or as a file inside the mounted disk. After downloading,
 each image is mounted on the selected DR drive (or the active drive in the
@@ -248,7 +269,7 @@ The top-row `<` key intentionally differs from the manual: Shift sends `>`
 
 Downloading files from the cloud in the cassette dialog saves selected files
 to the app's internal saved-tapes storage without importing them into the current
-tape, except `.dsk` images, which go to the model's disk library.
+tape, except `.dsk` and `.td0` images, which go to the model's disk library.
 Use **Saved tapes** to open and import a downloaded tape explicitly.
 
 Cloud cassette WAV files are streamed directly to internal storage with a

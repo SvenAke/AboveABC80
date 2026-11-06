@@ -720,7 +720,7 @@ fun StorageFileDialog(
                     val activeFloppy =
                         controller.getFloppy(targetDriveIndex ?: controller.currentDriveIndex)
                     val onlyDiskImagesSelected = selectedNodes.isNotEmpty() &&
-                        selectedNodes.all { it.name.endsWith(".dsk", ignoreCase = true) }
+                        selectedNodes.all { isDiskImageName(it.name) }
                     if (activeFloppy != null && rootPath == "abc80/" && destinationFolder == null &&
                         !onlyDiskImagesSelected
                     ) {
@@ -801,7 +801,7 @@ fun StorageFileDialog(
                                                         downloadedBytes = received
                                                     }
                                                     if (fileDestinationFolder == "disks" &&
-                                                        node.name.endsWith(".dsk", ignoreCase = true)
+                                                        isDiskImageName(node.name)
                                                     ) {
                                                         withContext(Dispatchers.IO) {
                                                             mountDownloadedCloudDisk(node.name, downloadDrive)

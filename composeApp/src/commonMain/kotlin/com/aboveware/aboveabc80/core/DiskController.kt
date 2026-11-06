@@ -95,7 +95,7 @@ class DiskController {
                     Source.DRIVE
                 } else {
                     Source.LOCAL
-                })
+                }, restoreAddressMarks = true)
             }
             if (image != null) {
                 Abc80Log.wtf("Saved drive image DR$index has an unsupported format; restoring $name instead")
@@ -121,23 +121,34 @@ class DiskController {
         }
         val libraryName = matchingLibraryDisk(image)
         val name = libraryName ?: "DR$index.DSK"
-        return mountImage(index, name, image, if (libraryName == null) Source.DRIVE else Source.LOCAL)
+        return mountImage(index, name, image, if (libraryName == null) Source.DRIVE else Source.LOCAL,
+            restoreAddressMarks = true)
     }
 
     private fun matchingLibraryDisk(image: ByteArray): String? =
-        listLocalDisks().firstOrNull { name -> loadLocalDisk(name)?.contentEquals(image) == true }
+        listLocalDisks().firstOrNull { name ->
+            val library = loadLocalDisk(name)
+            if (library == null) false else try {
+                AbcDiskImage.createFromData(library).getRawData().contentEquals(image)
+            } catch (e: IllegalArgumentException) {
+                Abc80Log.wtf("Cannot compare library disk $name: ${e.message}")
+                false
+            }
+        }
 
     private fun mountLocalImage(index: Int, name: String, data: ByteArray): String? =
         mountImage(index, name, data, Source.LOCAL)
 
-    private fun mountImage(index: Int, name: String, data: ByteArray, source: Source): String? {
+    private fun mountImage(
+        index: Int, name: String, data: ByteArray, source: Source, restoreAddressMarks: Boolean = false
+    ): String? {
         val image = try {
             AbcDiskImage.createFromData(data).getRawData()
         } catch (e: IllegalArgumentException) {
             Abc80Log.wtf("Kunde inte läsa disketten $name: ${e.message}")
             return null
         }
-        if (!NativeLib.getObject().bus.floppy.mount(index, image, name)) return null
+        if (!NativeLib.getObject().bus.floppy.mount(index, data, name, restoreAddressMarks)) return null
         mountedDisks[index] = MountedDisk(name, source)
         Abc80Log.diskette("DR$index: mounted $name (${image.size} bytes)")
         return name

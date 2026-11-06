@@ -329,6 +329,9 @@ class Abc80FloppyLayout(formatName: String, val drive: Int) {
         pointer = 0
     }
 
+    internal fun physicalSectorForAddress(file: Int, sector: Int): Int =
+        offset(file, sector) / 256
+
     private fun offset(
         physicalFileNumber: Int,
         physicalSectorNumber: Int,

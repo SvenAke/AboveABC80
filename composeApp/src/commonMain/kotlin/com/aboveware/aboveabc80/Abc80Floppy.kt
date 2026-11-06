@@ -2,6 +2,7 @@ package com.aboveware.aboveabc80
 
 import com.aboveware.aboveabc80.core.DiskController
 import com.aboveware.aboveabc80.terminal.TerminalManager
+import java.io.File
 @ExperimentalUnsignedTypes
 @OptIn(ExperimentalUnsignedTypes::class, ExperimentalStdlibApi::class)
 class Abc80Floppy : Abc80Bus.BusInterface {
@@ -104,6 +105,10 @@ class Abc80Floppy : Abc80Bus.BusInterface {
 
     val disks = DiskDrive()
     private val mountedNames = mutableMapOf<Int, String>()
+    private val addressMarks = mutableMapOf<Int, TeleDiskImage>()
+    private val addressRotations = IntArray(8)
+
+    private fun addressMarkFile(drive: Int) = File(getComputerModelStorageDir("dr"), "$drive.td0")
 
     private val disk
         get() = disks[drive.toInt()]
@@ -136,10 +141,26 @@ class Abc80Floppy : Abc80Bus.BusInterface {
         for (index in 0..7) disks[index]
     }
 
-    /** Inserts a raw disk image in the given drive. The format is derived from the image size. */
+    /** Inserts a raw or TD0 disk image, preserving TD0 address marks alongside the writable drive image. */
     @Synchronized
-    fun mount(drive: Int, image: ByteArray, name: String = ""): Boolean {
-        val format = Abc80FloppyLayout.detectFormatName(image)
+    fun mount(drive: Int, image: ByteArray, name: String = "", restoreAddressMarks: Boolean = false): Boolean {
+        val metadataFile = addressMarkFile(drive)
+        val metadata = try {
+            when {
+                TeleDiskImage.hasSignature(image) -> TeleDiskImage.decode(image)
+                restoreAddressMarks && metadataFile.isFile -> TeleDiskImage.decode(metadataFile.readBytes())
+                else -> null
+            }
+        } catch (e: IllegalArgumentException) {
+            Abc80Log.wtf("Cannot mount $name: ${e.message}")
+            return false
+        }
+        val raw = if (TeleDiskImage.hasSignature(image)) requireNotNull(metadata).rawData else image
+        if (metadata != null && metadata.rawData.size != raw.size) {
+            Abc80Log.wtf("Cannot mount $name: saved TD0 geometry does not match drive image")
+            return false
+        }
+        val format = Abc80FloppyLayout.detectFormatName(raw)
             ?: run {
                 Abc80Log.wtf(
                     "${TerminalManager.computerModel.displayName} DR$drive: cannot mount $name (${image.size} bytes). " +
@@ -150,9 +171,17 @@ class Abc80Floppy : Abc80Bus.BusInterface {
         disks[drive].close()
         val layout = Abc80FloppyLayout(format, drive)
         disks[drive] = layout
-        val loaded = layout.load(java.io.ByteArrayInputStream(image), name)
+        val loaded = layout.load(java.io.ByteArrayInputStream(raw), name)
         cancelTransfer(drive)
         if (loaded) {
+            if (metadata != null) {
+                if (!restoreAddressMarks || TeleDiskImage.hasSignature(image)) metadataFile.writeBytes(image)
+                addressMarks[drive] = metadata
+            } else {
+                check(!metadataFile.exists() || metadataFile.delete()) { "Could not remove stale TD0 metadata for DR$drive" }
+                addressMarks.remove(drive)
+            }
+            addressRotations[drive] = 0
             mountedNames[drive] = name
             Abc80Log.diskette("${TerminalManager.computerModel.displayName} DR$drive: mounted $name, format=$format, size=${image.size}")
         } else {
@@ -164,6 +193,9 @@ class Abc80Floppy : Abc80Bus.BusInterface {
     /** Removes the disk from the given drive. */
     @Synchronized
     fun unmount(drive: Int) {
+        addressMarks.remove(drive)
+        val metadataFile = addressMarkFile(drive)
+        check(!metadataFile.exists() || metadataFile.delete()) { "Could not remove TD0 metadata for DR$drive" }
         disks[drive].eject()
         disks[drive] = Abc80FloppyLayout("abc830", drive).open()
         cancelTransfer(drive)
@@ -174,6 +206,11 @@ class Abc80Floppy : Abc80Bus.BusInterface {
     fun closeForComputerModelChange() {
         disks.closeAndClear()
         mountedNames.clear()
+        addressMarks.clear()
+        addressRotations.fill(0)
+        sectorBuffers.forEach { it.fill(0) }
+        transferPosition = 256
+        commandError = false
         drive = 0u
         stateMachine.state = StateMachine.State.UNINITIALIZED
         route.clear()
@@ -199,8 +236,11 @@ class Abc80Floppy : Abc80Bus.BusInterface {
         check(mountedNames[drive] == name) { "The floppy disk in DR$drive: has been changed. Try again." }
         require(disks[drive].isValid()) { "The floppy disk in DR$drive: is not readable" }
         val image = update(disks[drive].readImage())
-        check(saveLocalDisk(name, image)) { "Could not save the floppy disk $name" }
-        check(mount(drive, image, name)) { "Could not mount the updated floppy disk $name" }
+        val hasAddressMarks = addressMarks.containsKey(drive)
+        if (!hasAddressMarks) check(saveLocalDisk(name, image)) { "Could not save the floppy disk $name" }
+        check(mount(drive, image, name, restoreAddressMarks = hasAddressMarks)) {
+            "Could not mount the updated floppy disk $name"
+        }
     }
 
     @Synchronized
@@ -222,6 +262,30 @@ class Abc80Floppy : Abc80Bus.BusInterface {
     private var status: UByte = 0b11001001u
     private var queriedDrive: Int = 0
     private var dos21CallBuffer: Int = 0
+    private val sectorBuffers = Array(4) { ByteArray(256) }
+    private var transferBuffer = 0
+    private var transferPosition = 256
+    private var commandError = false
+
+    private fun readAddressMark(file: Int, sector: Int) {
+        val physical = disk.physicalSectorForAddress(file, sector)
+        val format = requireNotNull(disk.format).sectorFormat
+        if (!disk.isValid() || physical !in 0 until format.sectors) {
+            commandError = true
+            Abc80Log.wtf("DR$drive: cannot read address mark outside a mounted disk")
+            return
+        }
+        val rotation = addressRotations[drive.toInt()]++
+        val doubleDensity = format.s == 16
+        val mark = addressMarks[drive.toInt()]?.addressMark(physical, rotation)
+            ?: TeleDiskImage.withAddressCrc(byteArrayOf(
+                (physical / format.s % format.c).toByte(),
+                (physical / (format.s * format.c)).toByte(),
+                (rotation.mod(16) + 1).toByte(),
+                if (doubleDensity) 1 else 0
+            ), doubleDensity)
+        mark.copyInto(sectorBuffers[transferBuffer])
+    }
 
     private val route = mutableListOf<Int>()
 
@@ -236,18 +300,35 @@ class Abc80Floppy : Abc80Bus.BusInterface {
                             Abc80Log.floppy("ROUTE $route")
                             val dos21SystemBuffer = dos21CallBuffer == 0x01
                             dos21CallBuffer = 0
+                            transferBuffer = route[1] ushr 6
+                            transferPosition = 256
+                            commandError = false
                             when {
-                                route[0].and(0x01) == 0x01 -> {
-                                    stateMachine.state = StateMachine.State.READING
+                                route[0] == 0x10 && route[1].and(0x38) == 0x10 -> {
+                                    selectDrive(route[1])
+                                    readAddressMark(route[2], route[3])
+                                    stateMachine.state = StateMachine.State.SELECTED
+                                }
+                                route[0].and(0x03) != 0 -> {
                                     selectDrive(route[1])
                                     if (progressOperation.isNotEmpty()) {
                                         progressDrive = "DR$drive: "
                                         progress(text = progressText)
                                     }
-                                    disk.open(route[2], route[3], dos21SystemBuffer)
+                                    if (route[0].and(0x01) != 0) {
+                                        disk.open(route[2], route[3], dos21SystemBuffer)
+                                        repeat(256) { sectorBuffers[transferBuffer][it] = disk.read() }
+                                    }
+                                    transferPosition = if (route[0].and(0x02) != 0) 0 else 256
+                                    stateMachine.state = if (transferPosition == 0) {
+                                        StateMachine.State.READING
+                                    } else {
+                                        StateMachine.State.SELECTED
+                                    }
                                 }
                                 route[0].and(0x0C) == 0x0C -> {
                                     stateMachine.state = StateMachine.State.WRITING
+                                    transferPosition = 0
                                     selectDrive(route[1])
                                     disk.open(route[2], route[3], dos21SystemBuffer)
                                 }
@@ -256,6 +337,7 @@ class Abc80Floppy : Abc80Bus.BusInterface {
                         }
                     }
                     StateMachine.State.WRITING -> {
+                        if (transferPosition < 256) sectorBuffers[transferBuffer][transferPosition++] = data.toByte()
                         disk.write(data)
                         this.status = 0b11001001u
                     }
@@ -295,11 +377,11 @@ class Abc80Floppy : Abc80Bus.BusInterface {
             0x00 -> {
                 when (stateMachine.state) {
                     StateMachine.State.UNINITIALIZED -> 0xffu
-                    StateMachine.State.SELECTED -> drive
+                    StateMachine.State.SELECTED -> if (commandError) 0x80u else drive
                     StateMachine.State.STARTED -> 0xffu
                     StateMachine.State.READING -> {
-                        if (disk.inTransfer()) {
-                            disk.read().toUByte()
+                        if (transferPosition < 256) {
+                            sectorBuffers[transferBuffer][transferPosition++].toUByte()
                         } else {
                             stateMachine.state = StateMachine.State.SELECTED
                             if (disk.isValid()) 0x00u else 0x80u
@@ -313,7 +395,9 @@ class Abc80Floppy : Abc80Bus.BusInterface {
             }
             0x01 -> {
                 when (stateMachine.state) {
-                    StateMachine.State.READING,
+                    StateMachine.State.READING -> {
+                        if (transferPosition < 256) 0b01001001u else 0b11001001u
+                    }
                     StateMachine.State.WRITING -> {
                         if (disk.inTransfer()) 0b01001001u else 0b11001001u
                     }
