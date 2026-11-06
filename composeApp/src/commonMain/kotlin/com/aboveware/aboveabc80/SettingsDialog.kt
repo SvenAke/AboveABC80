@@ -144,6 +144,7 @@ fun SettingsDialog(
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
 
+                // 2. Computer Model
                 Text(
                     stringResource(Res.string.settings_computer_model),
                     style = MaterialTheme.typography.titleMedium,
@@ -177,49 +178,7 @@ fun SettingsDialog(
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
 
-                // 3. Printer Selection
-                Text(
-                    stringResource(Res.string.settings_printer),
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(vertical = 8.dp)
-                )
-
-                Column(modifier = Modifier.selectableGroup()) {
-                    PrinterType.entries.forEach { type ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(48.dp)
-                                .selectable(
-                                    selected = (PrinterManager.currentPrinterType == type),
-                                    onClick = { PrinterManager.currentPrinterType = type },
-                                    role = Role.RadioButton
-                                ),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            RadioButton(
-                                selected = (PrinterManager.currentPrinterType == type),
-                                onClick = null
-                            )
-                            Text(
-                                text = type.displayName,
-                                style = MaterialTheme.typography.bodyLarge,
-                                modifier = Modifier.padding(start = 16.dp).weight(1f)
-                            )
-                            if (type == PrinterType.EPSON_MX80 || type == PrinterType.EPSON_FX80 || type == PrinterType.DIABLO_630) {
-                                IconButton(onClick = { showMx80Config = true }) {
-                                    Icon(
-                                        Icons.Default.Build,
-                                        contentDescription = stringResource(Res.string.settings_configure_printer)
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-
-                HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
-
+                // 3. Sound Volume
                 Text(volumeLabel, style = MaterialTheme.typography.titleMedium)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -263,7 +222,7 @@ fun SettingsDialog(
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
 
-                // 3. Scanline Intensity
+                // 4. Scanline Intensity
                 Text(
                     stringResource(Res.string.settings_crt_scanline_intensity),
                     style = MaterialTheme.typography.titleMedium,
@@ -278,7 +237,7 @@ fun SettingsDialog(
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
 
-                // Number of Disk Drives
+                // 5. Number of Disk Drives
                 Text(
                     stringResource(Res.string.settings_drive_count),
                     style = MaterialTheme.typography.titleMedium,
@@ -308,7 +267,15 @@ fun SettingsDialog(
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
 
+                // 6. ABC80 Specific Settings (Only visible when ABC80 model is selected)
                 if (TerminalManager.computerModel == ComputerModel.ABC80) {
+                    Text(
+                        stringResource(Res.string.settings_abc80_section),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.padding(vertical = 4.dp)
@@ -333,12 +300,10 @@ fun SettingsDialog(
                         }
                     }
 
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
-
                     Text(
                         stringResource(Res.string.settings_dos_rom),
-                        style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.padding(vertical = 8.dp)
+                        style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier.padding(top = 12.dp, bottom = 4.dp)
                     )
                     var selectedDosRom by remember {
                         mutableStateOf(getPersistedString("abc80_dos_rom", "dos.rom"))
@@ -372,7 +337,7 @@ fun SettingsDialog(
                                 )
                                 Text(
                                     text = label,
-                                    style = MaterialTheme.typography.bodyLarge,
+                                    style = MaterialTheme.typography.bodyMedium,
                                     modifier = Modifier.padding(start = 16.dp)
                                 )
                             }
@@ -382,6 +347,50 @@ fun SettingsDialog(
                     HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
                 }
 
+                // 7. Printer Selection (Right before CPU speed)
+                Text(
+                    stringResource(Res.string.settings_printer),
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
+
+                Column(modifier = Modifier.selectableGroup()) {
+                    PrinterType.entries.forEach { type ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp)
+                                .selectable(
+                                    selected = (PrinterManager.currentPrinterType == type),
+                                    onClick = { PrinterManager.currentPrinterType = type },
+                                    role = Role.RadioButton
+                                ),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = (PrinterManager.currentPrinterType == type),
+                                onClick = null
+                            )
+                            Text(
+                                text = type.displayName,
+                                style = MaterialTheme.typography.bodyLarge,
+                                modifier = Modifier.padding(start = 16.dp).weight(1f)
+                            )
+                            if (type == PrinterType.EPSON_MX80 || type == PrinterType.EPSON_FX80 || type == PrinterType.DIABLO_630) {
+                                IconButton(onClick = { showMx80Config = true }) {
+                                    Icon(
+                                        Icons.Default.Build,
+                                        contentDescription = stringResource(Res.string.settings_configure_printer)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
+
+                // 8. CPU Speed
                 Text(
                     stringResource(Res.string.settings_cpu_speed),
                     style = MaterialTheme.typography.titleMedium,

@@ -88,7 +88,8 @@
     <string name="settings_crt_scanline_intensity">CRT scanline intensity</string>
     <string name="settings_drive_count">Number of disk drives</string>
     <string name="settings_drives_label">%1$d drives (DR0:–DR%2$d:)</string>
-    <string name="settings_dos_rom">DOS ROM (ABC80)</string>
+    <string name="settings_abc80_section">ABC80 specific settings</string>
+    <string name="settings_dos_rom">DOS ROM</string>
     <string name="settings_dos_rom_floppy">Floppy DOS (dos.rom)</string>
     <string name="settings_dos_rom_ufd20">UFD-DOS v2.0 (ufdv20.rom)</string>
     <string name="settings_cpu_speed">CPU speed</string>
