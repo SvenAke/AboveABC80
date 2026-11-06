@@ -23,7 +23,8 @@ class AbcDiskImage(private var data: ByteArray) {
             655360 -> "abc832"
             else -> throw IllegalArgumentException("Diskformatet kan inte formateras")
         }
-        data = Abc80FloppyLayout(format, 0).create()
+        val existingVolume = Abc80FloppyLayout.readVolumeName(data)
+        data = Abc80FloppyLayout(format, 0).create(existingVolume)
     }
     fun listFiles() = requireNotNull(Abc80FloppyLayout.list(data)).map { (name, _) ->
         Entry(name.substringBeforeLast('.', name), name.substringAfterLast('.', ""))

@@ -1012,22 +1012,45 @@ fun NewDisketteDialog(
         "fd4d" to stringResource(Res.string.disk_format_dsdd_320),
         "abc832" to stringResource(Res.string.disk_format_dsdd_640)
     )
+    val storedSystemVolumeName by androidx.compose.runtime.produceState(initialValue = "SYSTEM-DISKETT ABC-80 Vers. 2.1.") {
+        try {
+            val raw = Res.readBytes("files/system.dsk")
+            value = Abc80FloppyLayout.readVolumeName(raw)
+        } catch (_: Exception) {
+        }
+    }
+
     var selectedTemplate by remember { mutableStateOf("abc830") }
     var systemDisk by remember { mutableStateOf(false) }
     var newName by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     var showOverwriteConfirmation by remember { mutableStateOf<String?>(null) }
 
-    fun createDisk(name: String) {
+    var pendingCreateTarget by remember { mutableStateOf<Pair<String, String>?>(null) }
+
+    androidx.compose.runtime.LaunchedEffect(systemDisk, storedSystemVolumeName) {
+        if (systemDisk) {
+            newName = storedSystemVolumeName
+        } else if (newName == storedSystemVolumeName) {
+            newName = ""
+        }
+    }
+
+    fun createDisk(hostFileName: String, volumeName: String) {
         scope.launch {
             try {
                 val data = if (systemDisk) {
-                    Res.readBytes("files/system.dsk")
+                    val raw = Res.readBytes("files/system.dsk")
+                    val targetVolName = volumeName.ifBlank { storedSystemVolumeName }
+                    val modified = raw.copyOf()
+                    Abc80FloppyLayout.writeVolumeName(modified, targetVolName)
+                    modified
                 } else {
-                    Abc80FloppyLayout(selectedTemplate, 0).create()
+                    val volName = volumeName.ifEmpty { "SYSTEM" }
+                    Abc80FloppyLayout(selectedTemplate, 0).create(volName)
                 }
-                if (saveLocalDisk(name, data)) {
-                    onCreated(name)
+                if (saveLocalDisk(hostFileName, data)) {
+                    onCreated(hostFileName)
                 }
             } catch (e: Exception) {
                 Abc80Log.wtf("Creation failed: ${e.message}")
@@ -1052,7 +1075,10 @@ fun NewDisketteDialog(
                             .padding(vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        RadioButton(selected = systemDisk == isSystem, onClick = { systemDisk = isSystem })
+                        RadioButton(
+                            selected = systemDisk == isSystem,
+                            onClick = { systemDisk = isSystem }
+                        )
                         Text(label, modifier = Modifier.padding(start = 8.dp))
                     }
                 }
@@ -1075,9 +1101,7 @@ fun NewDisketteDialog(
                 TextField(
                     value = newName,
                     onValueChange = { input ->
-                        val filtered =
-                            input.uppercase().filter { it in 'A'..'Z' || it in '0'..'9' }.take(8)
-                        newName = filtered
+                        newName = input.take(32)
                     },
                     label = { Text(stringResource(Res.string.storage_disk_name)) },
                     singleLine = true,
@@ -1088,16 +1112,16 @@ fun NewDisketteDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    if (newName.isNotBlank()) {
-                        val finalName = "$newName.DSK"
-                        if (fileExists(finalName)) {
-                            showOverwriteConfirmation = finalName
-                        } else {
-                            createDisk(finalName)
-                        }
+                    val volName = newName.trim()
+                    val defaultVolName = if (volName.isNotEmpty()) volName else if (systemDisk) "SYSTEM-DISKETT" else "SYSTEM"
+                    val finalName = Abc80FloppyLayout.generateUniqueDiskFileName(defaultVolName, listLocalDisks())
+                    if (fileExists(finalName)) {
+                        pendingCreateTarget = finalName to volName
+                        showOverwriteConfirmation = finalName
+                    } else {
+                        createDisk(finalName, volName)
                     }
-                },
-                enabled = newName.isNotBlank()
+                }
             ) {
                 Text(stringResource(Res.string.ui_create))
             }
@@ -1119,7 +1143,12 @@ fun NewDisketteDialog(
             confirmButton = {
                 Button(
                     onClick = {
-                        createDisk(name)
+                        val target = pendingCreateTarget
+                        if (target != null) {
+                            createDisk(target.first, target.second)
+                        } else {
+                            createDisk(name, newName.trim())
+                        }
                         showOverwriteConfirmation = null
                     }
                 ) {

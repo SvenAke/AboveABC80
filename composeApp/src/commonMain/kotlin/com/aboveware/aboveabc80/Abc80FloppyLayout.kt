@@ -132,9 +132,97 @@ class Abc80FloppyLayout(formatName: String, val drive: Int) {
         ): ByteArray {
             val layout = detectFormatName(image)?.let { Abc80FloppyLayout(it, 0) }
                 ?: throw IllegalArgumentException("Diskavbildens storlek stöds inte")
-            val result = if (clear) layout.create() else image.copyOf()
+            val existingVolume = readVolumeName(image)
+            val result = if (clear) layout.create(existingVolume) else image.copyOf()
             files.forEach { (name, records) -> layout.writeRecords(result, name, records) }
             return result
+        }
+
+        fun readVolumeName(image: ByteArray): String {
+            val layout = detectFormatName(image)?.let { Abc80FloppyLayout(it, 0) } ?: return "SYSTEM"
+            val diskFormat = layout.format ?: return "SYSTEM"
+            val offsetsToTry = listOf(
+                layout.physicalSector(diskFormat.systemSector) * 256 + 0x87,
+                diskFormat.systemSector * 256 + 0x87,
+                0x87
+            )
+            for (startOffset in offsetsToTry) {
+                val firstByte = image.getOrNull(startOffset)?.toUByte()?.toInt() ?: 0
+                if (firstByte in 32..126 && firstByte != 0x40 && firstByte != 0x00 && firstByte != 0xFF) {
+                    val ascii = StringBuilder()
+                    for (index in startOffset until (startOffset + 0x78)) {
+                        val b = image.getOrNull(index)?.toUByte()?.toInt() ?: 0
+                        if (b == 0x0D || b == 0x00 || b == 0xFF) break
+                        val char = when (b) {
+                            0x5D -> 'Å'
+                            0x5B -> 'Ä'
+                            0x5C -> 'Ö'
+                            0x7D -> 'å'
+                            0x7B -> 'ä'
+                            0x7C -> 'ö'
+                            0x5E -> 'Ü'
+                            0x7E -> 'ü'
+                            0x40 -> 'É'
+                            0x60 -> 'é'
+                            in 32..126 -> b.toChar()
+                            else -> '.'
+                        }
+                        ascii.append(char)
+                    }
+                    val name = ascii.toString().trim()
+                    if (name.isNotEmpty()) return name
+                }
+            }
+            return "SYSTEM"
+        }
+
+        fun writeVolumeName(image: ByteArray, volumeName: String) {
+            val layout = detectFormatName(image)?.let { Abc80FloppyLayout(it, 0) } ?: return
+            val diskFormat = layout.format ?: return
+            val offsetsToTry = listOf(
+                layout.physicalSector(diskFormat.systemSector) * 256 + 0x87,
+                diskFormat.systemSector * 256 + 0x87,
+                0x87
+            )
+            val startOffset = offsetsToTry.firstOrNull { offset ->
+                val b = image.getOrNull(offset)?.toUByte()?.toInt() ?: 0
+                b in 32..126 && b != 0x40 && b != 0x00 && b != 0xFF
+            } ?: (layout.physicalSector(diskFormat.systemSector) * 256 + 0x87)
+
+            val name = volumeName.trim().ifEmpty { "SYSTEM" }
+            var offset = startOffset
+            val maxOffset = startOffset + 0x77
+            for (char in name) {
+                if (offset >= maxOffset) break
+                val code = abc80CharCode(char) ?: char.code
+                image[offset++] = (code and 0xFF).toByte()
+            }
+            if (offset <= startOffset + 0x78) {
+                image[offset] = 0x0D.toByte()
+            }
+        }
+
+        fun generateUniqueDiskFileName(volumeName: String, existingFiles: List<String>): String {
+            val rawBase = volumeName.trim().ifEmpty { "SYSTEM" }
+            var sanitized = rawBase.replace(Regex("[^a-zA-Z0-9_-]"), "_")
+                .replace(Regex("_+"), "_")
+                .trim('_')
+                .uppercase()
+            if (sanitized.isEmpty()) sanitized = "DISK"
+            if (sanitized.startsWith("SYSTEM_DISKETT") || sanitized.startsWith("SYSTEM_DISK")) {
+                sanitized = "SYSTEM"
+            } else {
+                sanitized = sanitized.take(16)
+            }
+
+            var fileName = "$sanitized.DSK"
+            var counter = 1
+            val existingSet = existingFiles.map { it.uppercase() }.toSet()
+            while (existingSet.contains(fileName.uppercase())) {
+                fileName = "${sanitized}_$counter.DSK"
+                counter++
+            }
+            return fileName
         }
 
         /** Lists "NAME.EXT" and size in bytes for each file on a raw disk image, or null if the size matches no known format. */
@@ -415,20 +503,14 @@ class Abc80FloppyLayout(formatName: String, val drive: Int) {
     private fun volumeName(): String {
         if (randomAccessFile?.length()?.toInt() != size())
             return "NO DISKETTE"
-        block(0)
-        return if (buffer[0x87].toInt().toChar() !in 'A'..'~') "DR$drive:"
-        else {
-            val ascii = StringBuilder()
-            for (index in 0x87..0xff) {
-                if (buffer[index] == 0x0d.toByte()) return ascii.toString()
-                val asChar = buffer[index].toInt().toChar()
-                ascii.append(if (asChar in ' '..'~') asChar else ".")
-            }
-            ascii.toString()
-        }
+        val bytes = try { readImage() } catch (_: Exception) { null } ?: return "DR$drive:"
+        return readVolumeName(bytes)
     }
 
-    fun format() = load(ByteArrayInputStream(create()), "")
+    fun format(volumeName: String? = null) = load(
+        ByteArrayInputStream(create(volumeName ?: (try { readVolumeName(readImage()) } catch (_: Exception) { "SYSTEM" }))),
+        ""
+    )
 
     fun load(stream: InputStream, name: String): Boolean = try {
         open(create = true)
@@ -584,7 +666,7 @@ class Abc80FloppyLayout(formatName: String, val drive: Int) {
     /**
      * Create an empty disk image.
      */
-    fun create(): ByteArray {
+    fun create(volumeName: String = "SYSTEM"): ByteArray {
         var image = ByteArray(0) { 0x40 }
         format?.apply {
             image = ByteArray(sectorFormat.size) { 0x40 }
@@ -634,6 +716,19 @@ class Abc80FloppyLayout(formatName: String, val drive: Int) {
                 val fromIndex = directorySectors.a.shl(8)
                 val size = numberOfDirectorySectors.shl(8)
                 image.copyInto(image, toIndex, fromIndex, fromIndex + size)
+            }
+
+            // Write volume name to sector 0
+            val nameBytes = volumeName.trim().ifEmpty { "SYSTEM" }
+            var offset = bitmapIndex + 0x87
+            val maxOffset = bitmapIndex + 0xFE
+            for (char in nameBytes) {
+                if (offset >= maxOffset) break
+                val code = abc80CharCode(char) ?: char.code
+                image[offset++] = (code and 0xFF).toByte()
+            }
+            if (offset <= bitmapIndex + 0xFF) {
+                image[offset] = 0x0D.toByte()
             }
         }
         // The controller applies 7:1 interleave to every logical sector address.
