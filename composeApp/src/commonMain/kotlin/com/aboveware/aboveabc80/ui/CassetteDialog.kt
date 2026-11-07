@@ -19,8 +19,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowLeft
-import androidx.compose.material.icons.filled.ArrowRight
+import androidx.compose.material.icons.automirrored.filled.ArrowLeft
+import androidx.compose.material.icons.automirrored.filled.ArrowRight
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Eject
 import androidx.compose.material.icons.filled.Download
@@ -180,7 +180,7 @@ fun CassetteDialog(
                         Abc80Cassette.rewind(); refresh()
                     }
                     CassetteIconButton(
-                        Icons.Default.ArrowLeft,
+                        Icons.AutoMirrored.Filled.ArrowLeft,
                         stringResource(Res.string.cassette_back),
                         !loading,
                         iconModifier = Modifier.size(32.dp)
@@ -188,7 +188,7 @@ fun CassetteDialog(
                         refresh(Abc80Cassette.back())
                     }
                     CassetteIconButton(
-                        Icons.Default.ArrowRight,
+                        Icons.AutoMirrored.Filled.ArrowRight,
                         stringResource(Res.string.cassette_forward),
                         !loading,
                         iconModifier = Modifier.size(32.dp)

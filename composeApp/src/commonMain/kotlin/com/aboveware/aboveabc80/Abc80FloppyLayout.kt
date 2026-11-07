@@ -617,7 +617,7 @@ class Abc80FloppyLayout(formatName: String, val drive: Int) {
      * @param stream the stream to write this floppy to
      * @return true if we succeeded in our endeavour
      */
-    fun save(stream: OutputStream) = try {
+    fun save(stream: OutputStream): Boolean = try {
         Abc80Log.floppy("SAVE")
         randomAccessFile?.apply {
             while (read(buffer) == buffer.size) {

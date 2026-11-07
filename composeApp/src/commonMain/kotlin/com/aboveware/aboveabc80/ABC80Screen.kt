@@ -9,7 +9,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.RotateLeft
+import androidx.compose.material.icons.automirrored.filled.RotateLeft
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -882,7 +882,7 @@ internal fun ABC80Screen(
                         }
                     }
                 ) {
-                    Icon(Icons.Default.RotateLeft, contentDescription = null)
+                    Icon(Icons.AutoMirrored.Filled.RotateLeft, contentDescription = null)
                     Text("BASIC", modifier = Modifier.padding(start = 4.dp))
                 }
             }

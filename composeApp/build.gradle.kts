@@ -19,11 +19,12 @@ kotlin {
         }
     }
     jvm()
+    applyDefaultHierarchyTemplate()
     compilerOptions {
         freeCompilerArgs.add("-Xexpect-actual-classes")
     }
     sourceSets {
-        val jvmCommon by creating {
+        val jvmCommon = create("jvmCommon") {
             dependsOn(commonMain.get())
         }
         androidMain.get().dependsOn(jvmCommon)
@@ -35,7 +36,7 @@ kotlin {
             implementation(libs.ktor.client.okhttp)
             implementation(project.dependencies.platform(libs.firebase.bom))
         }
-        val androidInstrumentedTest by getting {
+        getByName("androidInstrumentedTest") {
             dependencies {
                 implementation(libs.androidx.test.ext.junit)
                 implementation(libs.androidx.test.runner)
@@ -59,7 +60,7 @@ kotlin {
             implementation(libs.ktor.client.content.negotiation)
             implementation(libs.ktor.serialization.kotlinx.json)
         }
-        val commonTest by getting {
+        getByName("commonTest") {
             dependencies {
                 implementation(kotlin("test"))
                 implementation(libs.ktor.client.mock)
