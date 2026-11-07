@@ -418,6 +418,15 @@ PCM, disabling sound, freeze/MAX muting, and MUSIK's machine-code routine
 device. Set `ABC80_MUSIC_TAPE` to a raw cassette image to additionally test
 the complete MUSIK.BAS program from that image; the source image is not modified.
 
+### ABC800M/C sound
+
+ABC800M and ABC800C use a piezo output, not the ABC80 SN76477. Reads from
+port `05h` (and its hardware mirrors) toggle the output, so the firmware
+controls the pitch and duration of the BASIC bell. Key presses also produce a
+short synthesized click; its waveform is an approximation, not a measured
+recording of the original hardware. Both sounds use the same volume and mute
+controls as the ABC80.
+
 ### ABC80 character graphics
 
 TKN80 supports an 80-by-24 screen. Settings includes **Start with TKN80 (80

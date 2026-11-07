@@ -260,6 +260,7 @@ Java_com_aboveware_aboveabc80_NativeLib_clearAbc800MTextScreenNative(JNIEnv *, j
 
 JNIEXPORT void JNICALL
 Java_com_aboveware_aboveabc80_NativeLib_resetCpuNative(JNIEnv *, jobject) {
+    abc80_sound_request_reset();
     z80_reset(true);
     tStates = 0;
     TOTAL_CYCLES = 0;

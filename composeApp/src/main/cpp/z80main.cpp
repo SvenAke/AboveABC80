@@ -38,6 +38,7 @@ static std::atomic_flag g_abc800m_character_ram_lock = ATOMIC_FLAG_INIT;
 static std::atomic_flag g_abc800m_crtc_lock = ATOMIC_FLAG_INIT;
 static std::atomic_flag g_abc800m_video_ram_lock = ATOMIC_FLAG_INIT;
 static std::deque<std::uint8_t> g_abc800m_keyboard;
+static std::atomic<bool> g_abc800m_key_click{false};
 static std::uint8_t g_abc800m_dart_register[2][8]{};
 static std::uint8_t g_abc800m_dart_selected[2]{};
 static bool g_abc800m_dart_expect_register[2]{};
@@ -178,6 +179,7 @@ void abc80_send_key(int code) {
     if (g_abc800m_active.load(std::memory_order_relaxed)) {
         if (g_abc800m_keyboard.size() < 64) {
             g_abc800m_keyboard.push_back(static_cast<std::uint8_t>(code));
+            g_abc800m_key_click.store(true, std::memory_order_relaxed);
             if (g_abc800m_dart_rx_irq_enabled.load(std::memory_order_relaxed))
                 g_abc800m_dart_irq_pending.store(true, std::memory_order_relaxed);
         }
@@ -215,6 +217,7 @@ void abc80_release_all_keys() {
     g_held_key.store(-1);
     KeyLock lock;
     g_abc800m_keyboard.clear();
+    g_abc800m_key_click.store(false, std::memory_order_relaxed);
 }
 
 int abc80_read_keyboard() {
@@ -274,6 +277,11 @@ bool abc80_try_keyboard_interrupt() {
 
 /* Queued text uses a two-frame pulse; physical keys stay down for at least five frames or until release. */
 static void abc80_keyboard_frame() {
+    if (g_abc800m_active.load(std::memory_order_relaxed) &&
+        g_abc800m_key_click.exchange(false, std::memory_order_relaxed)) {
+        abc800_sound_key_click(TOTAL_CYCLES, runtime_cpu_frequency.load(std::memory_order_relaxed),
+                               g_fast_speed.load(std::memory_order_relaxed));
+    }
     if (g_key_value.load(std::memory_order_relaxed) != 0) {
         const int min_frames = (g_current_key_held || I == 0xFA) ? 5 : 2;
         if (g_key_hold_frames < min_frames) ++g_key_hold_frames;
@@ -322,7 +330,8 @@ int run() {
         // event_next_event is the limit for this run
         z80_do_opcodes();
         abc80_sound_advance(TOTAL_CYCLES, runtime_cpu_frequency.load(std::memory_order_relaxed),
-                            g_fast_speed.load(std::memory_order_relaxed));
+                            g_fast_speed.load(std::memory_order_relaxed),
+                            g_abc800m_active.load(std::memory_order_relaxed));
         abc80_keyboard_frame();
 
         // Maintain long-term timing for tape pulses by keeping track of the overshoot
@@ -465,6 +474,7 @@ static void abc800_set_enabled(bool enabled, bool color_model) {
     {
         KeyLock lock;
         g_abc800m_keyboard.clear();
+        g_abc800m_key_click.store(false, std::memory_order_relaxed);
     }
     std::memset(g_abc800m_dart_register, 0, sizeof(g_abc800m_dart_register));
     std::memset(g_abc800m_dart_selected, 0, sizeof(g_abc800m_dart_selected));
@@ -535,7 +545,11 @@ std::uint8_t abc800m_read_port(int port) {
         abc800_ctc_advance();
         return static_cast<std::uint8_t>(g_abc800m_ctc[port & 3].counter);
     }
-    if (port == 0x05) return 0xff;
+    if ((port & 0xe7) == 0x05) {
+        abc800_sound_toggle(TOTAL_CYCLES, runtime_cpu_frequency.load(std::memory_order_relaxed),
+                            g_fast_speed.load(std::memory_order_relaxed));
+        return 0xff;
+    }
     return 0xff;
 }
 
@@ -544,7 +558,7 @@ bool abc800m_owns_port_read(int port) {
     return (port >= 0x20 && port <= 0x2f) ||
            (!g_abc800c_active.load(std::memory_order_relaxed) &&
             (port == 0x31 || port == 0x35 || port == 0x39 || port == 0x3d)) ||
-           (port >= 0x60 && port <= 0x7f) || port == 0x05 || port == 0x06;
+           (port >= 0x60 && port <= 0x7f) || (port & 0xe7) == 0x05 || port == 0x06;
 }
 
 void abc800m_write_port(int port, int value) {
