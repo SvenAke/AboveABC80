@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import com.aboveware.aboveabc80.ui.DiskFormatDropdown
+import com.aboveware.aboveabc80.terminal.TerminalManager
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -78,7 +79,7 @@ import org.jetbrains.compose.resources.stringResource
 fun StorageFileDialog(
     filter: String = "",
     targetDriveIndex: Int? = null,
-    rootPath: String = "abc80/",
+    rootPath: String = if (TerminalManager.computerModel.isAbc800) "abc/abc800/" else "abc/abc80/",
     downloadFolder: String? = null,
     onFilesDownloaded: ((List<String>) -> Unit)? = null,
     onDismiss: () -> Unit,
@@ -258,7 +259,12 @@ fun StorageFileDialog(
                     )
                     if (pathStack.size > 1 && selectedCloudFiles.isEmpty()) {
                         Text(
-                            text = "/" + (pathStack.lastOrNull() ?: rootPath).removePrefix("abc80/").toCloudDisplayName(),
+                            text = "/" + (pathStack.lastOrNull() ?: rootPath)
+                                .removePrefix("abc/abc80/")
+                                .removePrefix("abc/abc800/")
+                                .removePrefix("abc80/")
+                                .removePrefix("abc800/")
+                                .toCloudDisplayName(),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -721,7 +727,7 @@ fun StorageFileDialog(
                         controller.getFloppy(targetDriveIndex ?: controller.currentDriveIndex)
                     val onlyDiskImagesSelected = selectedNodes.isNotEmpty() &&
                         selectedNodes.all { isDiskImageName(it.name) }
-                    if (activeFloppy != null && rootPath == "abc80/" && destinationFolder == null &&
+                    if (activeFloppy != null && (rootPath.startsWith("abc/") || rootPath == "abc80/" || rootPath == "abc800/") && destinationFolder == null &&
                         !onlyDiskImagesSelected
                     ) {
                         Row(

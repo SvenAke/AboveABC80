@@ -5,7 +5,7 @@ import com.aboveware.aboveabc80.terminal.TerminalManager
 
 internal fun cloudDownloadFolder(path: String, configuredFolder: String?, fileName: String? = null): String? =
     if (fileName != null && isDiskImageName(fileName)) "disks"
-    else configuredFolder ?: if (path.startsWith("abc80/cassettes/")) "tapes" else null
+    else configuredFolder ?: if (path.startsWith("abc/abc80/cassettes/") || path.startsWith("abc/abc800/cassettes/") || path.startsWith("abc80/cassettes/") || path.startsWith("abc800/cassettes/")) "tapes" else null
 
 internal fun mountDownloadedCloudDisk(name: String, drive: Int) {
     val model = TerminalManager.computerModel

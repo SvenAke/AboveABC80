@@ -1,5 +1,6 @@
 package com.aboveware.aboveabc80.ui
 
+import com.aboveware.aboveabc80.terminal.TerminalManager
 import aboveabc80.composeapp.generated.resources.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -362,7 +363,7 @@ fun CassetteDialog(
 
     if (showCloud) {
         StorageFileDialog(
-            rootPath = "abc80/cassettes/",
+            rootPath = if (TerminalManager.computerModel.isAbc800) "abc/abc800/cassettes/" else "abc/abc80/cassettes/",
             downloadFolder = SAVED_TAPES,
             onDismiss = { showCloud = false },
             onFilesDownloaded = { names ->
