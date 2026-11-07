@@ -14,6 +14,7 @@ import com.aboveware.aboveabc80.getPersistedString
 import com.aboveware.aboveabc80.setPersistedString
 import com.aboveware.aboveabc80.loadLocalDisk
 import com.aboveware.aboveabc80.listLocalDisks
+import com.aboveware.aboveabc80.isDiskImageName
 import com.aboveware.aboveabc80.terminal.ComputerModel
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 
@@ -126,7 +127,7 @@ class DiskController {
     }
 
     private fun matchingLibraryDisk(image: ByteArray): String? =
-        listLocalDisks().firstOrNull { name ->
+        listLocalDisks().filter(::isDiskImageName).firstOrNull { name ->
             val library = loadLocalDisk(name)
             if (library == null) false else try {
                 AbcDiskImage.createFromData(library).getRawData().contentEquals(image)
