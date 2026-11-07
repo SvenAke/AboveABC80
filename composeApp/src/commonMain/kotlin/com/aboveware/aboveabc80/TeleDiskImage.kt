@@ -32,28 +32,30 @@ internal class TeleDiskImage private constructor(
 
         fun decode(data: ByteArray): TeleDiskImage {
             require(hasSignature(data) && data.size >= 12) { "Invalid TD0 header" }
-            require(data[0] == 0x54.toByte()) { "Advanced-compressed TD0 (LZH) is not supported" }
             val reader = Reader(data)
             require(crc16(data.copyOfRange(0, 10)) == reader.wordAt(10)) { "TD0 header checksum mismatch" }
             require(reader.byteAt(5) and 0x80 == 0) { "Single-density TD0 is not supported" }
             val heads = reader.byteAt(9)
             require(heads in 1..2) { "Unsupported TD0 head count" }
-            reader.position = 12
+            val compressed = data[0] == 0x74.toByte()
+            require(!compressed || reader.byteAt(4) >= 20) { "TD0 1.x compression is not supported" }
+            val body: Input = if (compressed) CompressedInput(data) else Reader(data).apply { position = 12 }
             if (reader.byteAt(7) and 0x80 != 0) {
-                val start = reader.position
-                val crc = reader.word()
-                val length = reader.word()
-                reader.take(6 + length)
-                require(crc16(data.copyOfRange(start + 2, reader.position)) == crc) { "TD0 comment checksum mismatch" }
+                val crc = body.word()
+                val length = body.word()
+                val comment = body.take(6 + length)
+                require(crc16(byteArrayOf(length.toByte(), (length shr 8).toByte()) + comment) == crc) {
+                    "TD0 comment checksum mismatch"
+                }
             }
             val tracks = linkedMapOf<Pair<Int, Int>, List<ByteArray>>()
             val sectors = linkedMapOf<Triple<Int, Int, Int>, ByteArray>()
             while (true) {
-                val count = reader.byte()
+                val count = body.byte()
                 if (count == 255) break
-                val cylinder = reader.byte()
-                val head = reader.byte()
-                val trackCrc = reader.byte()
+                val cylinder = body.byte()
+                val head = body.byte()
+                val trackCrc = body.byte()
                 require(crc16(byteArrayOf(count.toByte(), cylinder.toByte(), head.toByte())) and 255 == trackCrc) {
                     "TD0 track checksum mismatch"
                 }
@@ -61,15 +63,15 @@ internal class TeleDiskImage private constructor(
                     "Only 16-sector, double-density ABC TD0 tracks are supported"
                 }
                 val ids = List(count) {
-                    val id = reader.take(4)
-                    val flags = reader.byte()
-                    val sectorCrc = reader.byte()
+                    val id = body.take(4)
+                    val flags = body.byte()
+                    val sectorCrc = body.byte()
                     require(id[3].toInt() == 1 && flags == 0) {
                         "TD0 sector size or error/deleted/missing-sector flags are not supported"
                     }
                     val number = id[2].toInt() and 255
                     require(number in 1..16) { "Unsupported TD0 sector number" }
-                    val packed = Reader(reader.take(reader.word()))
+                    val packed = Reader(body.take(body.word()))
                     val block = when (val encoding = packed.byte()) {
                         0 -> packed.take(256)
                         1 -> {
@@ -109,7 +111,10 @@ internal class TeleDiskImage private constructor(
                 tracks.size == cylinders * heads && sectors.size == cylinders * heads * 16) {
                 "Unsupported or incomplete TD0 geometry"
             }
-            require(reader.position == data.size || reader.position + 3 == data.size) { "Trailing TD0 data" }
+            if (!compressed) {
+                val remaining = data.size - (body as Reader).position
+                require(remaining == 0 || remaining == 3) { "Trailing TD0 data" }
+            }
             val raw = ByteArray(cylinders * heads * 16 * 256)
             for ((key, block) in sectors) {
                 val (cylinder, head, number) = key
@@ -130,16 +135,34 @@ internal class TeleDiskImage private constructor(
         }
     }
 
-    private class Reader(val data: ByteArray) {
+    private interface Input {
+        fun byte(): Int
+        fun word(): Int = byte() or (byte() shl 8)
+        fun take(count: Int): ByteArray {
+            require(count >= 0) { "Invalid TD0 length" }
+            return ByteArray(count) { byte().toByte() }
+        }
+    }
+
+    private class CompressedInput(data: ByteArray) : Input {
+        private val decoder = TeleDiskLzh(data, 12)
+        private var count = 0
+        override fun byte(): Int {
+            require(count++ < 2 * 1024 * 1024) { "TD0 decompressed data exceeds size limit" }
+            return decoder.readByte()
+        }
+    }
+
+    private class Reader(val data: ByteArray) : Input {
         var position = 0
         fun byteAt(at: Int): Int {
             require(at in data.indices) { "Truncated TD0 data" }
             return data[at].toInt() and 255
         }
         fun wordAt(at: Int) = byteAt(at) or (byteAt(at + 1) shl 8)
-        fun byte() = byteAt(position).also { position++ }
-        fun word() = wordAt(position).also { position += 2 }
-        fun take(count: Int): ByteArray {
+        override fun byte() = byteAt(position).also { position++ }
+        override fun word() = wordAt(position).also { position += 2 }
+        override fun take(count: Int): ByteArray {
             require(count >= 0 && position <= data.size - count) { "Truncated TD0 data" }
             return data.copyOfRange(position, position + count).also { position += count }
         }

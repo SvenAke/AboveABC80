@@ -6,6 +6,7 @@ import com.aboveware.aboveabc80.terminal.ComputerModel
 import com.aboveware.aboveabc80.terminal.TerminalManager
 import java.io.ByteArrayOutputStream
 import java.nio.file.Files
+import java.security.MessageDigest
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
@@ -40,7 +41,7 @@ class TeleDiskImageTest {
     }
 
     @Test
-    fun rejectsTruncationCorruptChecksumsAndAdvancedCompression() {
+    fun rejectsTruncationAndCorruptChecksums() {
         val data = td0Fixture(Abc80FloppyLayout("abc830", 0).create())
         for (size in listOf(0, 2, 11, 12, 16, data.size - 5)) {
             assertFailsWith<IllegalArgumentException>("Truncated at $size") {
@@ -55,8 +56,30 @@ class TeleDiskImageTest {
         val advanced = data.copyOf()
         advanced[0] = 't'.code.toByte()
         advanced[1] = 'd'.code.toByte()
-        assertTrue(assertFailsWith<IllegalArgumentException> { TeleDiskImage.decode(advanced) }
-            .message.orEmpty().contains("LZH"))
+        assertFailsWith<IllegalArgumentException> { TeleDiskImage.decode(advanced) }
+    }
+
+    @Test
+    fun supportsBothUncompressedEndMarkers() {
+        val raw = Abc80FloppyLayout("abc830", 0).create()
+        val td0 = td0Fixture(raw)
+        assertContentEquals(raw, TeleDiskImage.decode(td0.copyOf(td0.size - 3)).rawData)
+        assertFailsWith<IllegalArgumentException> { TeleDiskImage.decode(td0.copyOf(td0.size - 1)) }
+    }
+
+    @Test
+    fun decodesSyntheticLzhStreamIncludingMatchesAndHuffmanRebuild() {
+        // Expected digest was produced by an independent LZH decoder.
+        val input = ByteArray(80000) { (it * 73 + 19).toByte() }
+        val decoder = TeleDiskLzh(input)
+        val decoded = ByteArray(467072) { decoder.readByte().toByte() }
+        val digest = MessageDigest.getInstance("SHA-256").digest(decoded)
+            .joinToString("") { "%02x".format(it.toInt() and 255) }
+        assertEquals("b316ea19f53380f30d71ca07e27f069a51690ff3a58630953e903b65762cd457", digest)
+        val truncated = TeleDiskLzh(input.copyOf(1))
+        assertFailsWith<IllegalArgumentException> {
+            repeat(1000) { truncated.readByte() }
+        }
     }
 
     @Test

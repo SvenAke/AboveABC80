@@ -107,8 +107,8 @@ Mount and directory error messages identify the selected computer model.
 The bundled system disk contains `COPY.ABS` (not `COPY.BAS`).
 
 TeleDisk `.td0` images can also be mounted from the local disk library or the
-cloud browser. Supported images use the `TD` signature (no advanced LZH
-compression), 256-byte MFM sectors, 16 sector numbers per track and 160, 320 or
+cloud browser. Supported images use the `TD` signature or the `td` signature
+with advanced LZH compression, 256-byte MFM sectors, 16 sector numbers per track and 160, 320 or
 640 kB geometry. Sector encodings 0, 1 and 2, comments and identical repeated
 sectors are supported; checksums are verified. Unsupported geometries,
 error/deleted/missing-sector flags and conflicting duplicate data are rejected
@@ -126,6 +126,8 @@ when transferring a protected mounted disk; keep its TD0 sidecar as well.
 The optional ORD boot regression reads a user-supplied image from the
 `ABC800_ORD_TD0` environment variable; no commercial disk image is bundled in
 the tests. It checks startup, text input and boot after restoring the drive.
+The optional Graf16 regression reads `ABC800_GRAF16_TD0` and checks the decoded
+disk contents, mounting and restoration.
 
 New empty disks are formatted in the controller's physical 7:1 sector order,
 including allocation maps and empty main/backup directories. The creation
