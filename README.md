@@ -185,6 +185,48 @@ or available space is invalid. The mounted working
 image and the saved disk image are both updated. Unlike the old downloader,
 importing a BAS file does not clear or overwrite the program in emulator RAM.
 
+### Uploading files recursively to Firebase Cloud Storage with gcloud
+
+To upload local files or entire directories recursively to the project's Firebase Cloud Storage bucket (`abovecpm-1a939.firebasestorage.app`), use the Google Cloud CLI (`gcloud`):
+
+1. **Log in** to your Google Cloud account:
+   ```shell
+   gcloud auth login
+   ```
+
+2. **Set the project** (if not already set):
+   ```shell
+   gcloud config set project abovecpm-1a939
+   ```
+
+3. **Upload a directory recursively**:
+   ```shell
+   gcloud storage cp --recursive <local-folder-path> gs://abovecpm-1a939.firebasestorage.app/<remote-folder-path>/
+   ```
+   Or synchronize a local folder recursively:
+   ```shell
+   gcloud storage rsync --recursive <local-folder-path> gs://abovecpm-1a939.firebasestorage.app/<remote-folder-path>/
+   ```
+
+4. **Delete a directory recursively**:
+   ```shell
+   gcloud storage rm --recursive gs://abovecpm-1a939.firebasestorage.app/<remote-folder-path>/
+   ```
+
+5. **Move or rename a file or directory**:
+   ```shell
+   gcloud storage mv --recursive gs://abovecpm-1a939.firebasestorage.app/<old-folder>/ gs://abovecpm-1a939.firebasestorage.app/<new-folder>/
+   ```
+
+*(Legacy `gsutil` alternative: `gsutil -m mv gs://abovecpm-1a939.firebasestorage.app/<old-folder>/ gs://abovecpm-1a939.firebasestorage.app/<new-folder>/`)*
+
+### External Luxor Software Archive
+
+A large collection of historical Luxor ABC80 and ABC800 software programs, disk images, manuals and software archives is available at:
+- **Luxor Public Archive**: [https://www.devili.iki.fi/pub/Luxor/](https://www.devili.iki.fi/pub/Luxor/)
+
+Downloaded `.dsk` and `.td0` disk images, cassettes or program files from this archive can be uploaded to your Cloud Storage bucket or imported into the emulator.
+
 ### Screen graphics
 
 The screen renderer recognizes text-mode controls used by graphics programs
