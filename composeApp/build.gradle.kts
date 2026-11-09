@@ -279,6 +279,8 @@ compose.desktop {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb, TargetFormat.Exe)
             packageName = "AboveABC80"
             packageVersion = appVersionName
+            vendor = "Aboveware"
+            description = "AboveABC80 Emulator for ABC80 and ABC800"
             
             // Låter jpackage hitta sidobilder (main-dialog.bmp, main-banner.bmp) i denna mapp
             appResourcesRootDir.set(project.layout.projectDirectory.dir("package"))
