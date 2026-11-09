@@ -108,8 +108,9 @@ object Abc80CloudDiskImport {
         var block = ByteArray(253) { 3 }
         var used = 0
         for ((index, line) in lines.dropLastWhile { it.isEmpty() }.withIndex()) {
-            require(line.length <= 120) {
-                "$name: line ${index + 1} contains ${line.length} characters (maximum 120)"
+            // Keep each line, its CR and two post terminators in one 253-byte record.
+            require(line.length <= 250) {
+                "$name: line ${index + 1} contains ${line.length} characters (maximum 250)"
             }
             val bytes = encodeText(line + "\r", "$name (line ${index + 1})")
             // ROM LOAD needs a post terminator before the final payload byte.

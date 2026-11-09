@@ -188,7 +188,8 @@ bitmap and 253-byte data records. BAC and ABS files
 retain their binary contents and receive format-specific validation. All other
 files, regardless of extension, are imported as UTF-8 or Latin-1 text with
 Swedish ABC80 character conversion and CR line endings. Text lines are limited
-to 120 characters and never split across records; longer lines are rejected
+to 250 characters (253 bytes minus CR and two terminators) and never split
+across records; longer lines are rejected
 with the filename and source line number, not truncated. Intermediate records
 are padded with byte 3 and the final record with zeros. Empty text files use
 one zero-filled record. Text packing reserves at least two terminator bytes

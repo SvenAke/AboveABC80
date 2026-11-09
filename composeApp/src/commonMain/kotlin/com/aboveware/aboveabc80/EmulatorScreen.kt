@@ -1011,73 +1011,7 @@ fun EmulatorScreen(startWithStorageOpen: Boolean = false, onLanguageChange: (Str
                                     }
                                 }
 
-                                // Disk Manager
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.padding(bottom = 16.dp)
-                                ) {
-                                    Surface(
-                                        shape = MaterialTheme.shapes.small,
-                                        color = MaterialTheme.colorScheme.surface,
-                                        shadowElevation = 4.dp,
-                                        modifier = Modifier.padding(end = 12.dp)
-                                    ) {
-                                        Text(
-                                            stringResource(Res.string.menu_disks),
-                                            modifier = Modifier.padding(
-                                                horizontal = 8.dp,
-                                                vertical = 4.dp
-                                            ),
-                                            style = MaterialTheme.typography.labelLarge
-                                        )
-                                    }
-                                    SmallFloatingActionButton(
-                                        onClick = {
-                                            speedDialOpen = false
-                                            showDiskManagerDialog = true
-                                        },
-                                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-                                    ) {
-                                        Icon(
 
-
-                                            Icons.Default.Storage,
-                                            contentDescription = stringResource(Res.string.disk_manager_title)
-                                        )
-                                    }
-                                }
-
-                                // Cassette
-                                if (!TerminalManager.computerModel.isAbc800) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        modifier = Modifier.padding(bottom = 16.dp)
-                                    ) {
-                                        Surface(
-                                            shape = MaterialTheme.shapes.small,
-                                            color = MaterialTheme.colorScheme.surface,
-                                            shadowElevation = 4.dp,
-                                            modifier = Modifier.padding(end = 12.dp)
-                                        ) {
-                                            Text(
-                                                stringResource(Res.string.menu_cassettes),
-                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                                style = MaterialTheme.typography.labelLarge
-                                            )
-                                        }
-                                        SmallFloatingActionButton(
-                                            onClick = {
-                                                speedDialOpen = false
-                                                showCassetteDialog = true
-                                            },
-                                            containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-                                        ) {
-                                            Icon(Icons.Default.Album, contentDescription = stringResource(Res.string.menu_cassettes))
-                                        }
-                                    }
-                                }
 
                                 // Test Submenu
                                 AnimatedVisibility(

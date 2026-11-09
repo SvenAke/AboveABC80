@@ -83,16 +83,42 @@ class CloudDiskImportTest {
                     ("\uFEFF" + lines.joinToString(ending) + ending).encodeToByteArray()))
             }
             val error = assertFailsWith<IllegalArgumentException> {
-                Abc80CloudDiskImport.prepare(name, ("OK\n" + "A".repeat(121)).encodeToByteArray())
+                Abc80CloudDiskImport.prepare(name, ("OK\n" + "A".repeat(251)).encodeToByteArray())
             }
             assertTrue(requireNotNull(error.message).contains("line 2"))
-            assertTrue(requireNotNull(error.message).contains("121"))
+            assertTrue(requireNotNull(error.message).contains("251"))
         }
         assertContentEquals(ByteArray(253),
             Abc80CloudDiskImport.prepare("EMPTY.DAT", byteArrayOf()))
         for (name in listOf("EMPTY.bAc", "EMPTY.aBs")) {
             assertFailsWith<IllegalArgumentException> {
                 Abc80CloudDiskImport.prepare(name, byteArrayOf())
+            }
+        }
+    }
+
+    @Test
+    fun longBasicLinesArePreservedWithoutWrappingOrTruncation() {
+        for (length in listOf(121, 128, 130, 249, 250)) {
+            val line = "1950 REM " + "A".repeat(length - 9)
+            for (ending in listOf("\n", "\r", "\r\n")) {
+                val lines = listOf("10 REM " + "B".repeat(113), line, "1960 END")
+                val records = Abc80CloudDiskImport.prepare(
+                    "ABCPAINT.BAS", (lines.joinToString(ending) + ending).encodeToByteArray()
+                )
+                val image = Abc80FloppyLayout.importFiles(
+                    Abc80FloppyLayout("abc830", 0).create(), listOf("ABCPAINT.BAS" to records)
+                )
+                assertContentEquals(records, readRecords(image, "ABCPAINT.BAS"))
+                assertContentEquals(
+                    (lines.joinToString("\r") + "\r").encodeToByteArray(),
+                    records.filter { it != 0.toByte() && it != 3.toByte() }.toByteArray()
+                )
+                for (offset in records.indices step 253) {
+                    val block = records.copyOfRange(offset, offset + 253)
+                    val lastCr = block.indexOfLast { it == 13.toByte() }
+                    assertTrue(lastCr <= 250, "Two post terminators must fit after CR")
+                }
             }
         }
     }
