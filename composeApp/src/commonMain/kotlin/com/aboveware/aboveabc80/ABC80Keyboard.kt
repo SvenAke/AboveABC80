@@ -7,9 +7,16 @@ import java.nio.charset.StandardCharsets
  * Maps a host key press to the 7-bit code the ABC80 keyboard delivers on PIO port A,
  * or null if the key has no ABC80 equivalent.
  */
-internal fun abc80KeyCode(key: Key, char: Char?, shift: Boolean, control: Boolean = false): Int? {
-    val effectiveShift = shift || (char?.isUpperCase() == true)
-    val symbolNumber = when (char) {
+internal fun abc80KeyCode(key: Key, char: Char?, shift: Boolean, control: Boolean = false, capsLock: Boolean = false): Int? {
+    val isLetter = (char?.isLetter() == true) || when (key) {
+        Key.Q, Key.W, Key.E, Key.R, Key.T, Key.Y, Key.U, Key.I, Key.O, Key.P,
+        Key.A, Key.S, Key.D, Key.F, Key.G, Key.H, Key.J, Key.K, Key.L,
+        Key.Z, Key.X, Key.C, Key.V, Key.B, Key.N, Key.M -> true
+        else -> false
+    }
+    val effectiveShift = if (isLetter) (shift || capsLock) else shift
+    val effectiveChar = if (capsLock && isLetter) char?.uppercaseChar() else char
+    val symbolNumber = when (effectiveChar) {
         'É', 'é', '`', '@' -> 12
         'Å', 'å' -> 30
         'Ü', 'ü' -> 31
@@ -17,9 +24,9 @@ internal fun abc80KeyCode(key: Key, char: Char?, shift: Boolean, control: Boolea
         'Ä', 'ä' -> 48
         '<', '>', '\u007F' -> if (key == Key.Delete) null else 13
         '¤' -> 4
-        else -> if (char != null && char.code >= 32 && !char.isLetter()) {
+        else -> if (effectiveChar != null && effectiveChar.code >= 32 && !effectiveChar.isLetter()) {
             abc80KeyTable.entries.firstOrNull {
-                it.value.unshifted == char.code || it.value.shifted == char.code
+                it.value.unshifted == effectiveChar.code || it.value.shifted == effectiveChar.code
             }?.key
         } else null
     }
@@ -88,7 +95,7 @@ internal fun abc80KeyCode(key: Key, char: Char?, shift: Boolean, control: Boolea
     val entry = abc80KeyTable.values.firstOrNull {
         it.unshifted == normalized || it.shifted == normalized
     }
-    return entry?.code(shift, control) ?: char?.let { abc80CharCode(it, shift) }
+    return entry?.code(effectiveShift, control) ?: char?.let { abc80CharCode(it, effectiveShift) }
 }
 
 /** Converts Unicode input/paste to ABC80 codes; physical modifiers use the key table. */

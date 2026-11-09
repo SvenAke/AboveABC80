@@ -225,6 +225,120 @@ class KeyboardLayoutTest {
     }
 
     @Test
+    fun abc80StickyControlAtDeliversNulAndResetsAfterUse() {
+        InstrumentationRegistry.getInstrumentation().runOnMainSync {
+            val terminal = MockTerminal()
+            val terminalKeyboard = ABC80TerminalKeyboard(terminal)
+            val keyboard = Keyboard().apply {
+                onKeyCodes = terminalKeyboard::handleKeyEvent
+                onKeyUpCodes = terminalKeyboard::handleKeyRelease
+            }
+            val view = KeyboardView(context, null).apply {
+                keyboardXmlResId = R.xml.abc80
+                this.keyboard = keyboard
+                measure(
+                    View.MeasureSpec.makeMeasureSpec(1200, View.MeasureSpec.EXACTLY),
+                    View.MeasureSpec.makeMeasureSpec(500, View.MeasureSpec.EXACTLY)
+                )
+                layout(0, 0, measuredWidth, measuredHeight)
+            }
+            fun tap(key: KeyboardViewController.Key) {
+                val now = SystemClock.uptimeMillis()
+                for (action in listOf(MotionEvent.ACTION_DOWN, MotionEvent.ACTION_UP)) {
+                    val event = MotionEvent.obtain(
+                        now, SystemClock.uptimeMillis(), action,
+                        key.x + key.width / 2f + view.paddingLeft,
+                        key.y + key.height / 2f + view.paddingTop, 0
+                    )
+                    try {
+                        assertTrue(view.onTouchEvent(event))
+                    } finally {
+                        event.recycle()
+                    }
+                }
+            }
+            val control = view.keyboardViewController.keys.single { it.codes == "7,1" }
+            val at = view.keyboardViewController.keys.single { it.codes == "abc80:12" }
+            assertTrue(control.sticky)
+            tap(control)
+            assertTrue(control.on)
+            assertTrue(terminal.sentChars.isEmpty())
+            tap(at)
+            assertEquals(listOf(0), terminal.sentChars.map { it.code })
+            assertFalse(control.on, "CTRL must reset after the following key")
+            tap(at)
+            assertEquals(listOf(0, 0x60), terminal.sentChars.map { it.code })
+        }
+    }
+
+    @Test
+    fun abc80MultiTouchDeliversControlAtAndReleasesTheCorrectFinger() {
+        InstrumentationRegistry.getInstrumentation().runOnMainSync {
+            val terminal = MockTerminal()
+            val terminalKeyboard = ABC80TerminalKeyboard(terminal)
+            val released = mutableListOf<String>()
+            val keyboard = Keyboard().apply {
+                onKeyCodes = terminalKeyboard::handleKeyEvent
+                onKeyUpCodes = {
+                    released.add(it)
+                    terminalKeyboard.handleKeyRelease(it)
+                }
+            }
+            val view = KeyboardView(context, null).apply {
+                keyboardXmlResId = R.xml.abc80
+                this.keyboard = keyboard
+                setPadding(3, 7, 11, 0)
+                measure(
+                    View.MeasureSpec.makeMeasureSpec(1200, View.MeasureSpec.EXACTLY),
+                    View.MeasureSpec.makeMeasureSpec(500, View.MeasureSpec.EXACTLY)
+                )
+                layout(0, 0, measuredWidth, measuredHeight)
+            }
+            val control = view.keyboardViewController.keys.single { it.codes == "7,1" }
+            val at = view.keyboardViewController.keys.single { it.codes == "abc80:12" }
+            val downTime = SystemClock.uptimeMillis()
+            fun touch(action: Int, keys: List<KeyboardViewController.Key>) {
+                val properties = keys.indices.map { index ->
+                    MotionEvent.PointerProperties().apply {
+                        id = index
+                        toolType = MotionEvent.TOOL_TYPE_FINGER
+                    }
+                }.toTypedArray()
+                val coordinates = keys.map { key ->
+                    MotionEvent.PointerCoords().apply {
+                        x = key.x + key.width / 2f + view.paddingLeft
+                        y = key.y + key.height / 2f + view.paddingTop
+                        pressure = 1f
+                        size = 1f
+                    }
+                }.toTypedArray()
+                val event = MotionEvent.obtain(
+                    downTime, SystemClock.uptimeMillis(), action, keys.size,
+                    properties, coordinates, 0, 0, 1f, 1f, 0, 0, 0, 0
+                )
+                try {
+                    assertTrue(view.onTouchEvent(event))
+                } finally {
+                    event.recycle()
+                }
+            }
+            touch(MotionEvent.ACTION_DOWN, listOf(control))
+            touch(MotionEvent.ACTION_POINTER_DOWN or (1 shl MotionEvent.ACTION_POINTER_INDEX_SHIFT),
+                listOf(control, at))
+            assertEquals(listOf(0), terminal.sentChars.map { it.code }, "CTRL + É/@ must send NUL without a move event")
+            assertTrue(control.pressed)
+            assertTrue(at.pressed)
+            touch(MotionEvent.ACTION_POINTER_UP or (1 shl MotionEvent.ACTION_POINTER_INDEX_SHIFT),
+                listOf(control, at))
+            assertTrue(control.pressed, "Releasing the second finger must not release CTRL")
+            assertFalse(at.pressed)
+            assertTrue("abc80:12" in released)
+            touch(MotionEvent.ACTION_UP, listOf(control))
+            assertFalse(control.pressed)
+        }
+    }
+
+    @Test
     fun abc80UpperCaseKeyTogglesItsRedLed() {
         InstrumentationRegistry.getInstrumentation().runOnMainSync {
             val terminal = MockTerminal()

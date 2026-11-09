@@ -1058,8 +1058,10 @@ class KeyboardView(
     override fun onTouchEvent(event: MotionEvent): Boolean {
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN, MotionEvent.ACTION_POINTER_DOWN -> {
-                val keyIndex =
-                    getKeyIndices(event.x.toInt() - paddingLeft, event.y.toInt() - paddingRight)
+                val keyIndex = getKeyIndices(
+                    event.getX(event.actionIndex).toInt() - paddingLeft,
+                    event.getY(event.actionIndex).toInt() - paddingTop
+                )
                 if (keyIndex == NOT_A_KEY) return true
                 val key = keyboardViewController.keys[keyIndex]
                 if (key.isLed) return true
@@ -1074,7 +1076,7 @@ class KeyboardView(
                 for (i in 0 until event.pointerCount) {
                     val keyIndex = getKeyIndices(
                         event.getX(i).toInt() - paddingLeft,
-                        event.getY(i).toInt() - paddingRight
+                        event.getY(i).toInt() - paddingTop
                     )
                     if (keyIndex != NOT_A_KEY) {
                         val key = keyboardViewController.keys[keyIndex]
@@ -1101,8 +1103,10 @@ class KeyboardView(
             }
 
             MotionEvent.ACTION_UP, MotionEvent.ACTION_POINTER_UP -> {
-                val keyIndex =
-                    getKeyIndices(event.x.toInt() - paddingLeft, event.y.toInt() - paddingRight)
+                val keyIndex = getKeyIndices(
+                    event.getX(event.actionIndex).toInt() - paddingLeft,
+                    event.getY(event.actionIndex).toInt() - paddingTop
+                )
                 if (keyIndex == NOT_A_KEY) return true
                 val key = keyboardViewController.keys[keyIndex]
                 if (key.isLed) return true

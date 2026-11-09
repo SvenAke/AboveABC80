@@ -1571,9 +1571,15 @@ private fun handleTerminalKeyEvent(
             activeTerminal.keyboard.leds["upper_case"]?.isOn = true
         }
         val upperCase = activeTerminal.keyboard.leds["upper_case"]?.isOn == true
+        val isLetter = (charValue?.isLetter() == true) || when (key) {
+            Key.Q, Key.W, Key.E, Key.R, Key.T, Key.Y, Key.U, Key.I, Key.O, Key.P,
+            Key.A, Key.S, Key.D, Key.F, Key.G, Key.H, Key.J, Key.K, Key.L,
+            Key.Z, Key.X, Key.C, Key.V, Key.B, Key.N, Key.M -> true
+            else -> false
+        }
         if (TerminalManager.computerModel.isAbc800) {
             if (key == Key.Enter || key == Key.NumPadEnter) charValue = '\r'
-            val effectiveChar = if (upperCase && !isShift) charValue?.uppercaseChar() else charValue
+            val effectiveChar = if (upperCase && !isShift && isLetter) charValue?.uppercaseChar() else charValue
             val code = abc800PhysicalKeyCode(key, effectiveChar, isShift, isCtrl)
             if (code != null) {
                 if (shouldForwardABC800MKey(type == KeyEventType.KeyDown, getRepeatCount(event))) {
@@ -1582,7 +1588,7 @@ private fun handleTerminalKeyEvent(
                 return true
             }
         }
-        val code = abc80KeyCode(key, charValue, isShift || upperCase, isCtrl)
+        val code = abc80KeyCode(key, charValue, isShift, isCtrl, upperCase)
         if (code != null) {
             if (type == KeyEventType.KeyDown) {
                 pressedKeys[key] = code

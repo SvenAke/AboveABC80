@@ -98,6 +98,57 @@ class CloudDiskImportTest {
     }
 
     @Test
+    fun detectsBinaryFormatsWithNonstandardExtensionsWithoutChangingTheirNames() {
+        val bac = byteArrayOf(0x82.toByte(), 5, 10, 0, 0x1A, 0x17, 1)
+        val abs = byteArrayOf(
+            0, 1, 0, 0x90.toByte(), 0x6F, 0, 0xFF.toByte(), 0xC9.toByte(),
+            0xC9.toByte(), 0, 0, 0, 0x90.toByte(), 0x6F, 0, 0xFF.toByte()
+        )
+        val files = listOf("INGRAFIK.MRG" to bac, "PROGRAM.DAT" to bac, "CODE.BIN" to abs)
+        val image = Abc80FloppyLayout.importFiles(
+            Abc80FloppyLayout("abc830", 0).create(),
+            files.map { (name, data) -> name to Abc80CloudDiskImport.prepare(name, data) }
+        )
+        assertEquals(files.map { it.first }.sorted(), Abc80FloppyLayout.list(image)?.map { it.first }?.sorted())
+        for ((name, data) in files) {
+            assertContentEquals(data.copyOf(253), readRecords(image, name))
+        }
+        assertFailsWith<IllegalArgumentException> {
+            Abc80CloudDiskImport.prepare("BROKEN.MRG", bac.copyOf(6))
+        }
+        assertContentEquals(
+            Abc80CloudDiskImport.prepare("TEXT.BAS", "10 END\n".encodeToByteArray()),
+            Abc80CloudDiskImport.prepare("TEXT.MRG", "10 END\n".encodeToByteArray())
+        )
+    }
+
+    @Test
+    fun graphicsDocumentationPreservesEmbeddedDisplayControls() {
+        val lines = listOf("P") + List(15) { "\u0017" + "j #!".repeat(13) + "\u0006" }
+        val source = lines.joinToString("\n").encodeToByteArray()
+        val original = source.copyOf()
+        val records = Abc80CloudDiskImport.prepare("INGRAFIK.INF", source)
+        val image = Abc80FloppyLayout.importFiles(
+            Abc80FloppyLayout("abc830", 0).create(),
+            listOf(
+                "INGRAFIK.INF" to records,
+                "GRAFIK.BAS" to Abc80CloudDiskImport.prepare("GRAFIK.BAS", "10 END\n".encodeToByteArray())
+            )
+        )
+        val stored = readRecords(image, "INGRAFIK.INF")
+        assertContentEquals(records, stored)
+        assertContentEquals(original, source)
+        assertEquals(15, stored.count { it == 0x17.toByte() })
+        assertEquals(15, stored.count { it == 0x06.toByte() })
+        val recovered = stored.filter { it != 0.toByte() && it != 3.toByte() }.toByteArray()
+        assertContentEquals((lines.joinToString("\r") + "\r").encodeToByteArray(), recovered)
+        assertEquals(2, Abc80FloppyLayout.list(image)?.size)
+        assertFailsWith<IllegalArgumentException> {
+            Abc80CloudDiskImport.prepare("INVALID.INF", "TEXT\u0001".encodeToByteArray())
+        }
+    }
+
+    @Test
     fun textImportStopsAtCtrlZBeforeDecodingOrValidatingPadding() {
         for (charset in listOf(Charsets.UTF_8, Charsets.ISO_8859_1)) {
             for (ending in listOf("", "\n", "\r", "\r\n")) {

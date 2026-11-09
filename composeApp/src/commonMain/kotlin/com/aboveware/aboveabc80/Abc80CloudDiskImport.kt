@@ -25,14 +25,14 @@ object Abc80CloudDiskImport {
     }
 
     internal fun prepare(name: String, data: ByteArray): ByteArray {
-        when (name.substringAfterLast('.', "").lowercase()) {
-            "bac", "abs" -> {
+        when (abc80ExecutableFormat(name, data, 253)) {
+            Abc80ExecutableFormat.BAC -> {
                 require(data.isNotEmpty()) { "File is empty: $name" }
-                if (name.endsWith(".bac", true)) {
-                    validateBac(name, data, 253)
-                } else {
-                    validateAbs(name, data)
-                }
+                validateBac(name, data, 253)
+            }
+            Abc80ExecutableFormat.ABS -> {
+                require(data.isNotEmpty()) { "File is empty: $name" }
+                validateAbs(name, data)
             }
             else -> return textRecords(name, data)
         }
@@ -83,7 +83,8 @@ object Abc80CloudDiskImport {
 
     internal fun encodeText(text: String, context: String = ""): ByteArray = text.map { char ->
         val code = if (char == '¤') 0x24 else abc80CharCode(char)
-        if (code == null || (code !in 32..127 && code != 9 && code != 13)) {
+        // Graphics text (for example INGRAFIK) embeds these ABC display controls.
+        if (code == null || (code !in 32..127 && code !in listOf(0x06, 0x09, 0x0D, 0x17))) {
             val hexCode = "U+" + char.code.toHex(4)
             val ctxStr = if (context.isNotBlank()) " in $context" else ""
             val detail = "Unsupported character '$char' ($hexCode)$ctxStr"

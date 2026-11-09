@@ -45,8 +45,14 @@ class ABC80TerminalKeyboard(private val terminal: Terminal) : TerminalKeyboard {
         }
         if (codes.startsWith("abc80:")) {
             val number = codes.removePrefix("abc80:").toIntOrNull()
+            val isLetterKeyNumber = number in setOf(
+                20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
+                38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48,
+                56, 57, 58, 59, 60, 61, 62
+            )
+            val isShiftEffective = shift || (isLetterKeyNumber && leds.getValue("upper_case").isOn)
             val code = number?.let {
-                abc80TableCode(it, shift || leds.getValue("upper_case").isOn, control)
+                abc80TableCode(it, isShiftEffective, control)
             }
             if (code == null) {
                 Abc80Log.wtf("Unknown ABC80 keyboard key: $codes")
@@ -106,7 +112,11 @@ class ABC80TerminalKeyboard(private val terminal: Terminal) : TerminalKeyboard {
     }
 
     override fun transformChar(c: Char, isShiftActive: Boolean): Char {
-        return if (isShiftActive || leds.getValue("upper_case").isOn) c.uppercaseChar() else c.lowercaseChar()
+        return if (c.isLetter()) {
+            if (isShiftActive || leds.getValue("upper_case").isOn) c.uppercaseChar() else c.lowercaseChar()
+        } else {
+            c
+        }
     }
 
     override fun stopRepeating() {
