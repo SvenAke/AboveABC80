@@ -760,37 +760,37 @@ fun EmulatorScreen(startWithStorageOpen: Boolean = false, onLanguageChange: (Str
                         }
                     }
 
-                    // Disk Indicator
+                    // Disk Indicator: always visible so a disk can be mounted even when none are
                     val mountedDisks = DiskController.instance.mountedDisks
-                    if (mountedDisks.isNotEmpty()) {
-                        Surface(
-                            color = Color.White.copy(alpha = 0.4f),
-                            shape = MaterialTheme.shapes.extraSmall,
-                            modifier = Modifier
-                                .padding(horizontal = 4.dp)
-                                .clickable { showDiskManagerDialog = true }
+                    Surface(
+                        color = Color.White.copy(alpha = 0.4f),
+                        shape = MaterialTheme.shapes.extraSmall,
+                        modifier = Modifier
+                            .padding(horizontal = 4.dp)
+                            .clickable { showDiskManagerDialog = true }
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp)
                         ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp)
-                            ) {
-                                val lastAccess = DiskController.instance.lastAccessTime
-                                var isBlinking by remember { mutableStateOf(false) }
+                            val lastAccess = DiskController.instance.lastAccessTime
+                            var isBlinking by remember { mutableStateOf(false) }
 
-                                LaunchedEffect(lastAccess) {
-                                    if (lastAccess > 0) {
-                                        isBlinking = true
-                                        delay(100.milliseconds)
-                                        isBlinking = false
-                                    }
+                            LaunchedEffect(lastAccess) {
+                                if (lastAccess > 0) {
+                                    isBlinking = true
+                                    delay(100.milliseconds)
+                                    isBlinking = false
                                 }
+                            }
 
-                                Icon(
-                                    imageVector = Icons.Default.Save,
-                                    contentDescription = stringResource(Res.string.menu_disks_accessibility),
-                                    tint = if (isBlinking) Color.Red else Color.Black.copy(alpha = 0.7f),
-                                    modifier = Modifier.size(16.dp)
-                                )
+                            Icon(
+                                imageVector = Icons.Default.Save,
+                                contentDescription = stringResource(Res.string.menu_disks_accessibility),
+                                tint = if (isBlinking) Color.Red else Color.Black.copy(alpha = 0.7f),
+                                modifier = Modifier.size(16.dp)
+                            )
+                            if (mountedDisks.isNotEmpty()) {
                                 Spacer(Modifier.width(6.dp))
                                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                     mountedDisks.keys.sorted().forEach { driveIndex ->
