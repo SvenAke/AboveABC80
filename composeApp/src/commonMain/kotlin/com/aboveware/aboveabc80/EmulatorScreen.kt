@@ -187,7 +187,7 @@ private suspend fun restoreDisksForModel(model: ComputerModel, migrateLegacySett
 
     if (!driveZeroLoaded && !driveZeroExplicitlyUnmounted) {
         if ("SYSTEM.DSK" !in listLocalDisks()) {
-            val image = Res.readBytes("files/system.dsk")
+            val image = Res.readBytes(systemDiskResourcePath(model))
             check(saveLocalDisk("SYSTEM.DSK", image)) { "Could not save SYSTEM.DSK" }
         }
         check(controller.loadFromLocal(0, "SYSTEM.DSK") != null) {

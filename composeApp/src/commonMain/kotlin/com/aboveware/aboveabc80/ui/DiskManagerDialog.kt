@@ -76,6 +76,7 @@ import com.aboveware.aboveabc80.fileExists
 import com.aboveware.aboveabc80.folderExists
 import com.aboveware.aboveabc80.getPlatform
 import com.aboveware.aboveabc80.listLocalDisks
+import com.aboveware.aboveabc80.loadSystemDiskTemplate
 import com.aboveware.aboveabc80.pickFolder
 import com.aboveware.aboveabc80.saveLocalDisk
 import com.aboveware.aboveabc80.setPersistedString
@@ -718,12 +719,21 @@ fun NewDiskDialog(
         "fd4d" to stringResource(Res.string.disk_format_dsdd_320),
         "abc832" to stringResource(Res.string.disk_format_dsdd_640)
     )
-    val storedSystemVolumeName by androidx.compose.runtime.produceState(initialValue = "SYSTEM-DISKETT ABC-80 Vers. 2.1.") {
-        try {
-            val raw = Res.readBytes("files/system.dsk")
-            value = Abc80FloppyLayout.readVolumeName(raw)
-        } catch (_: Exception) {
+    // ABC80 uses the bundled system disk, ABC800 uses the disk mounted as DR0
+    val systemDiskTemplate by androidx.compose.runtime.produceState<ByteArray?>(initialValue = null) {
+        value = try {
+            loadSystemDiskTemplate()
+        } catch (e: Exception) {
+            Abc80Log.wtf("Could not load system disk template: ${e.message}")
+            null
         }
+    }
+    val storedSystemVolumeName = remember(systemDiskTemplate) {
+        systemDiskTemplate?.let { Abc80FloppyLayout.readVolumeName(it) }
+            ?: "SYSTEM-DISKETT ABC-80 Vers. 2.1."
+    }
+    val systemTemplateFormat = remember(systemDiskTemplate) {
+        systemDiskTemplate?.let { Abc80FloppyLayout.detectFormatName(it) } ?: "abc830"
     }
 
     var selectedTemplate by remember { mutableStateOf("abc830") }
@@ -746,7 +756,7 @@ fun NewDiskDialog(
         scope.launch {
             try {
                 val data = if (systemDisk) {
-                    val raw = Res.readBytes("files/system.dsk")
+                    val raw = systemDiskTemplate ?: loadSystemDiskTemplate()
                     val targetVolName = volumeName.ifBlank { storedSystemVolumeName }
                     val modified = raw.copyOf()
                     Abc80FloppyLayout.writeVolumeName(modified, targetVolName)
@@ -792,7 +802,7 @@ fun NewDiskDialog(
                 Spacer(modifier = Modifier.height(8.dp))
                 DiskFormatDropdown(
                     formats = templates,
-                    selected = if (systemDisk) "abc830" else selectedTemplate,
+                    selected = if (systemDisk) systemTemplateFormat else selectedTemplate,
                     onSelected = {
                         selectedTemplate = it
                         systemDisk = false
