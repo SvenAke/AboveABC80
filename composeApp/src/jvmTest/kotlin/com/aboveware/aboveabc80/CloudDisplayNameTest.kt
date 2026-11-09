@@ -11,6 +11,17 @@ import kotlin.test.assertEquals
 
 class CloudDisplayNameTest {
     @Test
+    fun abcCharacterPositionsAreSwedishOnlyInTheDisplayName() {
+        assertEquals("färgdemo.bas", "f{rgdemo.bas".toCloudDisplayName())
+        assertEquals("fågeln.bas", "f}geln.bas".toCloudDisplayName())
+        assertEquals("ÄÖÅÜäöåü", "[\\]^{|}~".toCloudDisplayName())
+        val node = StorageNode("f{rgdemo.bas", "abc/grafik/f{rgdemo.bas", false)
+        assertEquals("färgdemo.bas", node.displayName)
+        assertEquals("f{rgdemo.bas", node.name)
+        assertEquals("abc/grafik/f{rgdemo.bas", node.fullName)
+    }
+
+    @Test
     fun decodesSwedishLettersFromLatin1AndWindows1252Mojibake() {
         assertEquals("åäöÅÄÖ.bas", "Ã¥Ã¤Ã¶Ã\u0085Ã\u0084Ã\u0096.bas".toCloudDisplayName())
         assertEquals("åäöÅÄÖ.bas", "Ã¥Ã¤Ã¶Ã…Ã„Ã–.bas".toCloudDisplayName())

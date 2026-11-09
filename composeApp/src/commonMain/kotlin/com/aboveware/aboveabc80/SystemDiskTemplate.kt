@@ -13,6 +13,11 @@ fun systemDiskResourcePath(model: ComputerModel): String =
 fun verboseErrorFileName(model: ComputerModel): String =
     if (model.isAbc800) "BASICINI.SYS" else "BASICERR.SYS"
 
+/** The bundled ABC800 DOS supports the older disk layout, up to 320 kB. */
+internal fun newDiskFormatNames(model: ComputerModel): List<String> =
+    if (model.isAbc800) listOf("fd2", "abc830", "fd4d")
+    else listOf("fd2", "abc830", "fd4d", "abc832")
+
 /**
  * Returns the raw disk image used as template when creating a new system diskette:
  * the bundled system disk resource matching the active computer model.
@@ -28,6 +33,9 @@ suspend fun loadSystemDiskTemplate(): ByteArray =
  */
 @OptIn(ExperimentalUnsignedTypes::class)
 suspend fun createBlankDisk(formatName: String, volumeName: String): ByteArray {
+    require(formatName in newDiskFormatNames(TerminalManager.computerModel)) {
+        "Unsupported new disk format for ${TerminalManager.computerModel.displayName}: $formatName"
+    }
     val blank = Abc80FloppyLayout(formatName, 0).create(volumeName)
     val errorFile = verboseErrorFileName(TerminalManager.computerModel)
     return try {

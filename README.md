@@ -155,6 +155,9 @@ automatically.
 
 ### Cloud files on ABC80 disks
 
+Cloud, disk and cassette file listings display Swedish ABC character positions
+as letters (for example `f{rgdemo.bas` as `färgdemo.bas`), without changing stored
+names or file lookup paths.
 Cloud display names repair Swedish letters misdecoded from UTF-8 as Latin-1
 or Windows-1252, and Latin-1 as DOS CP437 (for example `bes÷k.grf` becomes
 `besök.grf`). Original cloud object paths remain unchanged. Disk imports use
@@ -185,8 +188,13 @@ Other cloud downloads are saved to the active
 ABC80 disk (or the drive whose cloud-import button was selected). Both direct
 downloads and files selected from archives use the ABC80 directory, allocation
 bitmap and 253-byte data records. BAC and ABS files
-retain their binary contents and receive format-specific validation. All other
-files, regardless of extension, are imported as UTF-8 or Latin-1 text with
+retain their binary contents and receive format-specific validation. BASIC II
+BAC files (header byte `8F`) are preserved as complete 253-byte records; their
+token stream is not validated by the ABC80 BAC validator. Unrecognized files
+containing NUL bytes are preserved as binary data, except explicit text formats
+(`bas`, `txt`, `rem`, `sys`, `inf`). This supports graphics data such as
+`demopic.806` without mistaking its `00 FF` pattern for an ABS header.
+Other files are imported as UTF-8 or Latin-1 text with
 Swedish ABC80 character conversion and CR line endings. Text lines are limited
 to 250 characters (253 bytes minus CR and two terminators) and never split
 across records; longer lines are rejected
@@ -203,6 +211,12 @@ if its disk format, a filename (limited to 8+3 characters), BAC/ABS contents,
 or available space is invalid. The mounted working
 image and the saved disk image are both updated. Unlike the old downloader,
 importing a BAS file does not clear or overwrite the program in emulator RAM.
+
+New ABC800M/C disks are limited to 80, 160 and 320 kB: the bundled ABC800 DOS
+cannot find files in the 640 kB directory layout. ABC80 retains the 640 kB option.
+Existing disk images are not converted; for an existing 640 kB ABC800 data disk,
+create a disk of at most 320 kB and import the files again (split across disks
+if necessary).
 
 ### Uploading files recursively to Firebase Cloud Storage with gcloud
 

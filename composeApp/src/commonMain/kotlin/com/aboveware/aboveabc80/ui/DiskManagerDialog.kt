@@ -34,6 +34,7 @@ import androidx.compose.ui.text.AnnotatedString
 import com.aboveware.aboveabc80.ArchiveFileTextPreviewDialog
 import com.aboveware.aboveabc80.formatSize
 import com.aboveware.aboveabc80.isText
+import com.aboveware.aboveabc80.toCloudDisplayName
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
@@ -77,6 +78,7 @@ import com.aboveware.aboveabc80.folderExists
 import com.aboveware.aboveabc80.getPlatform
 import com.aboveware.aboveabc80.listLocalDisks
 import com.aboveware.aboveabc80.createBlankDisk
+import com.aboveware.aboveabc80.newDiskFormatNames
 import com.aboveware.aboveabc80.loadSystemDiskTemplate
 import com.aboveware.aboveabc80.pickFolder
 import com.aboveware.aboveabc80.saveLocalDisk
@@ -208,7 +210,7 @@ fun DiskManagerDialog(
                             val runnable = name in runnableFiles
                             val isPreviewable = runnableFiles[name] == Abc80ExecutableFormat.BAS || name.isText()
                             ListItem(
-                                headlineContent = { Text(name) },
+                                headlineContent = { Text(name.toCloudDisplayName()) },
                                 trailingContent = {
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
@@ -241,7 +243,7 @@ fun DiskManagerDialog(
                                                 val data = listingImage?.let { Abc80FloppyLayout.readFile(it, name) }
                                                 if (data != null) {
                                                     val text = decodeAbc80FloppyText(data)
-                                                    textPreview = name to text
+                                                    textPreview = name.toCloudDisplayName() to text
                                                 }
                                             }
                                         }
@@ -719,8 +721,8 @@ fun NewDiskDialog(
         "abc830" to stringResource(Res.string.disk_format_ssdd),
         "fd4d" to stringResource(Res.string.disk_format_dsdd_320),
         "abc832" to stringResource(Res.string.disk_format_dsdd_640)
-    )
-    // ABC80 uses the bundled system disk, ABC800 uses the disk mounted as DR0
+    ).filter { it.first in newDiskFormatNames(TerminalManager.computerModel) }
+    // Both models use their own bundled system disk.
     val systemDiskTemplate by androidx.compose.runtime.produceState<ByteArray?>(initialValue = null) {
         value = try {
             loadSystemDiskTemplate()

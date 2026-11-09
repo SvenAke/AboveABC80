@@ -64,6 +64,7 @@ import com.aboveware.aboveabc80.StorageFileDialog
 import com.aboveware.aboveabc80.getCurrentTimestamp
 import com.aboveware.aboveabc80.saveLocalFile
 import com.aboveware.aboveabc80.isText
+import com.aboveware.aboveabc80.toCloudDisplayName
 import org.jetbrains.compose.resources.stringResource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -275,7 +276,7 @@ fun CassetteDialog(
                                 ListItem(
                                     headlineContent = {
                                         Text(
-                                            info.displayName,
+                                            info.displayName.toCloudDisplayName(),
                                             fontWeight = if (info.current) FontWeight.Bold else FontWeight.Normal
                                         )
                                     },
@@ -316,7 +317,7 @@ fun CassetteDialog(
                                                             val content = withContext(Dispatchers.IO) {
                                                                 Abc80Cassette.previewBasic(info)
                                                             }
-                                                            preview = info.displayName to content
+                                                            preview = info.displayName.toCloudDisplayName() to content
                                                         } catch (e: kotlinx.coroutines.CancellationException) {
                                                             throw e
                                                         } catch (e: Exception) {

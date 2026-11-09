@@ -28,13 +28,25 @@ object Abc80CloudDiskImport {
         when (abc80ExecutableFormat(name, data, 253)) {
             Abc80ExecutableFormat.BAC -> {
                 require(data.isNotEmpty()) { "File is empty: $name" }
-                validateBac(name, data, 253)
+                if (data[0] == 0x8F.toByte()) {
+                    // BASIC II saves a different binary format in complete disk records.
+                    require(data.size >= 253 && data.size % 253 == 0 && data[1] == 0.toByte()) {
+                        "Incomplete BASIC II BAC file: $name"
+                    }
+                } else {
+                    validateBac(name, data, 253)
+                }
             }
             Abc80ExecutableFormat.ABS -> {
                 require(data.isNotEmpty()) { "File is empty: $name" }
                 validateAbs(name, data)
             }
-            else -> return textRecords(name, data)
+            Abc80ExecutableFormat.BAS -> return textRecords(name, data)
+            null -> {
+                // Unrecognized files with NUL bytes are binary data, not text with Ctrl+Z EOF.
+                if (name.isText() || name.endsWith(".inf", ignoreCase = true) ||
+                    !data.contains(0.toByte())) return textRecords(name, data)
+            }
         }
         return data.copyOf(((data.size + 252) / 253).coerceAtLeast(1) * 253)
     }
@@ -83,8 +95,8 @@ object Abc80CloudDiskImport {
 
     internal fun encodeText(text: String, context: String = ""): ByteArray = text.map { char ->
         val code = if (char == '¤') 0x24 else abc80CharCode(char)
-        // Graphics text (for example INGRAFIK) embeds these ABC display controls.
-        if (code == null || (code !in 32..127 && code !in listOf(0x06, 0x09, 0x0D, 0x17))) {
+        // Graphics text embeds ABC display controls, including backspace overprinting.
+        if (code == null || (code !in 32..127 && code !in listOf(0x06, 0x08, 0x09, 0x0D, 0x17))) {
             val hexCode = "U+" + char.code.toHex(4)
             val ctxStr = if (context.isNotBlank()) " in $context" else ""
             val detail = "Unsupported character '$char' ($hexCode)$ctxStr"

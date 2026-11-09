@@ -1017,8 +1017,8 @@ fun NewDisketteDialog(
         "abc830" to stringResource(Res.string.disk_format_ssdd),
         "fd4d" to stringResource(Res.string.disk_format_dsdd_320),
         "abc832" to stringResource(Res.string.disk_format_dsdd_640)
-    )
-    // ABC80 uses the bundled system disk, ABC800 uses the disk mounted as DR0
+    ).filter { it.first in newDiskFormatNames(TerminalManager.computerModel) }
+    // Both models use their own bundled system disk.
     val systemDiskTemplate by androidx.compose.runtime.produceState<ByteArray?>(initialValue = null) {
         value = try {
             loadSystemDiskTemplate()

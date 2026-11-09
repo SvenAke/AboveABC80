@@ -29,6 +29,14 @@ internal fun String.toCloudDisplayName(): String {
             '─' -> 'Ä'
             '╓' -> 'Ö'
             'Õ', 'õ' -> 'ö'
+            '[' -> 'Ä'
+            '\\' -> 'Ö'
+            ']' -> 'Å'
+            '^' -> 'Ü'
+            '{' -> 'ä'
+            '|' -> 'ö'
+            '}' -> 'å'
+            '~' -> 'ü'
             else -> char
         }
     }.filter { it != '\u0303' && it != '\u0308' && it != '\u030A' }.joinToString("")

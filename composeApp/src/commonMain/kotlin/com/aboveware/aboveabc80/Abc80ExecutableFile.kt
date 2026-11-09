@@ -19,7 +19,8 @@ internal fun abc80ExecutableFormat(
             return Abc80ExecutableFormat.BAC
         }
     }
-    if (data.size >= 7 && data[0] == 0.toByte() && data[2] == 0.toByte() &&
+    if (data.size >= 7 && (data[1].toInt() and 255) <= recordSize - 8 &&
+        data[0] == 0.toByte() && data[2] == 0.toByte() &&
         (data[3].toInt() xor data[4].toInt()) and 255 == 255 &&
         (data[5].toInt() xor data[6].toInt()) and 255 == 255) {
         return Abc80ExecutableFormat.ABS

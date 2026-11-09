@@ -8,6 +8,44 @@ import kotlin.test.assertTrue
 
 @OptIn(ExperimentalUnsignedTypes::class)
 class CloudDiskImportTest {
+    @Test
+    fun abc800GraphicsAndBasicTwoFilesKeepTheirBinaryRecords() {
+        val picture = byteArrayOf(0, -1, 0, -1, 0, -1, 0, 0x1A, 0x82.toByte(), 0)
+        val basicTwo = ByteArray(506) { 0xE5.toByte() }.apply {
+            this[0] = 0x8F.toByte()
+            this[1] = 0
+            this[24] = 0x1A
+        }
+        val files = listOf(
+            "DEMOPIC.806" to picture, "GTEXTKOD.DAT" to picture,
+            "PLOTTA.MAP" to picture, "SPELDEMO.BAN" to picture,
+            "TEST.PIC" to picture, "DOTOPT.BAC" to basicTwo
+        )
+        val image = Abc80FloppyLayout.importFiles(
+            Abc80FloppyLayout("abc832", 0).create(),
+            files.map { (name, data) -> name to Abc80CloudDiskImport.prepare(name, data) }
+        )
+        for ((name, data) in files) {
+            val stored = readRecords(image, name)
+            assertContentEquals(data, stored.copyOf(data.size), name)
+            assertTrue(stored.drop(data.size).all { it == 0.toByte() })
+        }
+        assertFailsWith<IllegalArgumentException> {
+            Abc80CloudDiskImport.prepare("BROKEN.BAC", basicTwo.copyOf(505))
+        }
+        assertFailsWith<IllegalArgumentException> {
+            Abc80CloudDiskImport.prepare("BROKEN.ABS", picture)
+        }
+        assertContentEquals(
+            "10 REM \b\bTEXT\r".encodeToByteArray(),
+            Abc80CloudDiskImport.prepare("GRAFIK.BAS", "10 REM \b\bTEXT\n".encodeToByteArray()).copyOf(14)
+        )
+        assertContentEquals(
+            Abc80CloudDiskImport.prepare("EOF.TXT", "TEXT".encodeToByteArray()),
+            Abc80CloudDiskImport.prepare("EOF.TXT", "TEXT\u001A\u0000".encodeToByteArray())
+        )
+    }
+
     companion object {
         fun readRecords(image: ByteArray, name: String): ByteArray =
             requireNotNull(Abc80FloppyLayout.readFile(image, name))
