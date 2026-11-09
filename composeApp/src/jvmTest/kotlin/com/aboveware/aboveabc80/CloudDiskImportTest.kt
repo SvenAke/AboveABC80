@@ -98,6 +98,34 @@ class CloudDiskImportTest {
     }
 
     @Test
+    fun textImportStopsAtCtrlZBeforeDecodingOrValidatingPadding() {
+        for (charset in listOf(Charsets.UTF_8, Charsets.ISO_8859_1)) {
+            for (ending in listOf("", "\n", "\r", "\r\n")) {
+                val text = "10 REM ÅÄÖåäö\r\n20 END$ending".toByteArray(charset)
+                val original = text + byteArrayOf(0x1A, 0x1A, 0, 0xFF.toByte()) +
+                    "NOT TEXT".repeat(30).encodeToByteArray()
+                val before = original.copyOf()
+                val expected = Abc80CloudDiskImport.prepare("GRAFIK.BAS", text)
+                val records = Abc80CloudDiskImport.prepare("GRAFIK.BAS", original)
+                assertContentEquals(expected, records)
+                assertContentEquals(before, original)
+                val image = Abc80FloppyLayout.importFiles(
+                    Abc80FloppyLayout("abc830", 0).create(),
+                    listOf("GRAFIK.BAS" to records)
+                )
+                assertContentEquals(expected, readRecords(image, "GRAFIK.BAS"))
+            }
+        }
+        assertContentEquals(
+            ByteArray(253),
+            Abc80CloudDiskImport.prepare("EMPTY.TXT", byteArrayOf(0x1A, 0xFF.toByte()))
+        )
+        assertFailsWith<IllegalArgumentException> {
+            Abc80CloudDiskImport.prepare("INVALID.TXT", byteArrayOf(0x01, 0x1A))
+        }
+    }
+
+    @Test
     fun textPostsReserveTwoBytesEvenWhenLinesAlmostFillThePayload() {
         for (lastLength in 88..90) {
             val lines = listOf("A".repeat(80), "B".repeat(80), "C".repeat(lastLength), "NEXT")

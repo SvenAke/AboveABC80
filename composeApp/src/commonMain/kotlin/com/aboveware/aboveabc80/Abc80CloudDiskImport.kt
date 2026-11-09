@@ -8,7 +8,13 @@ import java.nio.charset.CharacterCodingException
 object Abc80CloudDiskImport {
     fun save(drive: Int, files: List<Pair<String, ByteArray>>, clear: Boolean = false) {
         require(files.isNotEmpty()) { "No files selected" }
-        val records = files.map { (name, data) -> name to prepare(name, data) }
+        Abc80Log.diskette("Importing ${files.size} cloud files to DR$drive: [${files.joinToString { it.first }}]")
+        val records = try {
+            files.map { (name, data) -> name to prepare(name, data) }
+        } catch (e: Exception) {
+            Abc80Log.wtf("Cloud import prepare failed for DR$drive: ${e.message}")
+            throw e
+        }
         val mounted = requireNotNull(DiskController.instance.mountedDisks[drive]) {
             "No floppy disk mounted on DR$drive:"
         }
@@ -75,19 +81,26 @@ object Abc80CloudDiskImport {
         throw IllegalArgumentException("ABS file missing end record: $name")
     }
 
-    internal fun encodeText(text: String): ByteArray = text.map { char ->
+    internal fun encodeText(text: String, context: String = ""): ByteArray = text.map { char ->
         val code = if (char == '¤') 0x24 else abc80CharCode(char)
-        require(code != null && (code in 32..127 || code == 9 || code == 13)) {
-            "Text contains characters not supported by ABC80"
+        if (code == null || (code !in 32..127 && code != 9 && code != 13)) {
+            val hexCode = "U+" + char.code.toHex(4)
+            val ctxStr = if (context.isNotBlank()) " in $context" else ""
+            val detail = "Unsupported character '$char' ($hexCode)$ctxStr"
+            Abc80Log.wtf("encodeText: $detail")
+            throw IllegalArgumentException(detail)
         }
         code.toByte()
     }.toByteArray()
 
     private fun textRecords(name: String, data: ByteArray): ByteArray {
+        // Legacy text files use Ctrl+Z as EOF; trailing bytes are padding, not text.
+        val end = data.indexOf(0x1A.toByte())
+        val textData = if (end >= 0) data.copyOf(end) else data
         val decoded = try {
-            Charsets.UTF_8.newDecoder().decode(ByteBuffer.wrap(data)).toString().removePrefix("\uFEFF")
+            Charsets.UTF_8.newDecoder().decode(ByteBuffer.wrap(textData)).toString().removePrefix("\uFEFF")
         } catch (_: CharacterCodingException) {
-            data.toString(Charsets.ISO_8859_1)
+            textData.toString(Charsets.ISO_8859_1)
         }
         val lines = decoded.replace("\r\n", "\n").replace('\r', '\n').split('\n')
         val blocks = mutableListOf<ByteArray>()
@@ -97,7 +110,7 @@ object Abc80CloudDiskImport {
             require(line.length <= 120) {
                 "$name: line ${index + 1} contains ${line.length} characters (maximum 120)"
             }
-            val bytes = encodeText(line + "\r")
+            val bytes = encodeText(line + "\r", "$name (line ${index + 1})")
             // ROM LOAD needs a post terminator before the final payload byte.
             if (used + bytes.size + 2 > block.size) {
                 blocks.add(block)

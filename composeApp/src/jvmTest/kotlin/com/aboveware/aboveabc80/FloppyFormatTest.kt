@@ -108,4 +108,3 @@ class FloppyFormatTest {
         assertEquals("DS/QD", Abc80FloppyLayout.diskType(Abc80FloppyLayout("abc832", 0).create()))
     }
 }
-}

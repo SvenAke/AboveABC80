@@ -153,7 +153,7 @@ fun StorageFileDialog(
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
-                    Abc80Log.wtf("Cloud import to DR$drive failed: ${e.message}")
+                    Abc80Log.wtf("Cloud import to DR$drive failed for files [${files.joinToString { it.first }}]: ${e.message}")
                     errorMessage = e.message ?: fileDownloadFailedMessage
                 } finally {
                     isDownloading = false
@@ -553,7 +553,7 @@ fun StorageFileDialog(
                                                         ) {
                                                             compressedPreviewMessage
                                                         } else {
-                                                            cachedData.decodeToString()
+                                                            cachedData.toCloudPreviewText()
                                                         }
                                                         textPreview =
                                                             node.displayName to AnnotatedString(content)
@@ -597,7 +597,7 @@ fun StorageFileDialog(
                                                                         ) {
                                                                             compressedPreviewMessage
                                                                         } else {
-                                                                            downloadedData.decodeToString()
+                                                                            downloadedData.toCloudPreviewText()
                                                                         }
                                                                     textPreview =
                                                                         node.displayName to AnnotatedString(

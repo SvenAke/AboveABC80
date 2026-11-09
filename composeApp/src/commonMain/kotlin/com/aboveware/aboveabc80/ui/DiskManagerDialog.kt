@@ -546,7 +546,7 @@ fun DiskManagerDialog(
                 throw e
             } catch (e: Exception) {
                 if (clear) cloudImportTargetCleared = false
-                Abc80Log.wtf("Cloud import to DR$driveIndex failed: ${e.message}")
+                Abc80Log.wtf("Cloud import to DR$driveIndex failed for files [${files.joinToString { it.first }}]: ${e.message}")
                 errorMessage = e.message ?: copyFailedMessage
             }
         }
