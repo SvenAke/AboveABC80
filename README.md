@@ -35,6 +35,22 @@ in your IDE’s toolbar or run it directly from the terminal:
   .\gradlew.bat :composeApp:run
   ```
 
+### Build Release Windows MSI Installer
+
+To compile the C++ native library in Release mode (`aboveabc80.dll`) and package the desktop application into a Windows `.msi` installer:
+
+- **Command Prompt / PowerShell:**
+  ```shell
+  .\gradlew.bat :composeApp:packageMsi
+  ```
+- **Or run the convenience batch script:**
+  ```shell
+  .\BuildWindowsMsi.bat
+  ```
+
+The generated `.msi` installer will be located at:
+`composeApp/build/compose/binaries/main/msi/AboveABC80-<version>.msi` (for example `AboveABC80-1.0.5.msi`)
+
 ---
 
 ### Startup

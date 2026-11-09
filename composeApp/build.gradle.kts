@@ -1,6 +1,46 @@
 import org.apache.tools.ant.taskdefs.condition.Os
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.util.Properties
+
+fun getOrIncrementVersion(increment: Boolean): Triple<Int, Int, Int> {
+    val versionPropsFile = rootProject.file("version.properties")
+    val versionProps = Properties()
+    if (versionPropsFile.exists()) {
+        versionPropsFile.inputStream().use { versionProps.load(it) }
+    } else {
+        versionProps.setProperty("major", "1")
+        versionProps.setProperty("minor", "0")
+        versionProps.setProperty("patch", "0")
+        versionProps.setProperty("build", "1")
+    }
+
+    val major = versionProps.getProperty("major", "1").toInt()
+    val minor = versionProps.getProperty("minor", "0").toInt()
+    var patch = versionProps.getProperty("patch", "0").toInt()
+    var build = versionProps.getProperty("build", "1").toInt()
+
+    if (increment) {
+        patch += 1
+        build += 1
+        versionProps.setProperty("patch", patch.toString())
+        versionProps.setProperty("build", build.toString())
+        versionPropsFile.outputStream().use { versionProps.store(it, "Auto-incremented version properties") }
+        println("VERSION AUTO-INCREMENTED TO: $major.$minor.$patch (build $build)")
+    }
+
+    return Triple(major, minor, patch)
+}
+
+val isPackagingTaskRequested = gradle.startParameter.taskNames.any { name ->
+    name.contains("package", ignoreCase = true) ||
+    name.contains("release", ignoreCase = true) ||
+    name.contains("increment", ignoreCase = true)
+}
+
+val (majorVersion, minorVersion, patchVersion) = getOrIncrementVersion(isPackagingTaskRequested)
+val appVersionName = "$majorVersion.$minorVersion.$patchVersion"
+val appVersionCode = patchVersion + 1
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -182,12 +222,18 @@ android {
     namespace = "com.aboveware.aboveabc80"
     compileSdk = 37
 
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+        }
+    }
+
     defaultConfig {
         applicationId = "com.aboveware.aboveabc80"
         minSdk = 24
         targetSdk = 37
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = appVersionCode
+        versionName = appVersionName
 
         externalNativeBuild {
             cmake {
@@ -232,7 +278,7 @@ compose.desktop {
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb, TargetFormat.Exe)
             packageName = "AboveABC80"
-            packageVersion = "1.0.0"
+            packageVersion = appVersionName
             
             // Låter jpackage hitta sidobilder (main-dialog.bmp, main-banner.bmp) i denna mapp
             appResourcesRootDir.set(project.layout.projectDirectory.dir("package"))
