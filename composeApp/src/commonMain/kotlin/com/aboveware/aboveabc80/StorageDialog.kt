@@ -1062,7 +1062,7 @@ fun NewDisketteDialog(
                     modified
                 } else {
                     val volName = volumeName.ifEmpty { "SYSTEM" }
-                    Abc80FloppyLayout(selectedTemplate, 0).create(volName)
+                    createBlankDisk(selectedTemplate, volName)
                 }
                 if (saveLocalDisk(hostFileName, data)) {
                     onCreated(hostFileName)

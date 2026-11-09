@@ -76,6 +76,7 @@ import com.aboveware.aboveabc80.fileExists
 import com.aboveware.aboveabc80.folderExists
 import com.aboveware.aboveabc80.getPlatform
 import com.aboveware.aboveabc80.listLocalDisks
+import com.aboveware.aboveabc80.createBlankDisk
 import com.aboveware.aboveabc80.loadSystemDiskTemplate
 import com.aboveware.aboveabc80.pickFolder
 import com.aboveware.aboveabc80.saveLocalDisk
@@ -763,7 +764,7 @@ fun NewDiskDialog(
                     modified
                 } else {
                     val volName = volumeName.ifEmpty { "SYSTEM" }
-                    Abc80FloppyLayout(selectedTemplate, 0).create(volName)
+                    createBlankDisk(selectedTemplate, volName)
                 }
                 if (saveLocalDisk(hostFileName, data)) {
                     onCreated(hostFileName)
