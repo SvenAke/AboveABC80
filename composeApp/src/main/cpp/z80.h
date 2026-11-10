@@ -90,6 +90,7 @@ void z80_register_startup(void);
 int z80_init(int cpu_frequency);
 void z80_reset(bool hard_reset);
 int z80_interrupt(void);
+void z80_nmi(void);
 void z80_do_opcodes(void);
 void z80_enable_interrupts(void);
 void scf(void);

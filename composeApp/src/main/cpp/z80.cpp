@@ -47,7 +47,6 @@ int z80_nmos_iff2_event;
 
 static void z80_init_tables(void);
 
-static void z80_nmi(libspectrum_dword ts, int type, void *user_data);
 
 extern libspectrum_byte last_Q;
 
@@ -209,7 +208,7 @@ int z80_interrupt(void) {
 }
 
 /* Process a z80 non-maskable interrupt */
-static void z80_nmi(libspectrum_dword ts, int type, void *user_data) {
+void z80_nmi(void) {
     /* TODO: this isn't ideal */
     /*   if( spectranet_available && spectranet_nmi_flipflop() )
         return;
@@ -220,7 +219,7 @@ static void z80_nmi(libspectrum_dword ts, int type, void *user_data) {
     }
 
     IFF1 = 0;
-    R++;
+    R = (R & 0x80) | ((R + 1) & 0x7f);
     add_time(5);
 
     writeByte(--SP, PCH);

@@ -55,6 +55,13 @@ The generated `.msi` installer will be located at:
 
 ### Startup
 
+ABC80 delivers a non-maskable vertical-sync interrupt once per emulated frame.
+This wakes `DI`/`HALT` raster routines so programs such as ABCREZ can reach
+their keyboard polling code. ABC800M/C retain their separate interrupt hardware.
+The optional ABCREZ regression reads a user-supplied disk from
+`ABC80_ABCREZ_DSK`, runs `ABCREZ.BAC` in 40-column mode and checks that Space
+returns to BASIC without modifying the original disk.
+
 The floating menu moves up while the BASIC return button is visible, keeping
 the button's text unobstructed. It returns to its previous position afterwards.
 

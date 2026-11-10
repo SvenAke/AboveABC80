@@ -345,6 +345,10 @@ int run() {
         }
         event_next_event = execute;
 
+        if (!g_abc800m_active.load(std::memory_order_relaxed)) {
+            z80_nmi();
+        }
+
         if (!g_fast_speed) {
             const auto cpu_frequency = runtime_cpu_frequency.load(std::memory_order_relaxed);
             const auto frame_duration = std::chrono::nanoseconds(
