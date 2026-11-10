@@ -166,6 +166,12 @@ set; internal-storage downloads retain their original filenames.
 Disk directory listings decode ABC80 filename codes to Unicode Swedish letters
 (`][\}{|` to `ÅÄÖåäö`) without modifying the disk image.
 
+Cloud and disk file lists show a model-hint tag and an information button for
+BASIC/executable files. The hint uses filename extensions and, when available,
+recognized BASIC II or high-resolution graphics markers; it is only a heuristic,
+not a compatibility guarantee. The cloud browser downloads a file's contents
+only when its information button is opened.
+
 Cloud and archive dialogs offer text previews for filenames accepted by
 `String.isText()`. Preview actions use the same eye icon as cassette previews;
 cloud image previews also use this icon. Previewing does not import files to

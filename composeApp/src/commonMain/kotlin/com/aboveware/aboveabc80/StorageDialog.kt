@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.FolderOpen
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -64,6 +65,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.aboveware.aboveabc80.core.DiskController
 import com.aboveware.aboveabc80.core.AbcDiskImage
+import com.aboveware.aboveabc80.ui.ProgramCompatibilityInfoDialog
+import com.aboveware.aboveabc80.ui.ProgramCompatibilityTag
 import com.aboveware.aboveabc80.Abc80Log
 import com.aboveware.aboveabc80.core.unzipFile
 import kotlinx.coroutines.Dispatchers
@@ -113,6 +116,10 @@ fun StorageFileDialog(
     var textPreview by remember { mutableStateOf<Pair<String, AnnotatedString>?>(null) }
     var activeImageIndex by remember { mutableStateOf<Int?>(null) }
     var archivePreview by remember { mutableStateOf<Pair<String, List<ArchivedFile>>?>(null) }
+    var programCompatibilityDialog by remember {
+        mutableStateOf<Pair<String, ProgramCompatibilityHint>?>(null)
+    }
+    var compatibilityLoadingFor by remember { mutableStateOf<String?>(null) }
     var localDisks by remember { mutableStateOf(listLocalDisks()) }
     var showNewDiskDialog by remember { mutableStateOf(false) }
 
@@ -477,6 +484,9 @@ fun StorageFileDialog(
                             val isArchiveFile = !node.isDirectory && isArchiveFile(node.name)
                             val isImageFile = !node.isDirectory && isImageFile(node.name)
                             val isSelected = node in selectedNodes
+                            val compatibilityHint = if (isProgramCompatibilityCandidate(node.name)) {
+                                programCompatibilityHint(node.name, fileCache[node.fullName])
+                            } else null
 
                             val currentFolderImageNodes = remember(nodes) {
                                 nodes.filter { !it.isDirectory && isImageFile(it.name) }
@@ -485,7 +495,12 @@ fun StorageFileDialog(
                             ListItem(
                                 headlineContent = { Text(displayName) },
                                 supportingContent = if (!node.isDirectory) {
-                                    { Text(formatSize(node.size)) }
+                                    {
+                                        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                            Text(formatSize(node.size))
+                                            compatibilityHint?.let { ProgramCompatibilityTag(it) }
+                                        }
+                                    }
                                 } else null,
                                 leadingContent = {
                                     if (!node.isDirectory) {
@@ -633,6 +648,44 @@ fun StorageFileDialog(
                                                 Icon(
                                                     imageVector = Icons.Default.FolderOpen,
                                                     contentDescription = stringResource(Res.string.storage_open_archive)
+                                                )
+                                            }
+                                        }
+
+                                        if (compatibilityHint != null) {
+                                            IconButton(
+                                                onClick = {
+                                                    scope.launch {
+                                                        compatibilityLoadingFor = node.fullName
+                                                        try {
+                                                            val data = fileCache[node.fullName]
+                                                                ?: withContext(Dispatchers.IO) {
+                                                                    provider.downloadFile(node.fullName)
+                                                                }
+                                                                ?: error("Download returned no data")
+                                                            fileCache = fileCache + (node.fullName to data)
+                                                            programCompatibilityDialog =
+                                                                node.displayName to programCompatibilityHint(node.name, data)
+                                                        } catch (e: kotlinx.coroutines.CancellationException) {
+                                                            throw e
+                                                        } catch (e: Exception) {
+                                                            Abc80Log.wtf(
+                                                                "Could not inspect compatibility for ${node.name}: ${e.message}"
+                                                            )
+                                                            errorMessage =
+                                                                "${node.displayName}: $fileOpenFailedMessage"
+                                                        } finally {
+                                                            compatibilityLoadingFor = null
+                                                        }
+                                                    }
+                                                },
+                                                enabled = !isDownloading && compatibilityLoadingFor == null
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Info,
+                                                    contentDescription = stringResource(
+                                                        Res.string.program_compatibility_info_action
+                                                    )
                                                 )
                                             }
                                         }
@@ -868,6 +921,14 @@ fun StorageFileDialog(
             }
         }
     )
+
+    programCompatibilityDialog?.let { (fileName, hint) ->
+        ProgramCompatibilityInfoDialog(
+            fileName = fileName,
+            hint = hint,
+            onDismiss = { programCompatibilityDialog = null }
+        )
+    }
 
     if (showNewDiskDialog) {
         NewDisketteDialog(

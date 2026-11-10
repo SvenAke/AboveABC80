@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Visibility
@@ -35,6 +36,9 @@ import com.aboveware.aboveabc80.ArchiveFileTextPreviewDialog
 import com.aboveware.aboveabc80.formatSize
 import com.aboveware.aboveabc80.isText
 import com.aboveware.aboveabc80.toCloudDisplayName
+import com.aboveware.aboveabc80.ProgramCompatibilityHint
+import com.aboveware.aboveabc80.isProgramCompatibilityCandidate
+import com.aboveware.aboveabc80.programCompatibilityHint
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
@@ -78,6 +82,8 @@ import com.aboveware.aboveabc80.folderExists
 import com.aboveware.aboveabc80.getPlatform
 import com.aboveware.aboveabc80.listLocalDisks
 import com.aboveware.aboveabc80.createBlankDisk
+import com.aboveware.aboveabc80.ui.ProgramCompatibilityInfoDialog
+import com.aboveware.aboveabc80.ui.ProgramCompatibilityTag
 import com.aboveware.aboveabc80.newDiskFormatNames
 import com.aboveware.aboveabc80.loadSystemDiskTemplate
 import com.aboveware.aboveabc80.pickFolder
@@ -131,6 +137,10 @@ fun DiskManagerDialog(
     var listingImage by remember { mutableStateOf<ByteArray?>(null) }
     var textPreview by remember { mutableStateOf<Pair<String, String>?>(null) }
     var runnableFiles by remember { mutableStateOf(emptyMap<String, Abc80ExecutableFormat>()) }
+    var compatibilityHints by remember { mutableStateOf(emptyMap<String, ProgramCompatibilityHint>()) }
+    var programCompatibilityDialog by remember {
+        mutableStateOf<Pair<String, ProgramCompatibilityHint>?>(null)
+    }
 
     data class ExportPending(val parentDir: String, val floppyName: String, val floppy: AbcDiskImage)
     var exportPending by remember { mutableStateOf<ExportPending?>(null) }
@@ -209,8 +219,12 @@ fun DiskManagerDialog(
                         items(files) { (name, size) ->
                             val runnable = name in runnableFiles
                             val isPreviewable = runnableFiles[name] == Abc80ExecutableFormat.BAS || name.isText()
+                            val compatibilityHint = compatibilityHints[name]
                             ListItem(
                                 headlineContent = { Text(name.toCloudDisplayName()) },
+                                supportingContent = compatibilityHint?.let {
+                                    { ProgramCompatibilityTag(it) }
+                                },
                                 trailingContent = {
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
@@ -247,6 +261,16 @@ fun DiskManagerDialog(
                                                 }
                                             }
                                         }
+                                        if (compatibilityHint != null) {
+                                            CassetteIconButton(
+                                                Icons.Default.Info,
+                                                stringResource(Res.string.program_compatibility_info_action),
+                                                true
+                                            ) {
+                                                programCompatibilityDialog =
+                                                    name.toCloudDisplayName() to compatibilityHint
+                                            }
+                                        }
                                         Text(
                                             "${(size + 1023) / 1024} kB",
                                             modifier = Modifier.padding(start = 4.dp),
@@ -264,6 +288,14 @@ fun DiskManagerDialog(
                     Text(stringResource(Res.string.ui_close))
                 }
             }
+        )
+    }
+
+    programCompatibilityDialog?.let { (fileName, hint) ->
+        ProgramCompatibilityInfoDialog(
+            fileName = fileName,
+            hint = hint,
+            onDismiss = { programCompatibilityDialog = null }
         )
     }
 
@@ -298,12 +330,24 @@ fun DiskManagerDialog(
                                                             listingDrive = index
                                                             listingImage = image
                                                             val files = image?.let { Abc80FloppyLayout.list(it) }
-                                                            runnableFiles = files.orEmpty().mapNotNull { (name, _) ->
-                                                                val data = checkNotNull(Abc80FloppyLayout.readFile(checkNotNull(image), name)) {
+                                                            val executableFormats = mutableMapOf<String, Abc80ExecutableFormat>()
+                                                            val modelHints = mutableMapOf<String, ProgramCompatibilityHint>()
+                                                            files.orEmpty().forEach { (name, _) ->
+                                                                val data = checkNotNull(
+                                                                    Abc80FloppyLayout.readFile(checkNotNull(image), name)
+                                                                ) {
                                                                     "Could not read $name from ${mounted.name}"
                                                                 }
-                                                                abc80ExecutableFormat(name, data, 253)?.let { name to it }
-                                                            }.toMap()
+                                                                val executableFormat = abc80ExecutableFormat(name, data, 253)
+                                                                executableFormat?.let {
+                                                                    executableFormats[name] = it
+                                                                }
+                                                                if (executableFormat != null && isProgramCompatibilityCandidate(name)) {
+                                                                    modelHints[name] = programCompatibilityHint(name, data)
+                                                                }
+                                                            }
+                                                            runnableFiles = executableFormats
+                                                            compatibilityHints = modelHints
                                                             listing = mounted.name to files
                                                         } catch (e: IllegalArgumentException) {
                                                             Abc80Log.wtf("Invalid $modelName directory in ${mounted.name}: ${e.message}")
