@@ -712,6 +712,13 @@ internal fun ABC80Screen(
                     visible = nativeLib.screenCursorVisible
                 )
             }
+            if (model.isAbc800) {
+                if (abc80DosPromptVisible(rows)) {
+                    nativeLib.dosActive = true
+                } else if (rows.any { it.trim() == "ABC800" }) {
+                    nativeLib.dosActive = false
+                }
+            }
             if (++ticks % 10 == 0) blinkOn = !blinkOn
             delay(50)
         }
@@ -866,7 +873,7 @@ internal fun ABC80Screen(
             }
         }
         }
-            if (!isAbc800M && nativeLib.dosActive) {
+            if (nativeLib.dosActive) {
                 TextButton(
                     modifier = Modifier.align(Alignment.BottomEnd),
                     enabled = !returningToBasic,

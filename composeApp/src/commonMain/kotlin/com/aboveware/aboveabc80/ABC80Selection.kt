@@ -3,6 +3,7 @@ package com.aboveware.aboveabc80
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.aboveware.aboveabc80.terminal.TerminalManager
 import kotlinx.coroutines.delay
 
 internal class ABC80Selection {
@@ -49,8 +50,9 @@ internal fun abc80PasteCodes(text: String): List<Int> =
 
 internal suspend fun pasteABC80Text(nativeLib: NativeLib, text: String) {
     val codes = abc80PasteCodes(text)
+    val characterDelay = if (TerminalManager.computerModel.isAbc800) 70L else 20L
     for (code in codes) {
         nativeLib.sendKey(code)
-        delay(if (code == 13) 120 else 20)
+        delay(if (code == 13) 120 else characterDelay)
     }
 }

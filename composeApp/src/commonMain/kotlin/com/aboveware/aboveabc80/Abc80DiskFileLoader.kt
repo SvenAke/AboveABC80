@@ -1,17 +1,30 @@
 package com.aboveware.aboveabc80
 
 import com.aboveware.aboveabc80.core.DiskController
+import com.aboveware.aboveabc80.terminal.ComputerModel
+import com.aboveware.aboveabc80.terminal.TerminalManager
 import kotlinx.coroutines.delay
 import kotlin.time.TimeSource
 
-internal fun abc80DosPromptVisible(memory: ByteArray): Boolean {
-    val rows = decodeABC80Screen(memory)
+internal fun abc80DosPromptVisible(memory: ByteArray): Boolean =
+    abc80DosPromptVisible(decodeABC80Screen(memory))
+
+internal fun abc80DosPromptVisible(rows: List<String>): Boolean {
     val dosPrompt = rows.indexOfLast { it.contains("R E A D Y") }
-    return dosPrompt >= 0 && dosPrompt > rows.indexOfLast { it.trim() == "ABC80" }
+    return dosPrompt >= 0 && dosPrompt > rows.indexOfLast {
+        it.trim() == "ABC80" || it.trim() == "ABC800"
+    }
 }
 
+internal fun abc80DosPromptVisible(nativeLib: NativeLib): Boolean =
+    abc80DosPromptVisible(when (TerminalManager.computerModel) {
+        ComputerModel.ABC80 -> decodeABC80Screen(nativeLib.getMemory())
+        ComputerModel.ABC800M -> decodeABC800MScreen(nativeLib.getAbc800MTextScreen())
+        ComputerModel.ABC800C -> decodeABC800CScreen(nativeLib.getAbc800CTextScreen())
+    })
+
 internal suspend fun runABC80AbsoluteFile(nativeLib: NativeLib, name: String) {
-    fun dosReady() = abc80DosPromptVisible(nativeLib.getMemory())
+    fun dosReady() = abc80DosPromptVisible(nativeLib)
     if (!dosReady()) {
         pasteABC80Text(nativeLib, "BYE\r")
         val started = TimeSource.Monotonic.markNow()

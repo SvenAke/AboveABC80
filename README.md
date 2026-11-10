@@ -126,6 +126,11 @@ number, format and byte size. Raw ABC80/ABC800 images must be 81920, 163840, 327
 disk image; for example, a renamed TAR archive cannot be mounted as a floppy.
 Mount and directory error messages identify the selected computer model.
 The bundled system disk contains `COPY.ABS` (not `COPY.BAS`).
+Running an ABS file from the disk manager enters DOS and then sends its
+filename at the READY prompt. Prompt detection uses the selected model's
+screen memory on ABC80, ABC800M and ABC800C.
+Pasted text and disk commands use 70 ms between characters on ABC800M/C
+to avoid losing input; ABC80 retains its 20 ms character interval.
 
 TeleDisk `.td0` images can also be mounted from the local disk library or the
 cloud browser. Supported images use the `TD` signature or the `td` signature
