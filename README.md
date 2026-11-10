@@ -55,6 +55,11 @@ The generated `.msi` installer will be located at:
 
 ### Startup
 
+The floating menu button can be dragged with the mouse or a finger within the
+emulator screen. Clicking or tapping it still opens and closes the menu.
+The position is kept while the screen is open; the menu stays within the
+available screen area and scrolls when necessary.
+
 Android on-screen keyboards use model-selected XML resources:
 `composeApp/src/androidMain/res/xml/abc80.xml` for ABC80 and
 `composeApp/src/androidMain/res/xml/abc800.xml` shared by ABC800M/C.

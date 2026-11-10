@@ -29,6 +29,9 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -38,6 +41,7 @@ import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -106,10 +110,13 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.round
 import androidx.compose.ui.zIndex
 import com.aboveware.aboveabc80.core.AudioPlayer
 import com.aboveware.aboveabc80.core.SoundOutput
@@ -138,6 +145,12 @@ import kotlin.time.TimeSource
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.stringResource
 import kotlin.time.Duration.Companion.milliseconds
+
+internal fun constrainFabMenuOffset(offset: Offset, viewport: IntSize, menu: IntSize): Offset =
+    Offset(
+        offset.x.coerceIn(minOf(0, menu.width - viewport.width).toFloat(), 0f),
+        offset.y.coerceIn(minOf(0, menu.height - viewport.height).toFloat(), 0f)
+    )
 
 @OptIn(ExperimentalResourceApi::class)
 private suspend fun restoreDisksForModel(model: ComputerModel, migrateLegacySettings: Boolean = false) {
@@ -257,6 +270,9 @@ fun EmulatorScreen(startWithStorageOpen: Boolean = false, onLanguageChange: (Str
     var isFastSpeedMode by remember { mutableStateOf(nativeLib.isFastSpeed()) }
     var speedDialOpen by remember { mutableStateOf(value = false) }
     var speedDialTestOpen by remember { mutableStateOf(value = false) }
+    var fabOffset by remember { mutableStateOf(Offset.Zero) }
+    var fabViewportSize by remember { mutableStateOf(IntSize.Zero) }
+    var fabMenuSize by remember { mutableStateOf(IntSize.Zero) }
     var showCharacterSet by remember { mutableStateOf(false) }
     if (showCharacterSet) {
         CharacterSetDialog(onDismiss = { showCharacterSet = false })
@@ -650,6 +666,7 @@ fun EmulatorScreen(startWithStorageOpen: Boolean = false, onLanguageChange: (Str
                     .weight(1f)
                     .fillMaxWidth()
                     .clipToBounds()
+                    .onSizeChanged { fabViewportSize = it }
                     .onFocusChanged { state -> isFocused.value = state.isFocused },
                 contentAlignment = Alignment.BottomCenter
             ) {
@@ -895,15 +912,23 @@ fun EmulatorScreen(startWithStorageOpen: Boolean = false, onLanguageChange: (Str
                 Box(
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
+                        .offset {
+                            constrainFabMenuOffset(fabOffset, fabViewportSize, fabMenuSize).round()
+                        }
+                        .onSizeChanged { fabMenuSize = it }
                         .padding(16.dp)
                 ) {
                     Column(horizontalAlignment = Alignment.End) {
                         AnimatedVisibility(
                             visible = speedDialOpen,
+                            modifier = Modifier.weight(1f, fill = false),
                             enter = fadeIn() + expandVertically() + slideInVertically { it / 2 },
                             exit = fadeOut() + shrinkVertically() + slideOutVertically { it / 2 }
                         ) {
-                            Column(horizontalAlignment = Alignment.End) {
+                            Column(
+                                horizontalAlignment = Alignment.End,
+                                modifier = Modifier.verticalScroll(rememberScrollState())
+                            ) {
                                 // Restart System
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
@@ -1130,6 +1155,16 @@ fun EmulatorScreen(startWithStorageOpen: Boolean = false, onLanguageChange: (Str
                         }
 
                         FloatingActionButton(
+                            modifier = Modifier.pointerInput(Unit) {
+                                detectDragGestures { change, dragAmount ->
+                                    change.consume()
+                                    fabOffset = constrainFabMenuOffset(
+                                        constrainFabMenuOffset(fabOffset, fabViewportSize, fabMenuSize) + dragAmount,
+                                        fabViewportSize,
+                                        fabMenuSize
+                                    )
+                                }
+                            },
                             onClick = {
                                 speedDialOpen = !speedDialOpen
                                 if (!speedDialOpen) {
