@@ -916,6 +916,7 @@ fun EmulatorScreen(startWithStorageOpen: Boolean = false, onLanguageChange: (Str
                             constrainFabMenuOffset(fabOffset, fabViewportSize, fabMenuSize).round()
                         }
                         .onSizeChanged { fabMenuSize = it }
+                        .padding(bottom = if (nativeLib.dosActive) 64.dp else 0.dp)
                         .padding(16.dp)
                 ) {
                     Column(horizontalAlignment = Alignment.End) {

@@ -55,6 +55,9 @@ The generated `.msi` installer will be located at:
 
 ### Startup
 
+The floating menu moves up while the BASIC return button is visible, keeping
+the button's text unobstructed. It returns to its previous position afterwards.
+
 The floating menu button can be dragged with the mouse or a finger within the
 emulator screen. Clicking or tapping it still opens and closes the menu.
 The position is kept while the screen is open; the menu stays within the
