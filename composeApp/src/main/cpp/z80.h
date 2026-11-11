@@ -85,7 +85,6 @@ libspectrum_byte readport(libspectrum_word port);
 void writeport(libspectrum_word port, libspectrum_byte b);
 
 void add_time(libspectrum_dword time);
-void z80_retn(void);
 void z80_register_startup(void);
 int z80_init(int cpu_frequency);
 void z80_reset(bool hard_reset);

@@ -56,6 +56,11 @@ The generated `.msi` installer will be located at:
 ### Startup
 
 ABC80 delivers a non-maskable vertical-sync interrupt once per emulated frame.
+Its `RETN` return does not acknowledge the cassette PIO interrupt; only `RETI`
+releases that interrupt, preserving cassette reads during vertical sync.
+The optional cassette regression uses `ABC80_CURRENT_TAPE` to read a copy of
+the persisted `current.tape` (including its 8-byte position header), loads
+`MUSIK.BAS` with vertical sync enabled and checks that its keyboard appears.
 This wakes `DI`/`HALT` raster routines so programs such as ABCREZ can reach
 their keyboard polling code. ABC800M/C retain their separate interrupt hardware.
 The optional ABCREZ regression reads a user-supplied disk from

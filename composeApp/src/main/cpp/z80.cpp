@@ -245,6 +245,3 @@ void z80_nmi(void) {
     Q = 0;
     PC = 0x0066;
 }
-
-/* Special peripheral processing for RETN */
-void z80_retn(void) { abc80_cassette_reti(); }
