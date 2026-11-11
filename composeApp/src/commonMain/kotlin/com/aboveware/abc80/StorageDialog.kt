@@ -1,0 +1,1245 @@
+package com.aboveware.abc80
+
+import aboveabc80.composeapp.generated.resources.*
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import com.aboveware.abc80.ui.DiskFormatDropdown
+import com.aboveware.abc80.terminal.TerminalManager
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ChevronLeft
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.FolderOpen
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Storage
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import com.aboveware.abc80.core.DiskController
+import com.aboveware.abc80.core.AbcDiskImage
+import com.aboveware.abc80.ui.ProgramCompatibilityInfoDialog
+import com.aboveware.abc80.ui.ProgramCompatibilityTag
+import com.aboveware.abc80.Abc80Log
+import com.aboveware.abc80.core.unzipFile
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
+import java.io.File
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.jetbrains.compose.resources.ExperimentalResourceApi
+import org.jetbrains.compose.resources.stringResource
+
+@OptIn(ExperimentalComposeUiApi::class)
+@Composable
+fun StorageFileDialog(
+    filter: String = "",
+    targetDriveIndex: Int? = null,
+    rootPath: String = if (TerminalManager.computerModel.isAbc800) "abc/abc800/" else "abc/abc80/",
+    downloadFolder: String? = null,
+    onFilesDownloaded: ((List<String>) -> Unit)? = null,
+    onDismiss: () -> Unit,
+    onFilesSelected: ((List<Pair<String, ByteArray>>, Boolean) -> Unit)? = null
+) {
+    val provider = remember { FirebaseRestStorageProvider() }
+    DisposableEffect(provider) {
+        onDispose { provider.close() }
+    }
+    val scope = rememberCoroutineScope()
+    val controller = remember { DiskController.instance }
+    var nodes by remember { mutableStateOf<List<StorageNode>>(emptyList()) }
+    var pathStack by remember { mutableStateOf(listOf(rootPath)) }
+    val destinationFolder = cloudDownloadFolder(pathStack.lastOrNull() ?: rootPath, downloadFolder)
+    var isLoading by remember { mutableStateOf(true) }
+    var isDownloading by remember { mutableStateOf(false) }
+    var downloadingFileName by remember { mutableStateOf("") }
+    var downloadedBytes by remember { mutableStateOf(0L) }
+    var clearDestinationBeforeDownload by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+    val fileLoadFailedMessage = stringResource(Res.string.storage_file_load_failed)
+    val fileOpenFailedMessage = stringResource(Res.string.storage_file_open_failed)
+    val pdfOpenFailedMessage = stringResource(Res.string.storage_pdf_open_failed)
+    val compressedPreviewMessage = stringResource(Res.string.storage_compressed_preview)
+    val htmlPreviewFailedMessage = stringResource(Res.string.html_preview_failed)
+    val fileDownloadFailedMessage = stringResource(Res.string.storage_file_download_failed)
+    val filesLoadFailedMessage = stringResource(Res.string.storage_load_failed)
+
+    var selectedCloudFiles by remember { mutableStateOf<List<Pair<String, ByteArray>>>(emptyList()) }
+    var selectedNodes by remember(nodes) { mutableStateOf<Set<StorageNode>>(emptySet()) }
+    var textPreview by remember { mutableStateOf<Pair<String, AnnotatedString>?>(null) }
+    var activeImageIndex by remember { mutableStateOf<Int?>(null) }
+    var archivePreview by remember { mutableStateOf<Pair<String, List<ArchivedFile>>?>(null) }
+    var programCompatibilityDialog by remember {
+        mutableStateOf<Pair<String, ProgramCompatibilityHint>?>(null)
+    }
+    var compatibilityLoadingFor by remember { mutableStateOf<String?>(null) }
+    var localDisks by remember { mutableStateOf(listLocalDisks()) }
+    var showNewDiskDialog by remember { mutableStateOf(false) }
+
+    // Refresh list when dialog opens
+    LaunchedEffect(Unit) {
+        localDisks = listLocalDisks()
+    }
+
+    var thumbnails by remember { mutableStateOf(mapOf<String, ImageBitmap>()) }
+    var fileCache by remember { mutableStateOf(mapOf<String, ByteArray>()) }
+
+    fun injectFileToDisk(
+        diskName: String,
+        fileName: String,
+        data: ByteArray,
+        shouldClearFirst: Boolean = false
+    ) {
+        val drive = controller.mountedDisks.entries.firstOrNull { it.value.name == diskName }?.key
+            ?: (targetDriveIndex ?: controller.currentDriveIndex).also {
+                check(controller.loadFromLocal(it, diskName) != null) { "Kunde inte montera $diskName" }
+            }
+        Abc80CloudDiskImport.save(drive, listOf(fileName to data), shouldClearFirst)
+    }
+
+    fun handleFilesSelection(files: List<Pair<String, ByteArray>>) {
+        if (onFilesSelected != null) {
+            onFilesSelected.invoke(files, clearDestinationBeforeDownload)
+            onDismiss()
+        } else {
+            val drive = targetDriveIndex ?: controller.currentDriveIndex
+            scope.launch {
+                isDownloading = true
+                try {
+                    withContext(Dispatchers.IO) {
+                        Abc80CloudDiskImport.save(drive, files, clearDestinationBeforeDownload)
+                    }
+                    onDismiss()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Abc80Log.wtf("Cloud import to DR$drive failed for files [${files.joinToString { it.first }}]: ${e.message}")
+                    errorMessage = e.message ?: fileDownloadFailedMessage
+                } finally {
+                    isDownloading = false
+                }
+            }
+        }
+    }
+
+    fun isArchiveFile(name: String): Boolean =
+        name.substringAfterLast('.', "").lowercase() in setOf("ark", "arc", "zip", "lbr")
+
+    fun isImageFile(name: String): Boolean =
+        name.substringAfterLast('.', "").lowercase() in setOf("jpg", "jpeg", "png", "bmp", "gif", "webp")
+
+    fun openArchive(node: StorageNode) {
+        scope.launch {
+            downloadingFileName = node.displayName
+            isDownloading = true
+            try {
+                val data = fileCache[node.fullName] ?: provider.downloadFile(node.fullName)
+                if (data == null) {
+                    errorMessage = fileLoadFailedMessage
+                } else {
+                    if (!fileCache.containsKey(node.fullName)) {
+                        fileCache = fileCache + (node.fullName to data)
+                    }
+                    val files = when (node.name.substringAfterLast('.', "").lowercase()) {
+                        "ark", "arc" -> NativeLib.getObject().extractArkArchive(data)
+                        "zip" -> unzipFile(data)
+                        "lbr" -> NativeLib.getObject().extractLbrArchive(data)
+                        else -> emptyList()
+                    }
+                    archivePreview = node.displayName to files
+                }
+            } catch (e: Exception) {
+                Abc80Log.wtf("Could not open archive ${node.name}: ${e.message}")
+                errorMessage = fileOpenFailedMessage
+            } finally {
+                isDownloading = false
+            }
+        }
+    }
+
+    val currentPrefix = pathStack.lastOrNull() ?: rootPath
+
+    LaunchedEffect(currentPrefix) {
+        isLoading = true
+        try {
+            nodes = provider.listFiles(currentPrefix)
+            isLoading = false
+            errorMessage = null
+        } catch (e: Exception) {
+            Abc80Log.wtf("Could not load storage files at $currentPrefix: ${e.message}")
+            errorMessage = filesLoadFailedMessage
+            isLoading = false
+        }
+    }
+
+    LaunchedEffect(nodes) {
+        nodes.filter { !it.isDirectory }.forEach { node ->
+            val lowerName = node.name.lowercase()
+            val isImage = lowerName.endsWith(".jpg") || lowerName.endsWith(".jpeg") ||
+                    lowerName.endsWith(".png") || lowerName.endsWith(".bmp")
+
+            if (isImage && !thumbnails.containsKey(node.fullName)) {
+                launch {
+                    val data = fileCache[node.fullName] ?: provider.downloadFile(node.fullName)
+                    if (data != null) {
+                        if (!fileCache.containsKey(node.fullName)) {
+                            fileCache = fileCache + (node.fullName to data)
+                        }
+                        val imageBitmap = decodeImagePlatform(data)
+                        if (imageBitmap != null) {
+                            thumbnails = thumbnails + (node.fullName to imageBitmap)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = {
+            if (!isDownloading) {
+                if (selectedCloudFiles.isNotEmpty()) {
+                    selectedCloudFiles = emptyList()
+                } else {
+                    onDismiss()
+                }
+            }
+        },
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        stringResource(
+                            if (selectedCloudFiles.isNotEmpty()) {
+                                Res.string.storage_save_to_diskette
+                            } else {
+                                Res.string.storage_cloud_files
+                            }
+                        )
+                    )
+                    if (pathStack.size > 1 && selectedCloudFiles.isEmpty()) {
+                        Text(
+                            text = "/" + (pathStack.lastOrNull() ?: rootPath)
+                                .removePrefix("abc/abc80/")
+                                .removePrefix("abc/abc800/")
+                                .removePrefix("abc80/")
+                                .removePrefix("abc800/")
+                                .toCloudDisplayName(),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+        },
+        text = {
+            Box(modifier = Modifier.sizeIn(minHeight = 300.dp, maxHeight = 500.dp).fillMaxWidth()) {
+                if (isLoading) {
+                    Column(
+                        modifier = Modifier.align(Alignment.Center),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                } else if (selectedCloudFiles.isNotEmpty()) {
+                    val controller = DiskController.instance
+                    val mountedDrives = (0 until DiskController.instance.maxDrives).mapNotNull { i ->
+                        val mounted = controller.mountedDisks[i]
+                        if (mounted != null) {
+                            i to mounted
+                        } else null
+                    }
+
+                    Column {
+                        val totalBytes = selectedCloudFiles.sumOf { it.second.size.toLong() }
+                        val displayNames = if (selectedCloudFiles.size > 1) {
+                            "${selectedCloudFiles.size} files"
+                        } else if (selectedCloudFiles.isNotEmpty()) {
+                            "\"${selectedCloudFiles.firstOrNull()?.first ?: ""}\""
+                        } else ""
+
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                stringResource(Res.string.storage_save_files_to, displayNames),
+                                style = MaterialTheme.typography.titleSmall
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "(${formatSize(totalBytes)})",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary // Default color at top
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        LazyColumn(modifier = Modifier.weight(1f)) {
+                            if (mountedDrives.isNotEmpty()) {
+                                item {
+                                    Text(
+                                        "Mounted Drives",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        modifier = Modifier.padding(8.dp)
+                                    )
+                                }
+                                items(mountedDrives) { (index, mounted) ->
+                                    val floppy = controller.getFloppy(index)
+                                    val activeIdx = targetDriveIndex ?: controller.currentDriveIndex
+                                    val isTargetDrive = index == activeIdx
+                                    val freeSpace =
+                                        if (clearDestinationBeforeDownload && isTargetDrive && floppy != null) {
+                                            val copy =
+                                                AbcDiskImage.createFromData(floppy.getRawData().copyOf())
+                                            copy.format()
+                                            copy.getFreeSpace()
+                                        } else {
+                                            floppy?.getFreeSpace() ?: 0L
+                                        }
+                                    val fits = freeSpace >= totalBytes
+
+                                    ListItem(
+                                        headlineContent = {
+                                            Text(
+                                                "Drive ${('A' + index)}: ${
+                                                    mounted.name.substringBeforeLast(
+                                                        "."
+                                                    )
+                                                }"
+                                            )
+                                        },
+                                        supportingContent = {
+                                            Text(
+                                                text = "Free space: ${formatSize(freeSpace)}",
+                                                color = if (fits) MaterialTheme.colorScheme.onSurfaceVariant else Color.Red
+                                            )
+                                        },
+                                        leadingContent = {
+                                            Icon(
+                                                Icons.Default.Storage,
+                                                contentDescription = null,
+                                                tint = if (fits) MaterialTheme.colorScheme.primary else Color.Red
+                                            )
+                                        },
+                                        modifier = Modifier.clickable {
+                                            selectedCloudFiles.forEachIndexed { i, (fileName, fileData) ->
+                                                val shouldClear =
+                                                    clearDestinationBeforeDownload && (i == 0) && isTargetDrive
+                                                injectFileToDisk(
+                                                    mounted.name,
+                                                    fileName,
+                                                    fileData,
+                                                    shouldClearFirst = shouldClear
+                                                )
+                                            }
+                                            selectedCloudFiles = emptyList()
+                                            onDismiss()
+                                        }
+                                    )
+                                }
+                                item { HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp)) }
+                            }
+
+                            item {
+                                ListItem(
+                                    headlineContent = {
+                                        Text(
+                                            "Create new diskette...",
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    },
+                                    leadingContent = {
+                                        Icon(
+                                            Icons.Default.Add,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.primary
+                                        )
+                                    },
+                                    modifier = Modifier.clickable { showNewDiskDialog = true }
+                                )
+                            }
+
+                            val otherDisks = localDisks.filter { diskName ->
+                                mountedDrives.none { it.second.name == diskName }
+                            }
+
+                            if (otherDisks.isNotEmpty()) {
+                                item {
+                                    Text(
+                                        "Other Disks",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        modifier = Modifier.padding(8.dp)
+                                    )
+                                }
+                                items(otherDisks) { diskName ->
+                                    val ext = diskName.substringAfterLast(".").uppercase()
+                                    val bytes = loadLocalDisk(diskName)
+                                    val freeSpace = if (bytes != null) AbcDiskImage.createFromData(bytes)
+                                        .getFreeSpace() else 0L
+                                    val fits = freeSpace >= totalBytes
+
+                                    ListItem(
+                                        headlineContent = { Text(diskName.substringBeforeLast(".") + if (ext != "DSK") " ($ext)" else "") },
+                                        supportingContent = {
+                                            Text(
+                                                text = "Free space: ${formatSize(freeSpace)}",
+                                                color = if (fits) MaterialTheme.colorScheme.onSurfaceVariant else Color.Red
+                                            )
+                                        },
+                                        leadingContent = {
+                                            Icon(
+                                                Icons.Default.Storage,
+                                                contentDescription = null,
+                                                tint = if (fits) Color.Unspecified else Color.Red
+                                            )
+                                        },
+                                        modifier = Modifier.clickable {
+                                            selectedCloudFiles.forEach { (fileName, fileData) ->
+                                                injectFileToDisk(diskName, fileName, fileData)
+                                            }
+                                            selectedCloudFiles = emptyList()
+                                            onDismiss()
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                } else if (errorMessage != null) {
+                    Text(errorMessage!!, color = MaterialTheme.colorScheme.error)
+                } else {
+                    val filteredNodes = nodes.filter { node ->
+                        if (filter == "snapshot") {
+                            node.isDirectory // Snapshots removed
+                        } else true
+                    }
+                    LazyColumn {
+                        if (pathStack.size > 1) {
+                            item {
+                                ListItem(
+                                    headlineContent = { Text("..") },
+                                    leadingContent = {
+                                        Icon(
+                                            Icons.Default.Folder,
+                                            contentDescription = null,
+                                            tint = Color(0xFFFFC107)
+                                        )
+                                    },
+                                    modifier = Modifier.clickable {
+                                        pathStack = pathStack.dropLast(1)
+                                    }
+                                )
+                            }
+                        }
+
+                        items(filteredNodes) { node ->
+                            val thumbnail = thumbnails[node.fullName]
+                            val displayName = node.displayName
+                            val isTextFile = !node.isDirectory && (node.name.isText() || node.name.isHtml())
+                            val isArchiveFile = !node.isDirectory && isArchiveFile(node.name)
+                            val isImageFile = !node.isDirectory && isImageFile(node.name)
+                            val isSelected = node in selectedNodes
+                            val compatibilityHint = if (isProgramCompatibilityCandidate(node.name)) {
+                                programCompatibilityHint(node.name, fileCache[node.fullName])
+                            } else null
+
+                            val currentFolderImageNodes = remember(nodes) {
+                                nodes.filter { !it.isDirectory && isImageFile(it.name) }
+                            }
+
+                            ListItem(
+                                headlineContent = { Text(displayName) },
+                                supportingContent = if (!node.isDirectory) {
+                                    {
+                                        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                            Text(formatSize(node.size))
+                                            compatibilityHint?.let { ProgramCompatibilityTag(it) }
+                                        }
+                                    }
+                                } else null,
+                                leadingContent = {
+                                    if (!node.isDirectory) {
+                                        Checkbox(
+                                            checked = isSelected,
+                                            onCheckedChange = { checked ->
+                                                selectedNodes = if (checked) {
+                                                    selectedNodes + node
+                                                } else {
+                                                    selectedNodes - node
+                                                }
+                                            }
+                                        )
+                                    } else {
+                                        Icon(
+                                            Icons.Default.Folder,
+                                            contentDescription = null,
+                                            tint = Color(0xFFFFC107)
+                                        )
+                                    }
+                                },
+                                trailingContent = {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        if (thumbnail != null) {
+                                            Image(
+                                                bitmap = thumbnail,
+                                                contentDescription = null,
+                                                modifier = Modifier
+                                                    .size(40.dp)
+                                                    .clickable {
+                                                        val idx = currentFolderImageNodes.indexOf(node)
+                                                        if (idx >= 0) activeImageIndex = idx
+                                                    }
+                                            )
+                                        }
+
+                                        if (isImageFile) {
+                                            IconButton(
+                                                onClick = {
+                                                    val idx = currentFolderImageNodes.indexOf(node)
+                                                    if (idx >= 0) activeImageIndex = idx
+                                                },
+                                                enabled = !isDownloading
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Visibility,
+                                                    contentDescription = stringResource(Res.string.storage_preview_image)
+                                                )
+                                            }
+                                        }
+
+                                        if (isTextFile) {
+                                            IconButton(
+                                                onClick = {
+                                                    val isPdf =
+                                                        node.name.endsWith(
+                                                            ".pdf",
+                                                            ignoreCase = true
+                                                        )
+                                                    val cachedData = fileCache[node.fullName]
+                                                    if (cachedData != null && !isPdf && !node.name.isHtml()) {
+                                                        val content = if (cachedData.size >= 2 &&
+                                                            cachedData[0] == 0x76.toByte() &&
+                                                            cachedData[1] == 0xFF.toByte()
+                                                        ) {
+                                                            compressedPreviewMessage
+                                                        } else {
+                                                            cachedData.toCloudPreviewText()
+                                                        }
+                                                        textPreview =
+                                                            node.displayName to AnnotatedString(content)
+                                                    } else {
+                                                        scope.launch {
+                                                            downloadingFileName = node.displayName
+                                                            isDownloading = true
+                                                            try {
+                                                                val downloadedData = cachedData
+                                                                    ?: withContext(Dispatchers.IO) {
+                                                                        provider.downloadFile(node.fullName)
+                                                                    }
+                                                                    ?: error("Download returned no data")
+                                                                fileCache =
+                                                                    fileCache + (node.fullName to downloadedData)
+
+                                                                if (node.name.isHtml()) {
+                                                                    val opened = withContext(Dispatchers.IO) {
+                                                                        openHtmlPreview(node.displayName, downloadedData)
+                                                                    }
+                                                                    if (!opened) {
+                                                                        errorMessage = "${node.displayName}: $htmlPreviewFailedMessage"
+                                                                    }
+                                                                } else if (isPdf) {
+                                                                    val opened =
+                                                                        withContext(Dispatchers.IO) {
+                                                                            openPdfPreview(
+                                                                                node.displayName,
+                                                                                downloadedData
+                                                                            )
+                                                                        }
+                                                                    if (!opened) {
+                                                                        errorMessage =
+                                                                            "${node.displayName}: $pdfOpenFailedMessage"
+                                                                    }
+                                                                } else {
+                                                                    val content =
+                                                                        if (downloadedData.size >= 2 &&
+                                                                            downloadedData[0] == 0x76.toByte() &&
+                                                                            downloadedData[1] == 0xFF.toByte()
+                                                                        ) {
+                                                                            compressedPreviewMessage
+                                                                        } else {
+                                                                            downloadedData.toCloudPreviewText()
+                                                                        }
+                                                                    textPreview =
+                                                                        node.displayName to AnnotatedString(
+                                                                            content
+                                                                        )
+                                                                }
+                                                            } catch (e: kotlinx.coroutines.CancellationException) {
+                                                                throw e
+                                                            } catch (e: Exception) {
+                                                                Abc80Log.wtf("Could not open ${node.name}: ${e.message}")
+                                                                errorMessage =
+                                                                    "${node.displayName}: $fileOpenFailedMessage"
+                                                            } finally {
+                                                                isDownloading = false
+                                                            }
+                                                        }
+                                                    }
+                                                },
+                                                enabled = !isDownloading
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Visibility,
+                                                    contentDescription = stringResource(Res.string.ui_preview)
+                                                )
+                                            }
+                                        }
+
+                                        if (isArchiveFile) {
+                                            IconButton(
+                                                onClick = { openArchive(node) },
+                                                enabled = !isDownloading
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.FolderOpen,
+                                                    contentDescription = stringResource(Res.string.storage_open_archive)
+                                                )
+                                            }
+                                        }
+
+                                        if (compatibilityHint != null) {
+                                            IconButton(
+                                                onClick = {
+                                                    scope.launch {
+                                                        compatibilityLoadingFor = node.fullName
+                                                        try {
+                                                            val data = fileCache[node.fullName]
+                                                                ?: withContext(Dispatchers.IO) {
+                                                                    provider.downloadFile(node.fullName)
+                                                                }
+                                                                ?: error("Download returned no data")
+                                                            fileCache = fileCache + (node.fullName to data)
+                                                            programCompatibilityDialog =
+                                                                node.displayName to programCompatibilityHint(node.name, data)
+                                                        } catch (e: kotlinx.coroutines.CancellationException) {
+                                                            throw e
+                                                        } catch (e: Exception) {
+                                                            Abc80Log.wtf(
+                                                                "Could not inspect compatibility for ${node.name}: ${e.message}"
+                                                            )
+                                                            errorMessage =
+                                                                "${node.displayName}: $fileOpenFailedMessage"
+                                                        } finally {
+                                                            compatibilityLoadingFor = null
+                                                        }
+                                                    }
+                                                },
+                                                enabled = !isDownloading && compatibilityLoadingFor == null
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Info,
+                                                    contentDescription = stringResource(
+                                                        Res.string.program_compatibility_info_action
+                                                    )
+                                                )
+                                            }
+                                        }
+                                    }
+                                },
+                                modifier = Modifier.clickable {
+                                    if (node.isDirectory) {
+                                        pathStack = pathStack + node.fullName
+                                    } else {
+                                        selectedNodes = if (isSelected) {
+                                            selectedNodes - node
+                                        } else {
+                                            selectedNodes + node
+                                        }
+                                    }
+                                }
+                            )
+                        }
+
+                        if (filteredNodes.isEmpty() && pathStack.size == 1) {
+                            item {
+                                Text(
+                                    stringResource(Res.string.storage_no_matching_files),
+                                    modifier = Modifier.padding(16.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                if (isDownloading) {
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .background(Color.Black.copy(alpha = 0.35f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.surface,
+                            tonalElevation = 6.dp,
+                            shadowElevation = 8.dp,
+                            border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary),
+                            modifier = Modifier
+                                .fillMaxWidth(0.85f)
+                                .padding(16.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .padding(24.dp)
+                                    .fillMaxWidth(),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Text(
+                                    text = if (downloadingFileName.isNotEmpty()) {
+                                        stringResource(
+                                            Res.string.storage_downloading,
+                                            downloadingFileName
+                                        ) + if (destinationFolder != null) {
+                                            " (${formatSize(downloadedBytes)})"
+                                        } else {
+                                            ""
+                                        }
+                                    } else {
+                                        stringResource(Res.string.storage_download_progress)
+                                    },
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Medium,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            if (selectedCloudFiles.isNotEmpty()) {
+                TextButton(onClick = {
+                    selectedCloudFiles = emptyList()
+                    clearDestinationBeforeDownload = false
+                }) {
+                    Text(stringResource(Res.string.ui_back))
+                }
+            } else {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    val activeFloppy =
+                        controller.getFloppy(targetDriveIndex ?: controller.currentDriveIndex)
+                    val onlyDiskImagesSelected = selectedNodes.isNotEmpty() &&
+                        selectedNodes.all { isDiskImageName(it.name) }
+                    if (activeFloppy != null && (rootPath.startsWith("abc/") || rootPath == "abc80/" || rootPath == "abc800/") && destinationFolder == null &&
+                        !onlyDiskImagesSelected
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    clearDestinationBeforeDownload = !clearDestinationBeforeDownload
+                                }
+                                .padding(horizontal = 8.dp, vertical = 2.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Checkbox(
+                                checked = clearDestinationBeforeDownload,
+                                onCheckedChange = { clearDestinationBeforeDownload = it }
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = stringResource(Res.string.archive_clear_floppy),
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        TextButton(onClick = onDismiss, enabled = !isDownloading) {
+                            Text(stringResource(Res.string.ui_close))
+                        }
+
+                        Row {
+                            val fileNodes = nodes.filter { !it.isDirectory }
+                            TextButton(
+                                enabled = fileNodes.isNotEmpty() && !isDownloading,
+                                onClick = {
+                                    selectedNodes = if (selectedNodes.size == fileNodes.size) {
+                                        emptySet()
+                                    } else {
+                                        fileNodes.toSet()
+                                    }
+                                }
+                            ) {
+                                Text(
+                                    stringResource(
+                                        if (selectedNodes.size == fileNodes.size && fileNodes.isNotEmpty()) {
+                                            Res.string.ui_deselect_all
+                                        } else {
+                                            Res.string.ui_select_all
+                                        }
+                                    )
+                                )
+                            }
+
+                            TextButton(
+                                enabled = selectedNodes.isNotEmpty() && !isDownloading,
+                                onClick = {
+                                    val downloadDrive = targetDriveIndex ?: controller.currentDriveIndex
+                                    scope.launch {
+                                        isDownloading = true
+                                        errorMessage = null
+                                        val results = mutableListOf<Pair<String, ByteArray>>()
+                                        val savedNames = mutableListOf<String>()
+                                        var allOk = true
+                                        try {
+                                            for (node in selectedNodes) {
+                                                downloadingFileName = node.displayName
+                                                downloadedBytes = 0
+                                                val fileDestinationFolder = cloudDownloadFolder(
+                                                    pathStack.lastOrNull() ?: rootPath, downloadFolder, node.name
+                                                )
+                                                if (fileDestinationFolder != null) {
+                                                    provider.downloadToFile(
+                                                        node.fullName,
+                                                        File(getLocalFileDirectory(fileDestinationFolder), node.name),
+                                                        node.size
+                                                    ) { received ->
+                                                        downloadedBytes = received
+                                                    }
+                                                    if (fileDestinationFolder == "disks" &&
+                                                        isDiskImageName(node.name)
+                                                    ) {
+                                                        withContext(Dispatchers.IO) {
+                                                            mountDownloadedCloudDisk(node.name, downloadDrive)
+                                                        }
+                                                    }
+                                                    savedNames.add(node.name)
+                                                    continue
+                                                }
+                                                val data = fileCache[node.fullName] ?: provider.downloadFile(node.fullName)
+                                                if (data != null) {
+                                                    if (!fileCache.containsKey(node.fullName)) {
+                                                        fileCache = fileCache + (node.fullName to data)
+                                                    }
+                                                    results.add(node.name to data)
+                                                } else {
+                                                    allOk = false
+                                                    errorMessage = fileDownloadFailedMessage
+                                                    break
+                                                }
+                                            }
+                                        } catch (e: CancellationException) {
+                                            throw e
+                                        } catch (e: Exception) {
+                                            allOk = false
+                                            Abc80Log.wtf("Could not download $downloadingFileName: ${e.message}")
+                                            errorMessage = e.message ?: fileDownloadFailedMessage
+                                        } finally {
+                                            isDownloading = false
+                                        }
+                                        if (allOk && savedNames.isNotEmpty()) {
+                                            onFilesDownloaded?.invoke(savedNames)
+                                            if (results.isEmpty()) onDismiss()
+                                        }
+                                        if (allOk && results.isNotEmpty()) {
+                                            handleFilesSelection(results)
+                                        }
+                                    }
+                                }
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text(
+                                        stringResource(Res.string.ui_download) +
+                                            if (selectedNodes.size > 1) " (${selectedNodes.size})" else ""
+                                    )
+                                    if (selectedNodes.isNotEmpty()) {
+                                        val totalSize = selectedNodes.sumOf { it.size }
+                                        Text(
+                                            text = formatSize(totalSize),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    )
+
+    programCompatibilityDialog?.let { (fileName, hint) ->
+        ProgramCompatibilityInfoDialog(
+            fileName = fileName,
+            hint = hint,
+            onDismiss = { programCompatibilityDialog = null }
+        )
+    }
+
+    if (showNewDiskDialog) {
+        NewDisketteDialog(
+            onDismiss = { showNewDiskDialog = false },
+            onCreated = { newDiskName ->
+                localDisks = listLocalDisks()
+                showNewDiskDialog = false
+                // Auto-inject the selected files if we have any
+                if (selectedCloudFiles.isNotEmpty()) {
+                    selectedCloudFiles.forEach { (fileName, fileData) ->
+                        injectFileToDisk(newDiskName, fileName, fileData)
+                    }
+                    selectedCloudFiles = emptyList()
+                    onDismiss()
+                }
+            }
+        )
+    }
+
+    textPreview?.let { (fileName, content) ->
+        ArchiveFileTextPreviewDialog(
+            fileName = fileName,
+            content = content,
+            onDismissRequest = { textPreview = null }
+        )
+    }
+
+    val currentFolderImageNodes = remember(nodes) {
+        nodes.filter { !it.isDirectory && isImageFile(it.name) }
+    }
+
+    if (activeImageIndex != null) {
+        val currentIndex = activeImageIndex!!
+        val currentNode = currentFolderImageNodes.getOrNull(currentIndex)
+        if (currentNode != null) {
+            val currentBitmap = thumbnails[currentNode.fullName]
+            val totalImages = currentFolderImageNodes.size
+
+            LaunchedEffect(currentNode.fullName) {
+                if (!thumbnails.containsKey(currentNode.fullName)) {
+                    val downloadedData = fileCache[currentNode.fullName]
+                        ?: provider.downloadFile(currentNode.fullName)
+                    if (downloadedData != null) {
+                        if (!fileCache.containsKey(currentNode.fullName)) {
+                            fileCache = fileCache + (currentNode.fullName to downloadedData)
+                        }
+                        val bitmap = decodeImagePlatform(downloadedData)
+                        if (bitmap != null) {
+                            thumbnails = thumbnails + (currentNode.fullName to bitmap)
+                        }
+                    }
+                }
+            }
+
+            AlertDialog(
+                onDismissRequest = { activeImageIndex = null },
+                title = {
+                    Text(
+                        if (totalImages > 1) {
+                            "${currentNode.displayName} (${currentIndex + 1}/$totalImages)"
+                        } else {
+                            currentNode.displayName
+                        }
+                    )
+                },
+                text = {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        IconButton(
+                            onClick = { activeImageIndex = currentIndex - 1 },
+                            enabled = currentIndex > 0
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ChevronLeft,
+                                contentDescription = stringResource(Res.string.storage_previous_image)
+                            )
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .heightIn(max = 400.dp)
+                                .padding(horizontal = 8.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (currentBitmap != null) {
+                                Image(
+                                    bitmap = currentBitmap,
+                                    contentDescription = currentNode.displayName,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            } else {
+                                CircularProgressIndicator()
+                            }
+                        }
+
+                        IconButton(
+                            onClick = { activeImageIndex = currentIndex + 1 },
+                            enabled = currentIndex < totalImages - 1
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ChevronRight,
+                                contentDescription = stringResource(Res.string.storage_next_image)
+                            )
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { activeImageIndex = null }) {
+                        Text(stringResource(Res.string.ui_close))
+                    }
+                }
+            )
+        }
+    }
+
+    archivePreview?.let { (fileName, files) ->
+        ArchiveFileDialog(
+            archiveName = fileName,
+            files = files,
+            targetDriveIndex = targetDriveIndex ?: controller.currentDriveIndex,
+            clearBeforeDownload = clearDestinationBeforeDownload,
+            onClearBeforeDownloadChange = {
+                clearDestinationBeforeDownload = it
+            },
+            onResult = { selectedFiles ->
+                archivePreview = null
+                selectedFiles?.let { archivedFiles ->
+                    handleFilesSelection(archivedFiles.map { it.name to it.content })
+                }
+            }
+        )
+    }
+}
+
+@OptIn(ExperimentalUnsignedTypes::class)
+@Composable
+fun NewDisketteDialog(
+    onDismiss: () -> Unit,
+    onCreated: (String) -> Unit
+) {
+    val templates = listOf(
+        "fd2" to stringResource(Res.string.disk_format_sssd),
+        "abc830" to stringResource(Res.string.disk_format_ssdd),
+        "fd4d" to stringResource(Res.string.disk_format_dsdd_320),
+        "abc832" to stringResource(Res.string.disk_format_dsdd_640)
+    ).filter { it.first in newDiskFormatNames(TerminalManager.computerModel) }
+    // Both models use their own bundled system disk.
+    val systemDiskTemplate by androidx.compose.runtime.produceState<ByteArray?>(initialValue = null) {
+        value = try {
+            loadSystemDiskTemplate()
+        } catch (e: Exception) {
+            Abc80Log.wtf("Could not load system disk template: ${e.message}")
+            null
+        }
+    }
+    val storedSystemVolumeName = remember(systemDiskTemplate) {
+        systemDiskTemplate?.let { Abc80FloppyLayout.readVolumeName(it) }
+            ?: "SYSTEM-DISKETT ABC-80 Vers. 2.1."
+    }
+    val systemTemplateFormat = remember(systemDiskTemplate) {
+        systemDiskTemplate?.let { Abc80FloppyLayout.detectFormatName(it) } ?: "abc830"
+    }
+
+    var selectedTemplate by remember { mutableStateOf("abc830") }
+    var systemDisk by remember { mutableStateOf(false) }
+    var newName by remember { mutableStateOf("") }
+    val scope = rememberCoroutineScope()
+    var showOverwriteConfirmation by remember { mutableStateOf<String?>(null) }
+
+    var pendingCreateTarget by remember { mutableStateOf<Pair<String, String>?>(null) }
+
+    androidx.compose.runtime.LaunchedEffect(systemDisk, storedSystemVolumeName) {
+        if (systemDisk) {
+            newName = storedSystemVolumeName
+        } else if (newName == storedSystemVolumeName) {
+            newName = ""
+        }
+    }
+
+    fun createDisk(hostFileName: String, volumeName: String) {
+        scope.launch {
+            try {
+                val data = if (systemDisk) {
+                    val raw = systemDiskTemplate ?: loadSystemDiskTemplate()
+                    val targetVolName = volumeName.ifBlank { storedSystemVolumeName }
+                    val modified = raw.copyOf()
+                    Abc80FloppyLayout.writeVolumeName(modified, targetVolName)
+                    modified
+                } else {
+                    val volName = volumeName.ifEmpty { "SYSTEM" }
+                    createBlankDisk(selectedTemplate, volName)
+                }
+                if (saveLocalDisk(hostFileName, data)) {
+                    onCreated(hostFileName)
+                }
+            } catch (e: Exception) {
+                Abc80Log.wtf("Creation failed: ${e.message}")
+            }
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(Res.string.storage_new_diskette)) },
+        text = {
+            Column {
+                Text(stringResource(Res.string.storage_disk_type), style = MaterialTheme.typography.labelSmall)
+                listOf(
+                    false to stringResource(Res.string.storage_empty_disk),
+                    true to stringResource(Res.string.storage_system_disk)
+                ).forEach { (isSystem, label) ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { systemDisk = isSystem }
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = systemDisk == isSystem,
+                            onClick = { systemDisk = isSystem }
+                        )
+                        Text(label, modifier = Modifier.padding(start = 8.dp))
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+                DiskFormatDropdown(
+                    formats = templates,
+                    selected = if (systemDisk) systemTemplateFormat else selectedTemplate,
+                    onSelected = {
+                        selectedTemplate = it
+                        systemDisk = false
+                    },
+                    enabled = !systemDisk,
+                    label = stringResource(Res.string.storage_format),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                TextField(
+                    value = newName,
+                    onValueChange = { input ->
+                        newName = input.take(32)
+                    },
+                    label = { Text(stringResource(Res.string.storage_disk_name)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    val volName = newName.trim()
+                    val defaultVolName = if (volName.isNotEmpty()) volName else if (systemDisk) "SYSTEM-DISKETT" else "SYSTEM"
+                    val finalName = Abc80FloppyLayout.generateUniqueDiskFileName(defaultVolName, listLocalDisks())
+                    if (fileExists(finalName)) {
+                        pendingCreateTarget = finalName to volName
+                        showOverwriteConfirmation = finalName
+                    } else {
+                        createDisk(finalName, volName)
+                    }
+                }
+            ) {
+                Text(stringResource(Res.string.ui_create))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(Res.string.ui_cancel))
+            }
+        }
+    )
+
+    showOverwriteConfirmation?.let { name ->
+        AlertDialog(
+            onDismissRequest = { showOverwriteConfirmation = null },
+            title = { Text(stringResource(Res.string.storage_file_exists_title)) },
+            text = {
+                Text(stringResource(Res.string.storage_file_exists_message, name))
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val target = pendingCreateTarget
+                        if (target != null) {
+                            createDisk(target.first, target.second)
+                        } else {
+                            createDisk(name, newName.trim())
+                        }
+                        showOverwriteConfirmation = null
+                    }
+                ) {
+                    Text(stringResource(Res.string.ui_overwrite))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showOverwriteConfirmation = null }) {
+                    Text(stringResource(Res.string.ui_cancel))
+                }
+            }
+        )
+    }
+}
+
+fun decodeImagePlatform(data: ByteArray): ImageBitmap? = decodeImage(data)
+
+expect fun decodeImage(data: ByteArray): ImageBitmap?

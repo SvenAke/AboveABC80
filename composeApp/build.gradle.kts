@@ -2,6 +2,7 @@ import org.apache.tools.ant.taskdefs.condition.Os
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.util.Properties
+import com.android.build.api.variant.HasUnitTestBuilder
 
 fun getOrIncrementVersion(increment: Boolean): Triple<Int, Int, Int> {
     val versionPropsFile = rootProject.file("version.properties")
@@ -218,8 +219,14 @@ tasks.withType<JavaExec>().configureEach {
     }
 }
 
+androidComponents {
+    beforeVariants { variant ->
+        (variant as? HasUnitTestBuilder)?.enableUnitTest = true
+    }
+}
+
 android {
-    namespace = "com.aboveware.aboveabc80"
+    namespace = "com.aboveware.abc80"
     compileSdk = 37
 
     testOptions {
@@ -229,7 +236,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.aboveware.aboveabc80"
+        applicationId = "com.aboveware.abc80"
         minSdk = 24
         targetSdk = 37
         versionCode = appVersionCode
@@ -273,7 +280,7 @@ dependencies {
 
 compose.desktop {
     application {
-        mainClass = "com.aboveware.aboveabc80.MainKt"
+        mainClass = "com.aboveware.abc80.MainKt"
         jvmArgs("--enable-native-access=ALL-UNNAMED")
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb, TargetFormat.Exe)

@@ -1,0 +1,380 @@
+package com.aboveware.abc80
+
+import com.aboveware.abc80.terminal.ComputerModel
+import com.aboveware.abc80.terminal.TerminalManager
+import java.io.InputStream
+import java.io.OutputStream
+
+/**
+ * The cassette in the recorder. The tape is kept in memory and persisted as a local file:
+ * an 8-byte big-endian tape position followed by the tape contents (blocks of [Abc80Program.Block.BYTES]).
+ */
+@OptIn(ExperimentalUnsignedTypes::class)
+object Abc80Cassette {
+    private const val FOLDER = "cassette"
+    private const val FILE = "current.tape"
+    private const val HEADER = 8
+    private const val BLOCK = Abc80Program.Block.BYTES
+
+    class FileInfo {
+        var name = ""
+        var length = -1L
+        var position = 0L
+        var current = false
+        var valid = false
+        internal var executableFormat: Abc80ExecutableFormat? = null
+
+        val displayName get() = name.eightPointThree().ifEmpty { "-" }
+    }
+
+    private class BlockVerificationException : Exception("Block verification error")
+
+    private var tape = ByteArray(0)
+    private var position = 0
+    private var loaded = false
+    private var inserted = false
+    private var loadedModel: ComputerModel? = null
+
+    private fun ensureLoaded() {
+        val model = TerminalManager.computerModel
+        if (loaded && loadedModel == model) return
+        loaded = true
+        loadedModel = model
+        inserted = false
+        tape = ByteArray(0)
+        position = 0
+        if (!model.isAbc800) {
+            val stored = loadLocalFile(FOLDER, FILE)
+            if (stored != null && stored.size >= HEADER) {
+                inserted = true
+                var pos = 0L
+                for (i in 0 until HEADER) pos = (pos shl 8) or (stored[i].toLong() and 0xFF)
+                tape = stored.copyOfRange(HEADER, stored.size)
+                position = pos.toInt().coerceIn(0, tape.size)
+            }
+        }
+        Abc80CassetteStatus.hasTape = inserted
+    }
+
+    private fun persist() {
+        if (TerminalManager.computerModel.isAbc800) return
+        val out = ByteArray(HEADER + tape.size)
+        var pos = position.toLong()
+        for (i in HEADER - 1 downTo 0) {
+            out[i] = pos.toByte()
+            pos = pos shr 8
+        }
+        tape.copyInto(out, HEADER)
+        if (inserted) saveLocalFile(FOLDER, FILE, out) else deleteLocalFile(FOLDER, FILE)
+        Abc80CassetteStatus.hasTape = inserted
+    }
+
+    fun anyCassette(): Boolean {
+        ensureLoaded()
+        return inserted
+    }
+
+    /** Overwrites the tape at the current position with the blocks of [program]. */
+    fun save(program: Abc80Program) {
+        if (program.fileBlocks.isEmpty()) return
+        val data = program.fileBlocks.flatMap { it.toByteArray().asList() }.toByteArray()
+        write(data)
+    }
+
+    private fun write(data: ByteArray) {
+        ensureLoaded()
+        inserted = true
+        // Add some space after real data.
+        val gap = Abc80Program.DataBlock(0).toByteArray()
+        val end = position + data.size + gap.size
+        val result = ByteArray(maxOf(tape.size, end))
+        tape.copyInto(result)
+        data.copyInto(result, position)
+        gap.copyInto(result, position + data.size)
+        tape = result
+        position = end
+        persist()
+    }
+
+    /** Loads the next file into [program] if its name matches (or [name] is a wildcard). */
+    fun load(name: String, program: Abc80Program): FileInfo {
+        if (program.isNotEmpty()) return FileInfo()
+        program.init(name.eightPointThree())
+        return load(program, -1)
+    }
+
+    private fun load(program: Abc80Program?, currentPosition: Int): FileInfo {
+        ensureLoaded()
+        val info = FileInfo()
+        info.length = position.toLong()
+        info.position = position.toLong()
+        info.current = position == currentPosition
+        var pos = position
+        try {
+            if (pos + BLOCK <= tape.size) {
+                val nameBlock = Abc80Program.NameBlock()
+                nameBlock.load(tape.copyOfRange(pos, pos + BLOCK))
+                if (!nameBlock.verify()) throw BlockVerificationException()
+                pos += BLOCK
+                info.name = nameBlock.name
+                Abc80Log.cassette("READ $nameBlock")
+                program?.add(nameBlock)
+                var blockNumber = 0
+                val fileData = mutableListOf<Byte>()
+                while (pos + BLOCK <= tape.size) {
+                    val dataBlock = Abc80Program.DataBlock(blockNumber++)
+                    val raw = tape.copyOfRange(pos, pos + BLOCK)
+                    dataBlock.load(raw)
+                    pos += BLOCK
+                    if (!dataBlock.verify()) break
+                    fileData.addAll(raw.copyOfRange(39, 291).asList())
+                    program?.add(dataBlock)
+                }
+                info.executableFormat = abc80ExecutableFormat(info.displayName, fileData.toByteArray(), 252)
+                info.length = (pos - position - BLOCK).toLong()
+                position = pos
+                persist()
+            } else {
+                program?.markEndOfTape()
+                info.current = false
+                return info
+            }
+        } catch (ex: BlockVerificationException) {
+            Abc80Log.cassette("LOAD ${ex.message}")
+            program?.markError()
+            return info
+        }
+        info.valid = true
+        return info
+    }
+
+    /** Lists the files on the tape; the file at the current tape position is marked as current. */
+    fun list(): List<FileInfo> {
+        ensureLoaded()
+        if (TerminalManager.computerModel.isAbc800) return emptyList()
+        val saved = position
+        position = 0
+        val infos = mutableListOf<FileInfo>()
+        var info = load(null, saved)
+        var anyCurrent = info.current
+        while (info.valid) {
+            infos.add(info)
+            info = load(null, saved)
+            if (info.current) anyCurrent = true
+        }
+        position = saved
+        if (!anyCurrent) infos.add(FileInfo().apply {
+            valid = true
+            current = true
+            name = "           "
+            position = saved.toLong()
+        })
+        return infos
+    }
+
+    fun previewBasic(info: FileInfo): String = readText(info, requireEndMarker = false)
+
+    internal fun executableFormat(info: FileInfo): Abc80ExecutableFormat? =
+        abc80ExecutableFormat(info.displayName, byteArrayOf(), 252)
+            ?: abc80ExecutableFormat(info.displayName, fileData(info), 252)
+
+    private fun fileData(info: FileInfo): ByteArray =
+        fileDataBlocks(info).flatMap { it.copyOfRange(39, 291).asSequence() }.toList().toByteArray()
+
+    fun validateBasicLoad(info: FileInfo) {
+        require(executableFormat(info) == Abc80ExecutableFormat.BAS) {
+            "Only BASIC cassette files can be run"
+        }
+        readText(info, requireEndMarker = true)
+    }
+
+    fun validateBacLoad(info: FileInfo) {
+        require(executableFormat(info) == Abc80ExecutableFormat.BAC) {
+            "Only BAC cassette files can be validated"
+        }
+        val data = fileData(info)
+        Abc80CloudDiskImport.validateBac(info.displayName, data, 252)
+    }
+
+    internal fun validateExecutableLoad(info: FileInfo) {
+        when (executableFormat(info)) {
+            Abc80ExecutableFormat.BAS -> validateBasicLoad(info)
+            Abc80ExecutableFormat.BAC -> validateBacLoad(info)
+            Abc80ExecutableFormat.ABS -> Abc80CloudDiskImport.validateAbs(info.displayName, fileData(info), 252)
+            null -> error("Cassette file is not executable")
+        }
+    }
+
+    private fun readText(info: FileInfo, requireEndMarker: Boolean): String {
+        require(
+            info.displayName.isText() ||
+            executableFormat(info) == Abc80ExecutableFormat.BAS
+        ) {
+            "Only BASIC and text cassette files can be previewed"
+        }
+        val text = StringBuilder()
+        for (raw in fileDataBlocks(info)) {
+            for (index in 39 until 291) {
+                val code = raw[index].toInt() and 0xff
+                if (code == 0) return text.toString().replace("\r\n", "\n").replace('\r', '\n')
+                text.append(when (code) {
+                    0x40 -> 'É'
+                    0x5b -> 'Ä'
+                    0x5c -> 'Ö'
+                    0x5d -> 'Å'
+                    0x5e -> 'Ü'
+                    0x60 -> 'é'
+                    0x7b -> 'ä'
+                    0x7c -> 'ö'
+                    0x7d -> 'å'
+                    0x7e -> 'ü'
+                    0x24 -> '¤'
+                    else -> code.toChar()
+                })
+            }
+        }
+        check(!requireEndMarker) { "BASIC cassette file has no end marker" }
+        return text.toString().replace("\r\n", "\n").replace('\r', '\n')
+    }
+
+    private fun fileDataBlocks(info: FileInfo): Sequence<ByteArray> = sequence {
+        ensureLoaded()
+        require(info.position in 0..Int.MAX_VALUE.toLong()) { "Invalid cassette file position" }
+        var offset = info.position.toInt()
+        require(offset <= tape.size - BLOCK) { "Cassette file is no longer available" }
+        val name = Abc80Program.NameBlock()
+        name.load(tape.copyOfRange(offset, offset + BLOCK))
+        check(name.verify() && name.name == info.name) { "Cassette file has changed" }
+        offset += BLOCK
+        var number = 0
+        while (offset <= tape.size - BLOCK) {
+            val raw = tape.copyOfRange(offset, offset + BLOCK)
+            if (number > 0 && raw.all { it == 0.toByte() }) {
+                return@sequence
+            }
+            val block = Abc80Program.DataBlock(number++)
+            block.load(raw)
+            check(block.verify()) { "Invalid cassette data block" }
+            yield(raw)
+            offset += BLOCK
+        }
+        error("Cassette file has no terminating tape gap")
+    }
+
+    fun format() {
+        if (TerminalManager.computerModel.isAbc800) return
+        Abc80Log.cassette("FORMAT")
+        tape = ByteArray(0)
+        position = 0
+        loaded = true
+        loadedModel = TerminalManager.computerModel
+        inserted = true
+        persist()
+    }
+
+    fun rewind() {
+        ensureLoaded()
+        if (TerminalManager.computerModel.isAbc800) return
+        position = 0
+        persist()
+    }
+
+    /** Positions the tape at the start of [info]. */
+    fun seek(info: FileInfo) {
+        ensureLoaded()
+        if (TerminalManager.computerModel.isAbc800) return
+        position = info.position.toInt().coerceIn(0, tape.size)
+        persist()
+    }
+
+    fun forward(): List<FileInfo> {
+        if (TerminalManager.computerModel.isAbc800) return emptyList()
+        val infos = list()
+        val current = infos.indexOfFirst { it.current }
+        if (current != -1) {
+            if (current != infos.size - 1) position = infos[current + 1].position.toInt()
+            else if (infos[current].length != -1L) position = (infos[current].position + infos[current].length).toInt()
+            persist()
+        }
+        return list()
+    }
+
+    fun back(): List<FileInfo> {
+        if (TerminalManager.computerModel.isAbc800) return emptyList()
+        val infos = list()
+        val current = infos.indexOfFirst { it.current }
+        if (current > 0) {
+            position = infos[current - 1].position.toInt()
+            persist()
+        }
+        return list()
+    }
+
+    /** Imports a WAV/RAW recording (decoded) or a custom tape file (raw blocks); returns true on success. */
+    fun import(stream: InputStream, name: String): Boolean {
+        if (TerminalManager.computerModel.isAbc800) return false
+        return if (name.endsWith("WAV", true) || name.endsWith("RAW", true)) importWave(stream, name)
+        else importCustom(stream, name)
+    }
+
+    private fun importWave(stream: InputStream, name: String): Boolean {
+        Abc80CassetteStatus.tapeName = ""
+        val progressText = "Indexing cassette"
+        Abc80CassetteStatus.show(progressText)
+        try {
+            val decoder = Abc80CassetteDecoder(progressText)
+            if (!decoder.decode(stream)) return false
+            if (decoder.files().isEmpty()) {
+                Abc80Log.cassette("No valid programs found in $name")
+                return false
+            }
+            format()
+            decoder.files().forEach { write(it.rawData()) }
+            rewind()
+            Abc80CassetteStatus.tapeName = name
+            return true
+        } finally {
+            Abc80CassetteStatus.hide()
+        }
+    }
+
+    private fun importCustom(stream: InputStream, name: String): Boolean {
+        Abc80CassetteStatus.tapeName = ""
+        return try {
+            val bytes = stream.readBytes()
+            tape = bytes
+            position = 0
+            loaded = true
+            loadedModel = TerminalManager.computerModel
+            inserted = true
+            persist()
+            Abc80CassetteStatus.tapeName = name.substringAfterLast("/")
+            true
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    /** Exports the whole tape as raw blocks. */
+    fun export(stream: OutputStream) {
+        ensureLoaded()
+        stream.write(tape)
+        stream.flush()
+    }
+
+    fun exportBytes(): ByteArray {
+        ensureLoaded()
+        if (TerminalManager.computerModel.isAbc800) return byteArrayOf()
+        return tape.copyOf()
+    }
+
+    fun eject() {
+        tape = ByteArray(0)
+        position = 0
+        loaded = true
+        loadedModel = TerminalManager.computerModel
+        inserted = false
+        Abc80CassetteStatus.tapeName = ""
+        persist()
+    }
+}

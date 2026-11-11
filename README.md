@@ -444,7 +444,7 @@ original ABC80 hardware's port assignments.
 The desktop cassette regression test boots the BASIC ROM, loads a multi-block
 program after another file on a synthetic tape at normal CPU speed, and verifies
 the result with `LIST`. Run it with
-`.\gradlew.bat :composeApp:jvmTest --tests com.aboveware.aboveabc80.CassetteLoadIntegrationTest`.
+`.\gradlew.bat :composeApp:jvmTest --tests com.aboveware.abc80.CassetteLoadIntegrationTest`.
 It uses temporary storage instead of the user's saved tapes.
 
 ### ABC80 sound
