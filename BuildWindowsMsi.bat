@@ -4,7 +4,7 @@ call .\gradlew.bat :composeApp:packageMsi
 if %ERRORLEVEL% EQU 0 (
     echo.
     echo SUCCESS: MSI Installer created at:
-    for %%f in (composeApp\build\compose\binaries\main\msi\AboveABC80-*.msi) do echo %%~ff
+    for %%f in (composeApp\build\compose\binaries\main\msi\*.msi) do echo %%~ff
 ) else (
     echo.
     echo BUILD FAILED.

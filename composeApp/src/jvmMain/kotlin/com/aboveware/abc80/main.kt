@@ -1,8 +1,8 @@
 package com.aboveware.abc80
 
 import aboveabc80.composeapp.generated.resources.Res
-import aboveabc80.composeapp.generated.resources.windows_icon
-    import androidx.compose.foundation.background
+import aboveabc80.composeapp.generated.resources.app_icon
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -16,7 +16,7 @@ fun main() = application {
     Window(
         onCloseRequest = ::exitApplication,
         title = "aboveABC80",
-        icon = painterResource(Res.drawable.windows_icon)
+        icon = painterResource(Res.drawable.app_icon)
     ) {
         Box(
             modifier = Modifier

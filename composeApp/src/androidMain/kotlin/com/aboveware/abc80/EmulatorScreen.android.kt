@@ -2,6 +2,7 @@ package com.aboveware.abc80
 
 import android.graphics.Bitmap
 import android.view.View
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -9,12 +10,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.ContextCompat
 import androidx.core.graphics.createBitmap
 import com.aboveware.abc80.keyboard.Keyboard
 import com.aboveware.abc80.keyboard.KeyboardView
@@ -36,7 +39,7 @@ actual fun PlatformKeyboard(keyboard: Keyboard, modifier: Modifier) {
     val upperCaseLedOn = activeTerminal.keyboard.leds["upper_case"]?.isOn == true
 
     Box(
-        modifier = modifier,
+        modifier = modifier.background(Color(0xFFDFAD75)),
         contentAlignment = Alignment.Center
     ) {
         AndroidView(
@@ -45,6 +48,7 @@ actual fun PlatformKeyboard(keyboard: Keyboard, modifier: Modifier) {
                 .padding(8.dp),
             factory = { context ->
                 KeyboardView(context, null).apply {
+                    setBackgroundColor(ContextCompat.getColor(context, R.color.abc80))
                     visibility = View.VISIBLE
                     keyboardXmlResId = layoutId
                     this.keyboard = keyboard

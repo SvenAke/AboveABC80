@@ -185,7 +185,7 @@ val buildNativeDesktop = tasks.register("buildNativeDesktop") {
         searchDirs.forEach { dir ->
             if (dir.exists()) {
                 dir.listFiles()?.forEach { file ->
-                    if (file.name == "aboveabc80.dll" || file.name == "libaboveabc80.so") {
+                    if (file.name == "abc80.dll" || file.name == "libabc80.so") {
                         val target = outputDirFile.resolve(file.name)
                         file.copyTo(target, overwrite = true)
                         println("NATIVE-BUILD: Copied ${file.name} from ${dir.name} to ${target.absolutePath}")
@@ -195,7 +195,7 @@ val buildNativeDesktop = tasks.register("buildNativeDesktop") {
             }
         }
         if (!found) {
-            val allFiles = buildDirFile.walkTopDown().filter { it.name == "aboveabc80.dll" || it.name == "libaboveabc80.so" }.toList()
+            val allFiles = buildDirFile.walkTopDown().filter { it.name == "abc80.dll" || it.name == "libabc80.so" }.toList()
             allFiles.forEach { file ->
                 val target = outputDirFile.resolve(file.name)
                 file.copyTo(target, overwrite = true)
@@ -284,16 +284,16 @@ compose.desktop {
         jvmArgs("--enable-native-access=ALL-UNNAMED")
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb, TargetFormat.Exe)
-            packageName = "AboveABC80"
+            packageName = "abc80"
             packageVersion = appVersionName
             vendor = "Aboveware"
-            description = "AboveABC80 Emulator for ABC80 and ABC800"
+            description = "ABC80 Emulator for ABC80 and ABC800"
             
             // Låter jpackage hitta sidobilder (main-dialog.bmp, main-banner.bmp) i denna mapp
             appResourcesRootDir.set(project.layout.projectDirectory.dir("package"))
 
             windows {
-                iconFile.set(project.file("src/commonMain/composeResources/drawable/windows_icon.ico"))
+                iconFile.set(project.file("package/windows_icon.ico"))
                 shortcut = true
                 menu = true
                 // A unique UUID for the installer to handle upgrades

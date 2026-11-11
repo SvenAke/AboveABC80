@@ -19,6 +19,7 @@ import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
+import androidx.core.content.ContextCompat
 import androidx.core.content.res.ResourcesCompat
 import androidx.core.graphics.createBitmap
 import androidx.core.graphics.withSave
@@ -1189,6 +1190,7 @@ class KeyboardView(
         mBackgroundDimAmount =
             attributes.getFloat(R.styleable.KeyboardView_backgroundDimAmount, 0.5f)
         attributes.recycle()
+        setBackgroundColor(ContextCompat.getColor(context, R.color.abc80))
         mPaint = Paint()
         mPaint.typeface = Typeface.create("sans-serif-light", Typeface.NORMAL)
         mPaint.isAntiAlias = true
